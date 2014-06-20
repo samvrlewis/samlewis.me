@@ -1,0 +1,185 @@
+/*
+* Greg Reda
+* Styling based on the Skeleton documention (http://www.getskeleton.com/)
+* 11/25/2012
+* Use it however you want
+*/
+
+/*
+TODO:
+- Clean this crap up.
+*/
+
+@import url(http://fonts.googleapis.com/css?family=Droid+Serif);
+@import url(http://fonts.googleapis.com/css?family=Droid+Sans);
+@import url(http://fonts.googleapis.com/css?family=Source+Code+Pro);
+
+{margin: 0; padding: 0;}
+html, body {
+	height: 100%;
+	font-family: "Droid Sans", sans-serif;
+}
+h1, h2, h3, h4, h5, h6 { font-family: "Droid Serif", serif; }
+#content h3, h4 { margin-top: 20px; }
+
+div.container {
+	padding-top: 50px;
+	min-height: 100%;
+	margin-left: auto;
+	margin-right: auto;
+	/*margin-bottom: -50px;*/
+	/*position: relative;*/
+}
+footer {
+	float: right !important;
+	/*height: 50px;*/
+	/*position: relative;*/
+	text-align: center;
+	/*clear: both;*/
+}
+
+section#content {
+	margin-top: 30px 0;
+	float: right;
+}
+#content img {
+	display: block;
+	margin-left: auto;
+	margin-right: auto;
+	max-width: 90%;
+}
+
+
+/*SIDEBAR*/
+#sidebar {
+	position: fixed;
+	text-align: center;
+	font-family: "Droid Serif", serif;
+}
+
+#sidebar li {
+	margin: 0px;
+	font-size: 18px;
+}
+
+#logo {
+	letter-spacing: -1px;
+	font-weight: bold;
+}
+
+#avatar {
+	/*border-radius: 10px;*/
+	margin-left: auto;
+	margin-right: auto;
+	margin-bottom: 10px;
+	display: block;
+	width: 140px;
+	border: 2px solid #555;
+
+}
+
+
+blockquote {
+	padding: 0px 20px 0px 20px !important;
+	border-left: 2px solid #ddd !important;
+}
+
+
+/*
+* Styling
+*/
+
+/*Links*/
+a, a:visited {
+	text-decoration: none !important;
+	font-weight: bold;
+}
+
+a.icon, a:visited.icon, a:active.icon {
+	font-size: 17px;
+	color: #555;
+	font-weight: bold;
+}
+a:hover.icon, a:focus.icon { color: #222; }
+
+/*Horizontal Rulers*/
+hr.large {
+	border: none;
+	height: 2px;
+	background-color: #ebebeb;
+	margin: 10px 10px;
+}
+
+hr.small {
+	margin: 5px 0px;
+}
+
+
+/*Article Design*/
+.article-title {
+	clear: both;
+	float: left;
+	margin-top: 0px !important;
+}
+.article-date {
+	font-style: italic;
+	float: right;
+	margin: 8px 10px;
+}
+.article-summary { clear: both; }
+.article-content { clear: both; overflow: hidden; }
+.article-content img { border: 1px solid #222; }
+
+.article-content p {
+	margin: 12px 0px 12px 0px !important;
+	font-family: 'Droid Sans', sans-serif;
+	font-weight: 400;
+	line-height: 1.4em;
+	font-size: 18px;
+}
+
+.caption { font-size: 12px !important; }
+
+.back-to-home { 
+	margin-top: 20px;
+	margin-bottom: 10px;
+}
+
+
+/*Code Formatting*/
+code, pre.ipynb {
+	font-family: "Source Code Pro", monospace !important;
+	font-size: 13px !important;
+}
+.highlight, pre {
+	font-family: "Source Code Pro", monospace;
+	font-size: 12px;
+	background-color: #272822;
+	line-height: 125%;
+	padding: 5px 10px 5px 10px;
+	border-radius: 4px;
+}
+
+
+/*Mobile*/
+@media only screen and (max-width: 768px) {
+    #sidebar {
+        position: relative;
+        width: 100%;
+        top: 8px;
+    }
+    
+    /*#sidebar img { width: 140px; margin-right: 10px; }*/
+    
+    #content {
+        float: none;
+        margin-top: 30px;
+    }
+    
+    #content img {
+		max-width: 85%;
+		display: block;
+		margin-left: auto;
+		margin-right: auto; 
+	}
+}
