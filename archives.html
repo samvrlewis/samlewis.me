@@ -50,12 +50,7 @@
 	=================================================== -->
 	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
         
-        <script type="text/javascript">
-            if ( window.self === window.top ) { 
-                // console.log("not in a frame") 
-                window.location.href = 'http://www.samlewis.me';
-            }
-        </script>
+
 
 	<!-- Favicons
 	================================================== -->
@@ -130,6 +125,17 @@
           var newtab = true;
         }
         if (!newtab) {
+          e.preventDefault();
+          setTimeout('document.location = "' + url + '"', 100);
+        }
+      }
+    });
+  </script>
+
+<!-- End Document
+================================================== -->
+</body>
+</html>f (!newtab) {
           e.preventDefault();
           setTimeout('document.location = "' + url + '"', 100);
         }
