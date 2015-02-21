@@ -1711,7 +1711,7 @@ jQuery(document).ready(function($) {
 	<!-- Basic Page Needs
   ================================================== -->
 	<meta charset="utf-8">
-	<title>Automatically tracking my thesis progress | Sam Lewis</title>
+	<title>AFL statistics SQL database | Sam Lewis</title>
 
 	<meta name="google-site-verification" content="0wRDUL1uay7MXb9mC8tycRBay0xX5RCY4n8inQCY498" />
 
@@ -1791,68 +1791,22 @@ jQuery(document).ready(function($) {
 
 		<section id="content" class="thirteen columns offset-by-one">
 
-  <h3 class="article-title"><a href="/2014/10/automated-thesis-tracking" title="Permalink to Automatically tracking my thesis progress">Automatically tracking my thesis progress</a></h3>
-  <h6 class="article-date">03 Oct 2014</h6>
+  <h3 class="article-title"><a href="/2015/02/afl-stats-sql" title="Permalink to AFL statistics SQL database">AFL statistics SQL database</a></h3>
+  <h6 class="article-date">21 Feb 2015</h6>
   <div class="article-content">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
-
-<script src="https://www.google.com/jsapi"></script>
-
-<script>
-
-  // onload callback
-  function drawChart() {
-
-    var public_key = 'zDaZOadL0XUKgVp5ojgV';
-
-    // JSONP request
-    var jsonData = $.ajax({
-      url: 'https://data.sparkfun.com/output/' + public_key + '.json',
-      data: {page: 1},
-      dataType: 'jsonp',
-    }).done(function (results) {
-
-      var data = new google.visualization.DataTable();
-
-      data.addColumn('datetime', 'Time');
-      data.addColumn('number', 'wordcount');
-
-      $.each(results, function (i, row) {
-        data.addRow([
-          (new Date(row.timestamp)),
-          parseInt(row.wordcount)
-        ]);
-      });
-
-      var chart = new google.visualization.LineChart($('#chart').get(0));
-
-      chart.draw(data, {
-         title: 'Number of words written for my thesis',
-            legend: {position: 'none'},
-            pointSize: 4
-      });
-
-    });
-
-  }
-
-  // load chart lib
-  google.load('visualization', '1', {
-    packages: ['corechart']
-  });
-
-  // call drawChart once google charts is loaded
-  google.setOnLoadCallback(drawChart);
-
-</script>
-
-<div id="chart" style="width: 100%;"></div>
-
-<p>In my ongoing quest to procrastinate writing my <a href="http://www.github.com/samvrlewis/thesis/">thesis</a> by working on marginally related work so that I still feel vaguely productive, I implemented a simple system to automatically keep track of how many words I've written in my thesis report.  </p>
-<p>Conveniently, I'm using LaTeX to write the thesis report. This allowed me to use the cool <a href="http://app.uio.no/ifi/texcount/">texcount</a> script (included in most TeX distributions) to count the number of words in each of the .tex files in my thesis. The good thing about this script is it won't count the LaTeX markup towards my total word count. </p>
-<p>Needing somewhere to store the word count, and because I've been looking for an excuse to use it, I used SparkFun's <a href="https://data.sparkfun.com/">phant</a> to create a quick and dirty data stream. The great thing about phant is once you've created the data stream, all that's needed to submit data to it is a single HTTP GET request which is doable in a single line of python. If you're that way inclined, you can see my data stream <a href="https://data.sparkfun.com/streams/zDaZOadL0XUKgVp5ojgV">here</a>.</p>
-<p>Because I'm using git as version control, all that was then needed to tie everything together was a <a href="https://gist.github.com/samvrlewis/8a1522084bc99eda7651">quick python script</a> for the pre-commit git hook to count the words in each of my different sections, add them together and submit the total to my data stream on phant. This runs whenever I commit to git -- so whenever I've actually written something useful. Easy! </p>
-<p>It was then simple to hook into the data stream with google charts. A chart with my progress is shown above, will be interesting to see how the line behaves (I'm expecting an exponential rise closer to the due date!). </p>
+    <p>Download the SQL(ite) stats database here: <a href="https://github.com/samvrlewis/afl-stats-database/raw/master/afl-stats.sqlite">afl-stats.sqlite</a></p>
+<p>The below SQLite database has team statistics for each season and finals game for 1987-2014. In the earlier years not all stats are present as they were not all recorded. The database schema is shown below, which also shows the type of stats avaliable. </p>
+<p><img alt="db schema" src="https://raw.githubusercontent.com/samvrlewis/afl-stats-database/master/schema.png" /></p>
+<p>It's great for anyone nerdy who's wanting to do any sort of visualisation of stats, machine learning or just wanting to play around with the data easily. As an example of what can be quickly knocked up using Python in 10 minutes, here's the average amount of tackles in AFL games by year. </p>
+<p><img alt="tackle count" src="http://i.imgur.com/slv32nI.png" /></p>
+<p>Some things I think would be interesting to examine, using the data:</p>
+<ul>
+<li>How is the intensity of finals vs. normal season games captured in the statistics? Are there more tackles, is goal kicking less accurate, are there more or less free kicks etc etc?</li>
+<li>Can historical stats be used to make a good tipping/betting system? How accurate would a machine learning algorithm based on the stats be?</li>
+<li>How do attendances change when a team is on a hot or cold streak? Which teams have the most fair weather supporters?</li>
+<li>Are there any teams that consistently are outliers? For example, any teams that consistently kick accurately even if there are better </li>
+</ul>
+<p>Would love to hear from you if you do anything interesting with it though. I'm sure there are lots of cool things that could be done.</p>
   </div>
     
 

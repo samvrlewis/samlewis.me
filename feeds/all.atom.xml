@@ -1,5 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="http://www.samlewis.me/" rel="alternate"></link><link href="http://www.samlewis.me/feeds/all.atom.xml" rel="self"></link><id>http://www.samlewis.me/</id><updated>2014-10-03T00:00:00+10:00</updated><entry><title>Automatically tracking my thesis progress</title><link href="http://www.samlewis.me/2014/10/automated-thesis-tracking" rel="alternate"></link><updated>2014-10-03T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-10-03:2014/10/automated-thesis-tracking</id><summary type="html">&lt;script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"&gt;&lt;/script&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="http://www.samlewis.me/" rel="alternate"></link><link href="http://www.samlewis.me/feeds/all.atom.xml" rel="self"></link><id>http://www.samlewis.me/</id><updated>2015-02-21T00:00:00+10:00</updated><entry><title>AFL statistics SQL database</title><link href="http://www.samlewis.me/2015/02/afl-stats-sql" rel="alternate"></link><updated>2015-02-21T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-02-21:2015/02/afl-stats-sql</id><summary type="html">&lt;p&gt;Download the SQL(ite) stats database here: &lt;a href="https://github.com/samvrlewis/afl-stats-database/raw/master/afl-stats.sqlite"&gt;afl-stats.sqlite&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;The below SQLite database has team statistics for each season and finals game for 1987-2014. In the earlier years not all stats are present as they were not all recorded. The database schema is shown below, which also shows the type of stats avaliable. &lt;/p&gt;
+&lt;p&gt;&lt;img alt="db schema" src="https://raw.githubusercontent.com/samvrlewis/afl-stats-database/master/schema.png" /&gt;&lt;/p&gt;
+&lt;p&gt;It's great for anyone nerdy who's wanting to do any sort of visualisation of stats, machine learning or just wanting to play around with the data easily. As an example of what can be quickly knocked up using Python in 10 minutes, here's the average amount of tackles in AFL games by year. &lt;/p&gt;
+&lt;p&gt;&lt;img alt="tackle count" src="http://i.imgur.com/slv32nI.png" /&gt;&lt;/p&gt;
+&lt;p&gt;Some things I think would be interesting to examine, using the data:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;How is the intensity of finals vs. normal season games captured in the statistics? Are there more tackles, is goal kicking less accurate, are there more or less free kicks etc etc?&lt;/li&gt;
+&lt;li&gt;Can historical stats be used to make a good tipping/betting system? How accurate would a machine learning algorithm based on the stats be?&lt;/li&gt;
+&lt;li&gt;How do attendances change when a team is on a hot or cold streak? Which teams have the most fair weather supporters?&lt;/li&gt;
+&lt;li&gt;Are there any teams that consistently are outliers? For example, any teams that consistently kick accurately even if there are better &lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Would love to hear from you if you do anything interesting with it though. I'm sure there are lots of cool things that could be done.&lt;/p&gt;</summary></entry><entry><title>Automatically tracking my thesis progress</title><link href="http://www.samlewis.me/2014/10/automated-thesis-tracking" rel="alternate"></link><updated>2014-10-03T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-10-03:2014/10/automated-thesis-tracking</id><summary type="html">&lt;script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"&gt;&lt;/script&gt;
 
 &lt;script src="https://www.google.com/jsapi"&gt;&lt;/script&gt;
 
@@ -33,7 +45,8 @@
 
       chart.draw(data, {
          title: 'Number of words written for my thesis',
-            legend: {position: 'none'}
+            legend: {position: 'none'},
+            pointSize: 4
       });
 
     });
