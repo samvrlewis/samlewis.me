@@ -1794,8 +1794,8 @@ jQuery(document).ready(function($) {
   <h3 class="article-title"><a href="/2014/08/is-audio-playing-windows" title="Permalink to Using C# to check if audio is playing in Windows">Using C# to check if audio is playing in Windows</a></h3>
   <h6 class="article-date">05 Aug 2014</h6>
   <div class="article-content">
-    <p>Using the <a href="http://cscore.codeplex.com/">CSCore</a> library (easily installed in Visual Studio with <code>Install-Package CSCore</code>) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system. </p>
-<p>The code below is heavily inspired by audio meter code in the <a href="http://cscore.codeplex.com/SourceControl/latest#CSCore.Test/CoreAudioAPI/EndpointTests.cs">EndPointTests</a> file for CSCore. </p>
+    <p>Using the <a href="http://cscore.codeplex.com/">CSCore</a> library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.</p>
+<p>The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore.</p>
 <div class="highlight"><pre><span class="n">using</span> <span class="n">CSCore</span><span class="p">.</span><span class="n">CoreAudioAPI</span><span class="p">;</span>
 <span class="n">using</span> <span class="n">System</span><span class="p">;</span>
 
@@ -1831,7 +1831,7 @@ jQuery(document).ready(function($) {
 </pre></div>
 
 
-<p>The code is hopefully self explanatory but basically gets the default system audio device, then uses the peak value from a audio meter to determine whether audio is playing. </p>
+<p>The code is hopefully self explanatory but basically gets the default system audio device, then uses the peak value from a audio meter to determine whether audio is playing.</p>
   </div>
     
 
