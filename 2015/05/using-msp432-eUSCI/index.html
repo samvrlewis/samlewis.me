@@ -1711,7 +1711,7 @@ jQuery(document).ready(function($) {
 	<!-- Basic Page Needs
   ================================================== -->
 	<meta charset="utf-8">
-	<title>Automatically tracking my thesis progress | Sam Lewis</title>
+	<title>Using the MSP432 serial (eUSCI) modules | Sam Lewis</title>
 
 	<meta name="google-site-verification" content="0wRDUL1uay7MXb9mC8tycRBay0xX5RCY4n8inQCY498" />
 
@@ -1791,68 +1791,108 @@ jQuery(document).ready(function($) {
 
 		<section id="content" class="thirteen columns offset-by-one">
 
-  <h3 class="article-title"><a href="/2014/10/automated-thesis-tracking" title="Permalink to Automatically tracking my thesis progress">Automatically tracking my thesis progress</a></h3>
-  <h6 class="article-date">03 Oct 2014</h6>
+  <h3 class="article-title"><a href="/2015/05/using-msp432-eUSCI" title="Permalink to Using the MSP432 serial (eUSCI) modules">Using the MSP432 serial (eUSCI) modules</a></h3>
+  <h6 class="article-date">23 May 2015</h6>
   <div class="article-content">
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"></script>
+    <p>As a follow up to <a href="../msp432-serial-printf/">my post on MSP432 printf functionality</a>, this is a write-up of my notes on using the serial modules on the MSP432. </p>
+<p>The MSP432 has two different types of serial modules; eUSCI_A modules and eUSCI_B modules. The eUSCI_A modules support both the UART and SPI protocols while the eUSCI_B modules support the SPI and I2C protocols. Using the <a href="http://www.ti.com/lit/ds/slas826a/slas826a.pdf">MSP432 datasheet</a> you can find which MSP432 pins correspond to the modules. The following picture, which is an excerpt from page 10 of the data sheet shows the pin mapping for the first eUSCI_A and eUSCI_B modules.</p>
+<p><img alt="MSP432 serial modules" src="serial_modules.png" /></p>
+<p>As each of the two modules support multiple protocols, you might not need to use all of the pins when you're using one of the modules. For example, if you wanted to use eUSCI_A0 for UART, you wouldn't need a 'slave transmit enable' pin or a 'clock signal input/output'. So you'd only be using P1.2 and P1.3. In fact, these are exactly the two pins you're using when you're communicating with your PC over UART as described in <a href="../msp432-serial-printf/">my previous post</a>! </p>
+<p>So now you know which pins to use, but how do you actually configure and use them? A word of warning first though: on the MSP432 launchpad, not all the eUSCI modules have pins exposed on the launchpad, so first check that the module you want has the relevant pins exposed on the launchpad. I've been playing around with a ESP8266 chip which talks over UART and have been using the eUSCI_A2 module which is on pins P3.2 and P3.3.</p>
+<p>To configure the serial modules you have two choices; either read the <a href="http://www.ti.com/lit/ug/slau356a/slau356a.pdf">family guide</a> and toggle bits in all of the configuration registers manually or let TI do the heavy heavy lifting and use their <a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP432_Driver_Library/latest/exports/driverlib/doc/MSP432P4xx/MSP432_DriverLib_Users_Guide-MSP432P4xx-2_20_00_08.pdf">driverlib</a>. The driverlib is good but can be frustrating to use as the documentation provided is fairly minimal and you need to have an idea of what you're looking for first. </p>
+<p>As an example of using the driverlib to configure a serial module, I'll step through the process of configuring the eUSCI_A2 module for UART with a baud rate of 9600 so that it can talk to my ESP8266 chip. The process should be similar for any serial chip that you want to interface with your MSP432 though!</p>
+<p>First thing first, we want to put the pins in UART mode. The pins we're specifically interested in are P3.2 and P3.3, they correspond to the RX and TX pins respectively. To do this, we need to look at the datasheet again and find where the pin functions are defined. The following picture is an excerpt from page 104 of the datasheet.</p>
+<p><img alt="MSP432 serial modules" src="eUSCI_A2_control.png" /></p>
+<p>An 'X' in the P3DIR column indicates a "don't care". So for both pins, it doesn't matter if we set them to an output or an input when configuring them for UART. For the P3SEL1 and P3SEL0 columns, we need to consult the family guide. The next picture is an excerpt from page 483 of the family guide. </p>
+<p><img alt="MSP432 serial modules" src="eUSCI_A2_control.png" /></p>
+<p>So to use the UART functionality of these pins, we're using the 'primary IO module function'. Now we have all the information we need to set the pins up in UART mode! Because it doesn't matter whether the pins are in output or input mode, we're able to use the <code>GPIO_setAsPeripheralModuleFunctionInputPin</code> function or the `GPIO_setAsPeripheralModuleFunctionOutputPin`` function. For no reason whatsoever, I'll use the output variant. The result is the following line of code.</p>
+<div class="highlight"><pre><span class="cm">/* Set pins 2 and 3 of port 3 to the primary module function (UART) */</span>
+<span class="n">GPIO_setAsPeripheralModuleFunctionInputPin</span><span class="p">(</span><span class="no">GPIO_PORT_P3</span><span class="p">,</span> <span class="no">GPIO_PIN2</span> <span class="o">|</span> <span class="no">GPIO_PIN3</span><span class="p">,</span> <span class="no">GPIO_PRIMARY_MODULE_FUNCTION</span><span class="p">);</span>
+</pre></div>
 
-<script src="https://www.google.com/jsapi"></script>
 
-<script>
+<p>The next thing to do is to define a eUSCI config. This is basically from the TI provided examples. The only tricky bit is generating the BRDIV, UCxBRF and UCxBRS numbers which in this case are 78, 2 &amp; 0. Luckily, once again TI have <a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html">provided a tool</a> to do this. This tool finds the optimal way of prescaling and modulating the clock source you're using to achieve your desired baud rate. More information about this process is on page 721 of the family guide. </p>
+<p>Using the tool with a clock of 12MHz and baud rate of 9600 Hz, gives a clockPrescalar of 78, a firstModReg of 2, a secondModReg of 0 and oversampling turned on. Converting this into a config, we get the following:</p>
+<div class="highlight"><pre><span class="k">const</span> <span class="n">eUSCI_UART_Config</span> <span class="n">uartConfig</span> <span class="o">=</span>
+<span class="p">{</span>
+    <span class="n">EUSCI_A_UART_CLOCKSOURCE_SMCLK</span><span class="p">,</span>          <span class="c1">// SMCLK Clock Source</span>
+    <span class="mi">78</span><span class="p">,</span>                                      <span class="c1">// BRDIV = 78</span>
+    <span class="mi">2</span><span class="p">,</span>                                       <span class="c1">// UCxBRF = 2</span>
+    <span class="mi">0</span><span class="p">,</span>                                       <span class="c1">// UCxBRS = 0</span>
+    <span class="n">EUSCI_A_UART_NO_PARITY</span><span class="p">,</span>                  <span class="c1">// No Parity</span>
+    <span class="n">EUSCI_A_UART_LSB_FIRST</span><span class="p">,</span>                  <span class="c1">// MSB First</span>
+    <span class="n">EUSCI_A_UART_ONE_STOP_BIT</span><span class="p">,</span>               <span class="c1">// One stop bit</span>
+    <span class="n">EUSCI_A_UART_MODE</span><span class="p">,</span>                       <span class="c1">// UART mode</span>
+    <span class="n">EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION</span>  <span class="c1">// Oversampling</span>
+<span class="p">};</span>
+</pre></div>
 
-  // onload callback
-  function drawChart() {
 
-    var public_key = 'zDaZOadL0XUKgVp5ojgV';
+<p>The parity, MSB/LSB first and the amount of stop bits will all be determined by the device or chip that you want to communicate with. Now, to use that config to initialise the module using driverlib:</p>
+<div class="highlight"><pre><span class="n">UART_initModule</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">uartConfig</span><span class="p">);</span>
+</pre></div>
 
-    // JSONP request
-    var jsonData = $.ajax({
-      url: 'https://data.sparkfun.com/output/' + public_key + '.json',
-      data: {page: 1},
-      dataType: 'jsonp',
-    }).done(function (results) {
 
-      var data = new google.visualization.DataTable();
+<p>This sets all the relevant registers to achieve the configuration earlier specified. If you're really interesting in understanding what exactly this is doing, it's worth reading the family guide. Now that the module is intialised, it can finally be enabled on!</p>
+<div class="highlight"><pre><span class="n">UART_enableModule</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">);</span>
+</pre></div>
 
-      data.addColumn('datetime', 'Time');
-      data.addColumn('number', 'wordcount');
 
-      $.each(results, function (i, row) {
-        data.addRow([
-          (new Date(row.timestamp)),
-          parseInt(row.wordcount)
-        ]);
-      });
+<p>From here, you can send a byte of data to the module with the following driverlib function call:</p>
+<div class="highlight"><pre><span class="cm">/* sends the &#39;g&#39; character to the A2 module&#39; */</span>
+<span class="n">UART_transmitData</span><span class="p">(</span><span class="no">EUSCI_A2_MODULE</span><span class="p">,</span> <span class="sc">&#39;g&#39;</span><span class="p">);</span>
+</pre></div>
 
-      var chart = new google.visualization.LineChart($('#chart').get(0));
 
-      chart.draw(data, {
-         title: 'Number of words written for my thesis',
-            legend: {position: 'none'},
-            pointSize: 4
-      });
+<p>If you want to simplify the process of sending individual characters (or instead want to send strings/numbers etc), check out <a href="../msp432-serial-printf/">my post about a printf function for the MSP432</a>.</p>
+<p>The whole code would then end up looking like this.</p>
+<div class="highlight"><pre><span class="cp">#include &quot;driverlib.h&quot;</span>
 
-    });
+<span class="k">const</span> <span class="n">eUSCI_UART_Config</span> <span class="n">uartConfig</span> <span class="o">=</span>
+<span class="p">{</span>
+    <span class="n">EUSCI_A_UART_CLOCKSOURCE_SMCLK</span><span class="p">,</span>          <span class="c1">// SMCLK Clock Source</span>
+    <span class="mi">78</span><span class="p">,</span>                                     <span class="c1">// BRDIV = 78</span>
+    <span class="mi">2</span><span class="p">,</span>                                       <span class="c1">// UCxBRF = 2</span>
+    <span class="mi">0</span><span class="p">,</span>                                       <span class="c1">// UCxBRS = 0</span>
+    <span class="n">EUSCI_A_UART_NO_PARITY</span><span class="p">,</span>                  <span class="c1">// No Parity</span>
+    <span class="n">EUSCI_A_UART_LSB_FIRST</span><span class="p">,</span>                  <span class="c1">// MSB First</span>
+    <span class="n">EUSCI_A_UART_ONE_STOP_BIT</span><span class="p">,</span>               <span class="c1">// One stop bit</span>
+    <span class="n">EUSCI_A_UART_MODE</span><span class="p">,</span>                       <span class="c1">// UART mode</span>
+    <span class="n">EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION</span>  <span class="c1">// Oversampling</span>
+<span class="p">};</span>
 
-  }
 
-  // load chart lib
-  google.load('visualization', '1', {
-    packages: ['corechart']
-  });
+<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="cm">/* Halting WDT  */</span>
+    <span class="n">WDT_A_holdTimer</span><span class="p">();</span>
 
-  // call drawChart once google charts is loaded
-  google.setOnLoadCallback(drawChart);
 
-</script>
+    <span class="cm">/* Configure pins P3.2 and P3.3 in UART mode.</span>
+<span class="cm">     * Doesn&#39;t matter if they are set to inputs or outputs</span>
+<span class="cm">     */</span>
+    <span class="n">GPIO_setAsPeripheralModuleFunctionInputPin</span><span class="p">(</span><span class="n">GPIO_PORT_P3</span><span class="p">,</span>
+                <span class="n">GPIO_PIN2</span> <span class="o">|</span> <span class="n">GPIO_PIN3</span><span class="p">,</span> <span class="n">GPIO_PRIMARY_MODULE_FUNCTION</span><span class="p">);</span>
 
-<div id="chart" style="width: 100%;"></div>
+    <span class="cm">/* Setting DCO (clock) to 12MHz */</span>
+    <span class="n">CS_setDCOCenteredFrequency</span><span class="p">(</span><span class="n">CS_DCO_FREQUENCY_12</span><span class="p">);</span>
 
-<p>In my ongoing quest to procrastinate writing my <a href="http://www.github.com/samvrlewis/thesis/">thesis</a> by working on marginally related work so that I still feel vaguely productive, I implemented a simple system to automatically keep track of how many words I've written in my thesis report.  </p>
-<p>Conveniently, I'm using LaTeX to write the thesis report. This allowed me to use the cool <a href="http://app.uio.no/ifi/texcount/">texcount</a> script (included in most TeX distributions) to count the number of words in each of the .tex files in my thesis. The good thing about this script is it won't count the LaTeX markup towards my total word count. </p>
-<p>Needing somewhere to store the word count, and because I've been looking for an excuse to use it, I used SparkFun's <a href="https://data.sparkfun.com/">phant</a> to create a quick and dirty data stream. The great thing about phant is once you've created the data stream, all that's needed to submit data to it is a single HTTP GET request which is doable in a single line of python. If you're that way inclined, you can see my data stream <a href="https://data.sparkfun.com/streams/zDaZOadL0XUKgVp5ojgV">here</a>.</p>
-<p>Because I'm using git as version control, all that was then needed to tie everything together was a <a href="https://gist.github.com/samvrlewis/8a1522084bc99eda7651">quick python script</a> for the pre-commit git hook to count the words in each of my different sections, add them together and submit the total to my data stream on phant. This runs whenever I commit to git -- so whenever I've actually written something useful. Easy! </p>
-<p>It was then simple to hook into the data stream with google charts. A chart with my progress is shown above, will be interesting to see how the line behaves (I'm expecting an exponential rise closer to the due date!). </p>
+    <span class="cm">/* Configuring UART Module */</span>
+    <span class="n">UART_initModule</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">uartConfig</span><span class="p">);</span>
+
+    <span class="cm">/* Enable UART module */</span>
+    <span class="n">UART_enableModule</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">);</span>
+
+    <span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="p">{</span>
+        <span class="cm">/* Send the &#39;g&#39; character over UART */</span>
+        <span class="n">UART_transmitData</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">,</span> <span class="sc">&#39;g&#39;</span><span class="p">);</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>Hopefully that's helpful in understanding a little bit about configuring the serial modules on the MSP432. If you have a question or just want to yell at me for getting something completely wrong, don't hesitate to reach out.</p>
   </div>
     
 

@@ -1,5 +1,103 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="http://www.samlewis.me/" rel="alternate"></link><link href="http://www.samlewis.me/feeds/all.atom.xml" rel="self"></link><id>http://www.samlewis.me/</id><updated>2015-05-17T00:00:00+10:00</updated><entry><title>MSP432 serial printf</title><link href="http://www.samlewis.me/2015/05/msp432-serial-printf" rel="alternate"></link><updated>2015-05-17T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-17:2015/05/msp432-serial-printf</id><summary type="html">&lt;p&gt;While the &lt;a href="http://www.ti.com/lsds/ti/microcontrollers_16-bit_32-bit/msp/low_power_performance/msp432p4x/getting_started.page?paramCriteria=no"&gt;MSP432&lt;/a&gt;, does seem to be an kickin' rad microcontroller, I've noticed a distinct lack of resources online to do the most basic microcontrolley stuff.&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="http://www.samlewis.me/" rel="alternate"></link><link href="http://www.samlewis.me/feeds/all.atom.xml" rel="self"></link><id>http://www.samlewis.me/</id><updated>2015-05-23T00:00:00+10:00</updated><entry><title>Using the MSP432 serial (eUSCI) modules</title><link href="http://www.samlewis.me/2015/05/using-msp432-eUSCI" rel="alternate"></link><updated>2015-05-23T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-23:2015/05/using-msp432-eUSCI</id><summary type="html">&lt;p&gt;As a follow up to &lt;a href="../msp432-serial-printf/"&gt;my post on MSP432 printf functionality&lt;/a&gt;, this is a write-up of my notes on using the serial modules on the MSP432. &lt;/p&gt;
+&lt;p&gt;The MSP432 has two different types of serial modules; eUSCI_A modules and eUSCI_B modules. The eUSCI_A modules support both the UART and SPI protocols while the eUSCI_B modules support the SPI and I2C protocols. Using the &lt;a href="http://www.ti.com/lit/ds/slas826a/slas826a.pdf"&gt;MSP432 datasheet&lt;/a&gt; you can find which MSP432 pins correspond to the modules. The following picture, which is an excerpt from page 10 of the data sheet shows the pin mapping for the first eUSCI_A and eUSCI_B modules.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="MSP432 serial modules" src="serial_modules.png" /&gt;&lt;/p&gt;
+&lt;p&gt;As each of the two modules support multiple protocols, you might not need to use all of the pins when you're using one of the modules. For example, if you wanted to use eUSCI_A0 for UART, you wouldn't need a 'slave transmit enable' pin or a 'clock signal input/output'. So you'd only be using P1.2 and P1.3. In fact, these are exactly the two pins you're using when you're communicating with your PC over UART as described in &lt;a href="../msp432-serial-printf/"&gt;my previous post&lt;/a&gt;! &lt;/p&gt;
+&lt;p&gt;So now you know which pins to use, but how do you actually configure and use them? A word of warning first though: on the MSP432 launchpad, not all the eUSCI modules have pins exposed on the launchpad, so first check that the module you want has the relevant pins exposed on the launchpad. I've been playing around with a ESP8266 chip which talks over UART and have been using the eUSCI_A2 module which is on pins P3.2 and P3.3.&lt;/p&gt;
+&lt;p&gt;To configure the serial modules you have two choices; either read the &lt;a href="http://www.ti.com/lit/ug/slau356a/slau356a.pdf"&gt;family guide&lt;/a&gt; and toggle bits in all of the configuration registers manually or let TI do the heavy heavy lifting and use their &lt;a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP432_Driver_Library/latest/exports/driverlib/doc/MSP432P4xx/MSP432_DriverLib_Users_Guide-MSP432P4xx-2_20_00_08.pdf"&gt;driverlib&lt;/a&gt;. The driverlib is good but can be frustrating to use as the documentation provided is fairly minimal and you need to have an idea of what you're looking for first. &lt;/p&gt;
+&lt;p&gt;As an example of using the driverlib to configure a serial module, I'll step through the process of configuring the eUSCI_A2 module for UART with a baud rate of 9600 so that it can talk to my ESP8266 chip. The process should be similar for any serial chip that you want to interface with your MSP432 though!&lt;/p&gt;
+&lt;p&gt;First thing first, we want to put the pins in UART mode. The pins we're specifically interested in are P3.2 and P3.3, they correspond to the RX and TX pins respectively. To do this, we need to look at the datasheet again and find where the pin functions are defined. The following picture is an excerpt from page 104 of the datasheet.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="MSP432 serial modules" src="eUSCI_A2_control.png" /&gt;&lt;/p&gt;
+&lt;p&gt;An 'X' in the P3DIR column indicates a "don't care". So for both pins, it doesn't matter if we set them to an output or an input when configuring them for UART. For the P3SEL1 and P3SEL0 columns, we need to consult the family guide. The next picture is an excerpt from page 483 of the family guide. &lt;/p&gt;
+&lt;p&gt;&lt;img alt="MSP432 serial modules" src="eUSCI_A2_control.png" /&gt;&lt;/p&gt;
+&lt;p&gt;So to use the UART functionality of these pins, we're using the 'primary IO module function'. Now we have all the information we need to set the pins up in UART mode! Because it doesn't matter whether the pins are in output or input mode, we're able to use the &lt;code&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/code&gt; function or the `GPIO_setAsPeripheralModuleFunctionOutputPin`` function. For no reason whatsoever, I'll use the output variant. The result is the following line of code.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/* Set pins 2 and 3 of port 3 to the primary module function (UART) */&lt;/span&gt;
+&lt;span class="n"&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;GPIO_PORT_P3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;GPIO_PIN2&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="no"&gt;GPIO_PIN3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="no"&gt;GPIO_PRIMARY_MODULE_FUNCTION&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;The next thing to do is to define a eUSCI config. This is basically from the TI provided examples. The only tricky bit is generating the BRDIV, UCxBRF and UCxBRS numbers which in this case are 78, 2 &amp;amp; 0. Luckily, once again TI have &lt;a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html"&gt;provided a tool&lt;/a&gt; to do this. This tool finds the optimal way of prescaling and modulating the clock source you're using to achieve your desired baud rate. More information about this process is on page 721 of the family guide. &lt;/p&gt;
+&lt;p&gt;Using the tool with a clock of 12MHz and baud rate of 9600 Hz, gives a clockPrescalar of 78, a firstModReg of 2, a secondModReg of 0 and oversampling turned on. Converting this into a config, we get the following:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="n"&gt;eUSCI_UART_Config&lt;/span&gt; &lt;span class="n"&gt;uartConfig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_CLOCKSOURCE_SMCLK&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;          &lt;span class="c1"&gt;// SMCLK Clock Source&lt;/span&gt;
+    &lt;span class="mi"&gt;78&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                      &lt;span class="c1"&gt;// BRDIV = 78&lt;/span&gt;
+    &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="c1"&gt;// UCxBRF = 2&lt;/span&gt;
+    &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="c1"&gt;// UCxBRS = 0&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_NO_PARITY&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="c1"&gt;// No Parity&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_LSB_FIRST&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="c1"&gt;// MSB First&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_ONE_STOP_BIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;               &lt;span class="c1"&gt;// One stop bit&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_MODE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                       &lt;span class="c1"&gt;// UART mode&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION&lt;/span&gt;  &lt;span class="c1"&gt;// Oversampling&lt;/span&gt;
+&lt;span class="p"&gt;};&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;The parity, MSB/LSB first and the amount of stop bits will all be determined by the device or chip that you want to communicate with. Now, to use that config to initialise the module using driverlib:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;UART_initModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;uartConfig&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;This sets all the relevant registers to achieve the configuration earlier specified. If you're really interesting in understanding what exactly this is doing, it's worth reading the family guide. Now that the module is intialised, it can finally be enabled on!&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;UART_enableModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;From here, you can send a byte of data to the module with the following driverlib function call:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/* sends the &amp;#39;g&amp;#39; character to the A2 module&amp;#39; */&lt;/span&gt;
+&lt;span class="n"&gt;UART_transmitData&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="no"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="sc"&gt;&amp;#39;g&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;If you want to simplify the process of sending individual characters (or instead want to send strings/numbers etc), check out &lt;a href="../msp432-serial-printf/"&gt;my post about a printf function for the MSP432&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;The whole code would then end up looking like this.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cp"&gt;#include &amp;quot;driverlib.h&amp;quot;&lt;/span&gt;
+
+&lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="n"&gt;eUSCI_UART_Config&lt;/span&gt; &lt;span class="n"&gt;uartConfig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_CLOCKSOURCE_SMCLK&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;          &lt;span class="c1"&gt;// SMCLK Clock Source&lt;/span&gt;
+    &lt;span class="mi"&gt;78&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                     &lt;span class="c1"&gt;// BRDIV = 78&lt;/span&gt;
+    &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="c1"&gt;// UCxBRF = 2&lt;/span&gt;
+    &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="c1"&gt;// UCxBRS = 0&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_NO_PARITY&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="c1"&gt;// No Parity&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_LSB_FIRST&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="c1"&gt;// MSB First&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_ONE_STOP_BIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;               &lt;span class="c1"&gt;// One stop bit&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_MODE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                       &lt;span class="c1"&gt;// UART mode&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION&lt;/span&gt;  &lt;span class="c1"&gt;// Oversampling&lt;/span&gt;
+&lt;span class="p"&gt;};&lt;/span&gt;
+
+
+&lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="nf"&gt;main&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="cm"&gt;/* Halting WDT  */&lt;/span&gt;
+    &lt;span class="n"&gt;WDT_A_holdTimer&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+
+
+    &lt;span class="cm"&gt;/* Configure pins P3.2 and P3.3 in UART mode.&lt;/span&gt;
+&lt;span class="cm"&gt;     * Doesn&amp;#39;t matter if they are set to inputs or outputs&lt;/span&gt;
+&lt;span class="cm"&gt;     */&lt;/span&gt;
+    &lt;span class="n"&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;GPIO_PORT_P3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+                &lt;span class="n"&gt;GPIO_PIN2&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="n"&gt;GPIO_PIN3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;GPIO_PRIMARY_MODULE_FUNCTION&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="cm"&gt;/* Setting DCO (clock) to 12MHz */&lt;/span&gt;
+    &lt;span class="n"&gt;CS_setDCOCenteredFrequency&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;CS_DCO_FREQUENCY_12&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="cm"&gt;/* Configuring UART Module */&lt;/span&gt;
+    &lt;span class="n"&gt;UART_initModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;uartConfig&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="cm"&gt;/* Enable UART module */&lt;/span&gt;
+    &lt;span class="n"&gt;UART_enableModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="k"&gt;while&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="cm"&gt;/* Send the &amp;#39;g&amp;#39; character over UART */&lt;/span&gt;
+        &lt;span class="n"&gt;UART_transmitData&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="sc"&gt;&amp;#39;g&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Hopefully that's helpful in understanding a little bit about configuring the serial modules on the MSP432. If you have a question or just want to yell at me for getting something completely wrong, don't hesitate to reach out.&lt;/p&gt;</summary></entry><entry><title>MSP432 serial printf</title><link href="http://www.samlewis.me/2015/05/msp432-serial-printf" rel="alternate"></link><updated>2015-05-17T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-17:2015/05/msp432-serial-printf</id><summary type="html">&lt;p&gt;While the &lt;a href="http://www.ti.com/lsds/ti/microcontrollers_16-bit_32-bit/msp/low_power_performance/msp432p4x/getting_started.page?paramCriteria=no"&gt;MSP432&lt;/a&gt;, does seem to be an kickin' rad microcontroller, I've noticed a distinct lack of resources online to do the most basic microcontrolley stuff.&lt;/p&gt;
 &lt;p&gt;So this is a quick bit of code to get a serial/UART connection up and going from the MSP432 to your computer over the USB connection. Perfect for any debugging that you might want to do, or communication with other serial devices (for example the exciting ESP8266 which I'll cover in a later blog post).&lt;/p&gt;
 &lt;p&gt;The MSP432-printf library, which is largely from 43oh member OPossum (&lt;a href="http://www.msp430launchpad.com/2012/06/using-printf.html"&gt;printf for the MSP430&lt;/a&gt;), lets you print to any serial module using standard printf syntax. For example: &lt;code&gt;printf(EUSCI_A0_MODULE, "String one: %d", 1)&lt;/code&gt;. The code for the library can be &lt;a href="https://github.com/samvrlewis/MSP432-printf/blob/master/printf.c"&gt;found on my GitHub&lt;/a&gt;. &lt;/p&gt;
 &lt;p&gt;An example of using this printf library with the MSP432 is shown below. &lt;/p&gt;
