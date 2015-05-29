@@ -3,13 +3,13 @@
 #report to console
 set -e
 
+#make the website
+pelican  content -o output -s pelicanconf.py
+
 git clone https://${GH_TOKEN}@github.com/samvrlewis/samvrlewis.github.io.git master
 
 #clean old master dir
 rm -rf master
-
-#make the website
-make publish
 
 #copy to master
 cp -R output/* master
