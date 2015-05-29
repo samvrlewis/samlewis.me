@@ -30,14 +30,13 @@ TAG_FEED_ATOM = "feeds/tag/%s.atom.xml"
 
 # PLUGINS
 PLUGIN_PATH = './plugins/'
-PLUGINS = ['liquid_tags.notebook', 'liquid_tags.include_code',
-            'liquid_tags.img', 'liquid_tags.video']
+PLUGINS = []
 
 CODE_DIR = 'code'
 NOTEBOOK_DIR = 'notebooks'
-EXTRA_HEADER = open('_nb_header.html').read().decode('utf-8')
+#EXTRA_HEADER = open('_nb_header.html').read().decode('utf-8')
 
-STATIC_PATHS = ['images', 'code', 'notebooks', 'extra']
+STATIC_PATHS = ['images']
 EXTRA_PATH_METADATA = {'extra/robots.txt': {'path': 'robots.txt'},}
 
 

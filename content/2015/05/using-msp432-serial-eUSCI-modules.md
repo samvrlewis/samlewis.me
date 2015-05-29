@@ -6,7 +6,7 @@ As a follow up to [my post on MSP432 printf functionality](../msp432-serial-prin
 
 The MSP432 has two different types of serial modules; eUSCI_A modules and eUSCI_B modules. The eUSCI_A modules support both the UART and SPI protocols while the eUSCI_B modules support the SPI and I2C protocols. Using the [MSP432 datasheet](http://www.ti.com/lit/ds/slas826a/slas826a.pdf) you can find which MSP432 pins correspond to the modules. The following picture, which is an excerpt from page 10 of the data sheet shows the pin mapping for the first eUSCI_A and eUSCI_B modules.
 
-![MSP432 serial modules](serial_modules.png)
+![MSP432 serial modules](/images/serial_modules.png)
 
 As each of the two modules support multiple protocols, you might not need to use all of the pins when you're using one of the modules. For example, if you wanted to use eUSCI_A0 for UART, you wouldn't need a 'slave transmit enable' pin or a 'clock signal input/output'. So you'd only be using P1.2 and P1.3. In fact, these are exactly the two pins you're using when you're communicating with your PC over UART as described in [my previous post](../msp432-serial-printf/)! 
 
@@ -18,11 +18,11 @@ As an example of using the driverlib to configure a serial module, I'll step thr
 
 First thing first, we want to put the pins in UART mode. The pins we're specifically interested in are P3.2 and P3.3, they correspond to the RX and TX pins respectively. To do this, we need to look at the datasheet again and find where the pin functions are defined. The following picture is an excerpt from page 104 of the datasheet.
 
-![MSP432 serial modules](eUSCI_A2_control.png)
+![MSP432 serial modules](/images/eUSCI_A2_control.png)
 
 An 'X' in the P3DIR column indicates a "don't care". So for both pins, it doesn't matter if we set them to an output or an input when configuring them for UART. For the P3SEL1 and P3SEL0 columns, we need to consult the family guide. The next picture is an excerpt from page 483 of the family guide. 
 
-![MSP432 serial modules](GPIO_selection.png)
+![MSP432 serial modules](/images/GPIO_selection.png)
 
 So to use the UART functionality of these pins, we're using the 'primary IO module function'. Now we have all the information we need to set the pins up in UART mode! Because it doesn't matter whether the pins are in output or input mode, we're able to use the ``GPIO_setAsPeripheralModuleFunctionInputPin`` function or the `GPIO_setAsPeripheralModuleFunctionOutputPin`` function. For no reason whatsoever, I'll use the output variant. The result is the following line of code.
 	
