@@ -24,7 +24,7 @@ An 'X' in the P3DIR column indicates a "don't care". So for both pins, it doesn'
 
 ![MSP432 serial modules](/images/GPIO_selection.png)
 
-So to use the UART functionality of these pins, we're using the 'primary IO module function'. Now we have all the information we need to set the pins up in UART mode! Because it doesn't matter whether the pins are in output or input mode, we're able to use the ``GPIO_setAsPeripheralModuleFunctionInputPin`` function or the ``GPIO_setAsPeripheralModuleFunctionOutputPin`` function. For no reason whatsoever, I'll use the output variant. The result is the following line of code.
+So to use the UART functionality of these pins, we're using the 'primary IO module function'. Now we have all the information we need to set the pins up in UART mode! Because it doesn't matter whether the pins are in output or input mode, we're able to use the ``GPIO_setAsPeripheralModuleFunctionInputPin`` function or the ``GPIO_setAsPeripheralModuleFunctionOutputPin`` function. For no reason whatsoever, I'll use the output variant. The result is the following line of code:
 	
 	/* Set pins 2 and 3 of port 3 to the primary module function (UART) */
 	GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P3, GPIO_PIN2 | GPIO_PIN3, GPIO_PRIMARY_MODULE_FUNCTION);
