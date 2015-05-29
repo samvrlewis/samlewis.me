@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+<head>
+
+  {% block header %}{% endblock %}
+
+	<!-- Basic Page Needs
+  ================================================== -->
+	<meta charset="utf-8">
+	<title>{% block title %}{% endblock %}</title>
+	<meta name="google-site-verification" content="AgIAQN_qsniIQWOq659Bnhzx-LZts2FdgP1kLgtQg-k" />
+	<meta name="description" content="{% block metadesc %}{% endblock %}">
+	<meta name="author" content="Greg Reda">
+
+	<!-- Facebook Open Graph
+  ================================================== -->
+  <meta property="og:title" content="{{ TITLE }}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="http://www.gregreda.com">
+  <meta property="og:image" content="http://www.gregreda.com/theme/images/avatar.jpg">
+  <meta property="og:description" content="{{ DESCRIPTION }}">
+
+	<!-- Mobile Specific Metas
+  ================================================== -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<!-- CSS
+  ================================================== -->
+	<link rel="stylesheet" href="{{ SITEURL }}/theme/css/base.css">
+	<link rel="stylesheet" href="{{ SITEURL }}/theme/css/skeleton.css">
+	<link rel="stylesheet" href="{{ SITEURL }}/theme/css/layout.css">
+	<link rel="stylesheet" href="{{ SITEURL }}/theme/css/simply.css">
+	<link rel="stylesheet" href="{{ SITEURL }}/theme/css/pygments.css">
+	<link rel="stylesheet" href="{{ SITEURL }}/theme/css/font-awesome.css">
+	<link href='http://fonts.googleapis.com/css?family=Source+Code+Pro' rel='stylesheet' type='text/css'>
+
+	<!--[if lt IE 9]>
+		<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+
+	<!-- JavaScript
+	=================================================== -->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+
+	<!-- Favicons
+	================================================== -->
+	<!-- <link rel="shortcut icon" href="./theme/images/favicon.ico"> -->
+	<link rel="apple-touch-icon" href="./theme/images/apple-touch-icon.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="./theme/images/apple-touch-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="./theme/images/apple-touch-icon-114x114.png">
+
+</head>
+<body>
+
+	<!-- Primary Page Layout
+	================================================== -->
+	<div class="container">
+		<div id="sidebar" class="three columns">
+			<a href="{{ SITEURL }}"><img id="avatar" src="{{ SITEURL }}/theme/images/avatar.jpg"></img></a>
+			<h3 id="logo"><a href="{{ SITEURL }}">{{ SITENAME }}</a></h3>
+	    <p id="bio">Hi. I'm a data nerd at <a href="http://grubhub.com">GrubHub</a> in Chicago. I'm obsessed with all things data, statistics, music, and craft beer.</p>
+	    <p>Thoughts and views here are mine.</p>
+	    <hr class="small" /> 
+    	<div id="social">
+    		<a class="icon" href="https://twitter.com/gjreda" title="Twitter"><i class="icon-twitter"></i></a>
+    		<a class="icon" href="https://github.com/gjreda" title="GitHub"><i class="icon-github"></i></a>
+    		<a class="icon" href="http://linkedin.com/in/gjreda" title="LinkedIn"><i class="icon-linkedin"></i></a>
+    		<a class="icon" href="https://plus.google.com/111658599948853828157?rel=author" title="Google+"><i class="icon-google-plus"></i></a>
+				<a class="icon" href="https://last.fm/user/gjreda" title="LastFM"><i class="icon-music"></i></a>
+    		<a class="icon" href="mailto:gjreda@gmail.com?subject=Hi" title="E-Mail"><i class="icon-envelope"></i></a>
+    		<a class="icon" href="http://www.gregreda.com/feeds/all.atom.xml" title="Subscribe (Atom)"><i class="icon-rss"></i></a>
+    	</div> <!-- social -->
+    	<!-- <a style="text-align:center;" href="{{ SITEURL }}/about/">About Me</a> -->
+		</div> <!-- sidebar -->
+
+		<section id="content" class="twelve columns offset-by-one">
+			{% block content %}{% endblock %}
+		</section>
+
+		<footer class="twelve columns offset-by-one">
+			<!-- <hr class="small"> -->
+			<p>Generated with <a href="http://getpelican.com">Pelican</a>. Layout done with <a href="http://getskeleton.com">Skeleton</a>. Icons are <a href="http://fortawesome.github.com/Font-Awesome/">Font Awesome</a>. Hosted on <a href="http://aws.amazon.com/s3/">S3</a>.</p>
+		</footer>
+		
+	</div><!-- container -->
+
+<!-- Google Analytics -->
+	{% include "analytics.html" %}
+
+  <script type="text/javascript">
+    $("a").on('click', function(e) {
+      var url = $(this).attr("href");
+      if (e.currentTarget.host != window.location.host) {
+        _gaq.push(['_trackEvent', 'Outbound Links', e.currentTarget.host, url, 0]);
+        if (e.metaKey || e.ctrlKey) {
+          var newtab = true;
+        }
+        if (!newtab) {
+          e.preventDefault();
+          setTimeout('document.location = "' + url + '"', 100);
+        }
+      }
+    });
+  </script>
+
+<!-- End Document
+================================================== -->
+</body>
+</html>

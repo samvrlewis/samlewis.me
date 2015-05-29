@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+<head>
+
+  {% block header %}{% endblock %}
+
+	<!-- Basic Page Needs
+  ================================================== -->
+	<meta charset="utf-8">
+	<title>{% block title %}{% endblock %}</title>
+
+	<meta name="google-site-verification" content="0wRDUL1uay7MXb9mC8tycRBay0xX5RCY4n8inQCY498" />
+
+	<meta name="description" content="{% block metadesc %}{% endblock %}">
+	<meta name="author" content="Sam Lewis">
+        <link rel="canonical" href="http://www.samlewis.me"/>
+
+  <!-- Feeds
+  ================================================== --> 
+  {% if FEED_ALL_ATOM %}
+  <link rel="alternate" type="application/atom+xml" href="{{ FEED_DOMAIN }}/{{ FEED_ALL_ATOM }}" title="{{ SITENAME }} Full Atom Feed">
+  {% endif %}
+
+	<!-- Facebook Open Graph
+  ================================================== -->
+  <meta property="og:title" content="{{ TITLE }}">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="{{ SITEURL }}">
+  <meta property="og:image" content="{{ AVATAR }}">
+  <meta property="og:description" content="{{ DESCRIPTION }}">
+
+  <!-- Twitter Cards
+  ================================================== -->
+  {% if TWITTER_CARDS %}
+  {% block twittercards %}{% endblock %}
+  {% endif %}
+
+	<!-- Mobile Specific Metas
+  ================================================== -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<!-- CSS
+  ================================================== -->
+	<link rel="stylesheet" href="/theme/css/base.css">
+	<link rel="stylesheet" href="/theme/css/skeleton.css">
+	<link rel="stylesheet" href="/theme/css/layout.css">
+	<link rel="stylesheet" href="/theme/css/simply.css">
+	<link rel="stylesheet" href="/theme/css/pygment.css">
+	<link href="//netdna.bootstrapcdn.com/font-awesome/3.2.1/css/font-awesome.css" rel="stylesheet">
+
+	<!--[if lt IE 9]>
+		<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+
+	<!-- JavaScript
+	=================================================== -->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        
+
+
+	<!-- Favicons
+	================================================== -->
+	<link rel="shortcut icon" href="/theme/images/favicon.ico">
+	<link rel="apple-touch-icon" href="/theme/images/apple-touch-icon.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="/theme/images/apple-touch-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="/theme/images/apple-touch-icon-114x114.png">
+
+</head>
+<body>
+
+	<!-- Primary Page Layout
+	================================================== -->
+	<div class="container">
+		<section id="sidebar" class="two columns">
+			<a href="/"><img id="avatar" src="{{ AVATAR }}"></img></a>
+			<h3 id="logo"><a href="/">{{ SITENAME }}</a></h3>
+	    <hr class="small" /> 
+    	<div id="social">
+    		<a class="icon" href="http://github.com/samvrlewis" title="GitHub"><i class="icon-github"></i></a>
+    		<a class="icon" href="http://au.linkedin.com/in/samvrlewis" title="LinkedIn"><i class="icon-linkedin"></i></a>
+            <a class="icon" href="mailto:sam.vr.lewis@gmail.com?subject=Hi" title="E-Mail"><i class="icon-envelope"></i></a>
+    		<a class="icon" href="{{ FEED_DOMAIN }}/{{ FEED_ALL_ATOM }}" title="Subscribe (Atom)"><i class="icon-rss"></i></a>
+    	</div> <!-- social -->
+      <!-- <hr class="small" />
+      <div class="nav">
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/work">Work</a></li>
+        </ul>
+      </div> -->
+		</section> <!-- sidebar -->
+
+		<section id="content" class="thirteen columns offset-by-one">
+			{% block content %}{% endblock %}
+		</section>
+
+	</div><!-- container -->
+
+<!-- Google Analytics -->
+	{% include "analytics.html" %}
+
+  <script type="text/javascript">
+    $("a").on('click', function(e) {
+      var url = $(this).attr("href");
+      if (e.currentTarget.host != window.location.host) {
+        _gaq.push(['_trackEvent', 'Outbound Links', e.currentTarget.host, url, 0]);
+        if (e.metaKey || e.ctrlKey) {
+          var newtab = true;
+        }
+        if (!newtab) {
+          e.preventDefault();
+          setTimeout('document.location = "' + url + '"', 100);
+        }
+      }
+    });
+  </script>
+
+<!-- End Document
+================================================== -->
+</body>
+</html>
