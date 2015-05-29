@@ -11,7 +11,7 @@ rm -rf master
 #make the website
 make publish
 
-#
+#copy to master
 cp -R output/* master
 
 cd master
