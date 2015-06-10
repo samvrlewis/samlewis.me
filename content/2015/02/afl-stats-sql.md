@@ -2,7 +2,8 @@ Title: AFL statistics SQL database
 Date: 2015-02-21
 Slug: afl-stats-sql
 
-[AFL stats db](https://github.com/samvrlewis/afl-stats-database) <iframe src="https://ghbtns.com/github-btn.html?user=samvrlewis&repo=afl-stats-database&type=star&count=true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
+The AFL stats database (and some relevant code) is [on github](https://github.com/samvrlewis/afl-stats-database)!
+<iframe src="https://ghbtns.com/github-btn.html?user=samvrlewis&repo=afl-stats-database&type=star&count=true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
 
 Download the SQL(ite) stats database here: [afl-stats.sqlite](https://github.com/samvrlewis/afl-stats-database/raw/master/afl-stats.sqlite)
 
