@@ -9,7 +9,11 @@
  
  function goBackToApp() {
     document.getElementById("content").innerHTML = "Returning you to Enforcer app.."
-    window.location.href = "ibmice://test";
+    
+    setTimeout(function() {
+
+        document.location.href = "ibmice://registered";
+      }, 1000);
  }
  </script>
 </head>
