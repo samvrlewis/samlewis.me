@@ -4,7 +4,7 @@
  function getConfig() {
     
     window.location.href = "http://www.publicvpn.com/support/PublicVPN.com-L2TP.mobileconfig";
-    setTimeout(postmc, 1000);
+    setTimeout(goBackToApp, 1000);
  }
  
  function goBackToApp() {
@@ -14,7 +14,7 @@
  </script>
 </head>
 
-<body onload="setTimeout(mc, 500)">
+<body onload="setTimeout(getConfig, 500)">
 <div id="text">Loading</div>
 </body>
 </html>
