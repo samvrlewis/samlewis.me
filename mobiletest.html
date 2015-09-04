@@ -1,19 +1,20 @@
 <html>
 <head>
 <script type="text/javascript">
- function mc() {
+ function getConfig() {
+    
     window.location.href = "http://www.publicvpn.com/support/PublicVPN.com-L2TP.mobileconfig";
     setTimeout(postmc, 1000);
  }
  
- function postmc() {
-    window.location.href = "http://www.bing.com";
- 
+ function goBackToApp() {
+    document.getElementById("content").innerHTML = "Returning you to Enforcer app.."
+    window.location.href = "ibmice://test;
  }
  </script>
 </head>
 
 <body onload="setTimeout(mc, 500)">
-hello
+<div id="text">Loading</div>
 </body>
 </html>
