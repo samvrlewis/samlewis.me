@@ -1,3 +1,7 @@
+Title: Startup Catalyst 2015: I'm off to Silicon Valley!
+Date: 2015-09-24
+Slug: startup-catalyst-2015
+
 In just two short sleeps, I'll be jetting off to Silicon Valley as part of the [Startup Catalyst]('http:/www.startupcatalyst.com.au/') program. The program was instigated by Australian entrepreneur/mentor/investor Steve Baxter (who is now a 'shark' on the Australian version of Shark Tank) and aims to expose a group of under 25s (affectionately referred to as 'youths') with technical backgrounds to the startup culture in Silicon Valley.
 
 I'll be headed over with 19 other awesome youths from a variety of different backgrounds - spanning robotics to UI - and over the 10 days that we're in San Francisco we'll visit a whole bunch of tech companies (Google, Facebook and Twitter to name just a few!), have the chance to chat to startup founders and technical whizzes, attend tech meetups and even participate in a startup weekend. Sound like a lot for 10 days? It is! The schedule is completely packed with awesome events and as we were told by Steve and Colin (the project director and technology lead, respectively), they don’t want to kill us - just nearly kill us. 
