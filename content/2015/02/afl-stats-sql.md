@@ -2,6 +2,9 @@ Title: AFL statistics SQL database
 Date: 2015-02-21
 Slug: afl-stats-sql
 
+The AFL stats database (and some relevant code) is [on github](https://github.com/samvrlewis/afl-stats-database)!
+<iframe src="https://ghbtns.com/github-btn.html?user=samvrlewis&repo=afl-stats-database&type=star&count=true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
+
 Download the SQL(ite) stats database here: [afl-stats.sqlite](https://github.com/samvrlewis/afl-stats-database/raw/master/afl-stats.sqlite)
 
 The SQLite database has team statistics for each season and finals game for 1987-2014. In the earlier years not all stats are present as they were not all recorded. The database schema is shown below, which also shows the type of stats avaliable. 
