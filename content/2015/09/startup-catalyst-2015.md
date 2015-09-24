@@ -6,7 +6,7 @@ In just two short sleeps, I'll be jetting off to Silicon Valley as part of the [
 
 I'll be headed over with 19 other awesome youths from a variety of different backgrounds - spanning robotics to UI - and over the 10 days that we're in San Francisco we'll visit a whole bunch of tech companies (Google, Facebook and Twitter to name just a few!), have the chance to chat to startup founders and technical whizzes, attend tech meetups and even participate in a startup weekend. Sound like a lot for 10 days? It is! The schedule is completely packed with awesome events and as we were told by Steve and Colin (the project director and technology lead, respectively), they don’t want to kill us - just nearly kill us. 
 
-![Catalyst Group](/images/catalystgroup.png)
+![Catalyst Group](/images/cataylstgroup.png)
 *The 2015 Catalyst group*
 
 I'm only a recent convert to the startup world, having participated in my first 'Startup Weekend' (an event where you literally create a startup during the course of the weekend!) where I, and 3 others, created [Drivevibe](http://www.drivevibe.co). I've been bit by the bug ever since, the Startup Mentality of 'just getting it done', is just so infectious and motivational.
