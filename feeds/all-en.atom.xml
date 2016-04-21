@@ -15,7 +15,7 @@ make qemu
 
 &lt;p&gt;If make fails, make sure you have your compiler toolchain installed. There's some good info on the &lt;a href="https://pdos.csail.mit.edu/6.828/2014/tools.html"&gt;6.282 tools page&lt;/a&gt;. For me, on Fedora, I needed to install gcc with &lt;code&gt;dnf install gcc&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;Once you have your compiler toolchain working, qemu will pop up and you'll be presented with the xv6 shell. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="qemu xv6 shell" src="qemu.png" /&gt; &lt;/p&gt;
+&lt;p&gt;&lt;img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png" /&gt; &lt;/p&gt;
 &lt;p&gt;From here, you'll be able to run a few simple commands like &lt;code&gt;ls&lt;/code&gt; and &lt;code&gt;cat&lt;/code&gt; and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. &lt;/p&gt;
 &lt;p&gt;The core &lt;code&gt;while&lt;/code&gt; loop the shell executes is shown below. &lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt; // Read and run input commands.
