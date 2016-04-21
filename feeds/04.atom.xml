@@ -37,5 +37,5 @@ make qemu
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;p&gt;This loop gets a command from a user, checks if it's the &lt;code&gt;cd&lt;/code&gt; command and attempts to change directory if it is, otherwise it forks, and runs the entered command in the child process. I personally love how simple and enjoyable the code is to read - check out the rest of the listing for &lt;code&gt;sh.c&lt;/code&gt; in the xv6 source code pdf - it's only 400 pages of code and a delight to read.&lt;/p&gt;
+&lt;p&gt;This loop gets a command from a user, checks if it's the &lt;code&gt;cd&lt;/code&gt; command and attempts to change directory if it is, otherwise it forks, and runs the entered command in the child process. I personally love how simple and enjoyable the code is to read - check out the rest of the listing for &lt;code&gt;sh.c&lt;/code&gt; in the xv6 source code pdf - it's only 400 lines of code and a delight to read.&lt;/p&gt;
 &lt;p&gt;This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll explore the xv6 bootstrap sequence!&lt;/p&gt;</summary></entry></feed>
