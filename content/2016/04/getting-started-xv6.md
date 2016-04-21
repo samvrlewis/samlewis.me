@@ -46,4 +46,4 @@ The core `while` loop the shell executes is shown below.
 
 This loop gets a command from a user, checks if it's the `cd` command and attempts to change directory if it is, otherwise it forks, and runs the entered command in the child process. I personally love how simple and enjoyable the code is to read - check out the rest of the listing for `sh.c` in the xv6 source code pdf - it's only 400 lines of code and a delight to read.
 
-This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll explore the xv6 bootstrap sequence!
+This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll step through and explore the xv6 bootstrap sequence!
