@@ -1,4 +1,6 @@
-Title: Getting started with the xv6 operating system Date: 2016-04-18 Slug: getting-started-xv6
+Title: Getting started with the xv6 operating system 
+Date: 2016-04-18 
+Slug: getting-started-xv6
 
 xv6 is a nifty operating system that is essentially a reimplementation of [Sixth Edition Unix](https://en.wikipedia.org/wiki/Version_6_Unix) that, unlike most of the huge montholithic Linux or BSD distributions that you'd run on your workstation or server, is simple enough to be used as a learning tool. Though xv6 lacks in functionality that you'd expect from a modern operating system, much of the core unix concepts and structure remain the same. xv6 is also very lightweight, only taking a few seconds to compile and allows remote debugging. This all makes it great for understanding how modern operating systems hang together. 
 
