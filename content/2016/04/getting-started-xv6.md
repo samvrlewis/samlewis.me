@@ -21,7 +21,7 @@ If make fails, make sure you have your compiler toolchain installed. There's som
 
 Once you have your compiler toolchain working, qemu will pop up and you'll be presented with the xv6 shell. 
 
-![qemu xv6 shell](qemu.png) 
+![qemu xv6 shell](https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png) 
 
 From here, you'll be able to run a few simple commands like `ls` and `cat` and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. 
 
