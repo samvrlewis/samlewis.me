@@ -11,7 +11,7 @@
 	<!-- Basic Page Needs
   ================================================== -->
 	<meta charset="utf-8">
-	<title>Using C# to check if audio is playing in Windows | Sam Lewis</title>
+	<title>Getting started with the xv6 operating system Date: 2016-04-18 Slug: getting-started-xv6 | Sam Lewis</title>
 
 	<meta name="google-site-verification" content="0wRDUL1uay7MXb9mC8tycRBay0xX5RCY4n8inQCY498" />
 
@@ -92,47 +92,49 @@
 
 		<section id="content" class="thirteen columns offset-by-one">
 
-  <h3 class="article-title"><a href="/2014/08/is-audio-playing-windows" title="Permalink to Using C# to check if audio is playing in Windows">Using C# to check if audio is playing in Windows</a></h3>
-  <h6 class="article-date">05 Aug 2014</h6>
+  <h3 class="article-title"><a href="/2016/04/getting-started-with-the-xv6-operating-system-date-2016-04-18-slug-getting-started-xv6" title="Permalink to Getting started with the xv6 operating system Date: 2016-04-18 Slug: getting-started-xv6">Getting started with the xv6 operating system Date: 2016-04-18 Slug: getting-started-xv6</a></h3>
+  <h6 class="article-date">21 Apr 2016</h6>
   <div class="article-content">
-    <p>Using the <a href="http://cscore.codeplex.com/">CSCore</a> library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.</p>
-<p>The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore.</p>
-<div class="highlight"><pre><span></span>using CSCore.CoreAudioAPI;
-using System;
-
-namespace AudioPlayingTest
-{
-    class AudioPlayChecker
-    {
-        // Gets the default device for the system
-        public static MMDevice GetDefaultRenderDevice()
-        {
-            using (var enumerator = new MMDeviceEnumerator())
-            {
-                return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
-            }
-        }
-
-        // Checks if audio is playing on a certain device
-        public static bool IsAudioPlaying(MMDevice device)
-        {
-            using (var meter = AudioMeterInformation.FromDevice(device))
-            {
-                return meter.PeakValue &gt; 0;
-            }
-        }
-
-        static void Main(string[] args)
-        {
-            Console.WriteLine(IsAudioPlaying(GetDefaultRenderDevice()));
-            Console.ReadLine(); //Just so the console window doesn&#39;t close
-        }
-    }
-}
+    <p>xv6 is a nifty operating system that is essentially a reimplementation of <a href="https://en.wikipedia.org/wiki/Version_6_Unix">Sixth Edition Unix</a> that, unlike most of the huge montholithic Linux or BSD distributions that you'd run on your workstation or server, is simple enough to be used as a learning tool. Though xv6 lacks in functionality that you'd expect from a modern operating system, much of the core unix concepts and structure remain the same. xv6 is also very lightweight, only taking a few seconds to compile and allows remote debugging. This all makes it great for understanding how modern operating systems hang together. </p>
+<p>In fact, xv6 was developed by MIT as a teaching operating system for their <a href="https://pdos.csail.mit.edu/6.828/2014/xv6.html">6.828 course</a>. The course page for 6.828 is a great resource that MIT are kind enough to have publicly avaliable. </p>
+<p>MIT also produce a fantastic <a href="https://pdos.csail.mit.edu/6.828/2014/xv6/book-rev8.pdf">xv6 reference book</a> that provides commentary on the structure of the xv6 operating system. Additionally, the xv6 source actually self documents - the xv6 <code>make</code> file contains a target (<code>make xv6.pdf</code>) that generates a <a href="https://pdos.csail.mit.edu/6.828/2014/xv6/xv6-rev8.pdf">pdf of the source code</a>, which amazingly comes in under 100 pages and 10k lines of source (including comments!). Not bad for an entire, functional, operating system. </p>
+<p>xv6 is typically run virtualized using qemu on a Linux host machine. To get started with xv6, clone the xv6 repo:</p>
+<div class="highlight"><pre><span></span>git clone git://github.com/mit-pdos/xv6-public.git xv6
 </pre></div>
 
 
-<p>The code is hopefully self explanatory but basically gets the default system audio device, then uses the peak value from a audio meter to determine whether audio is playing.</p>
+<p>Then to start it as a virtual machine under qemu:</p>
+<div class="highlight"><pre><span></span>cd xv6
+make qemu
+</pre></div>
+
+
+<p>If make fails, make sure you have your compiler toolchain installed. There's some good info on the <a href="https://pdos.csail.mit.edu/6.828/2014/tools.html">6.282 tools page</a>. For me, on Fedora, I needed to install gcc with <code>dnf install gcc</code>.</p>
+<p>Once you have your compiler toolchain working, qemu will pop up and you'll be presented with the xv6 shell. </p>
+<p><img alt="qemu xv6 shell" src="qemu.png" /> </p>
+<p>From here, you'll be able to run a few simple commands like <code>ls</code> and <code>cat</code> and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. </p>
+<p>The core <code>while</code> loop the shell executes is shown below. </p>
+<div class="highlight"><pre><span></span> // Read and run input commands.
+ while(getcmd(buf, sizeof(buf)) &gt;= 0){
+    if(buf[0] == ’c’ &amp;&amp; buf[1] == ’d’ &amp;&amp; buf[2] == ’ ’){
+        // Clumsy but will have to do for now.
+        // Chdir has no effect on the parent if run in the child.
+        buf[strlen(buf)−1] = 0; // chop \n
+
+        if(chdir(buf+3) &lt; 0)
+            printf(2, &quot;cannot cd %s\n&quot;, buf+3);
+        continue;
+    }
+    if(fork1() == 0)
+        runcmd(parsecmd(buf));
+    wait();
+ }
+ exit();
+</pre></div>
+
+
+<p>This loop gets a command from a user, checks if it's the <code>cd</code> command and attempts to change directory if it is, otherwise it forks, and runs the entered command in the child process. I personally love how simple and enjoyable the code is to read - check out the rest of the listing for <code>sh.c</code> in the xv6 source code pdf - it's only 400 pages of code and a delight to read.</p>
+<p>This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll explore the xv6 bootstrap sequence!</p>
   </div>
     
 

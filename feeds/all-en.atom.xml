@@ -1,5 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="http://www.samlewis.me/" rel="alternate"></link><link href="http://www.samlewis.me/feeds/all-en.atom.xml" rel="self"></link><id>http://www.samlewis.me/</id><updated>2015-09-24T00:00:00+10:00</updated><entry><title>Startup Catalyst 2015: I'm off to Silicon Valley!</title><link href="http://www.samlewis.me/2015/09/startup-catalyst-2015" rel="alternate"></link><updated>2015-09-24T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-09-24:2015/09/startup-catalyst-2015</id><summary type="html">&lt;p&gt;In just two short sleeps, I'll be jetting off to Silicon Valley as part of the &lt;a href="" title="http:/www.startupcatalyst.com.au/"&gt;Startup Catalyst&lt;/a&gt; program. The program was instigated by Australian entrepreneur/mentor/investor Steve Baxter (who is now a 'shark' on the Australian version of Shark Tank) and aims to expose a group of under 25s (affectionately referred to as 'youths') with technical backgrounds to the startup culture in Silicon Valley.&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="http://www.samlewis.me/" rel="alternate"></link><link href="http://www.samlewis.me/feeds/all-en.atom.xml" rel="self"></link><id>http://www.samlewis.me/</id><updated>2016-04-21T23:15:41+10:00</updated><entry><title>Getting started with the xv6 operating system Date: 2016-04-18 Slug: getting-started-xv6</title><link href="http://www.samlewis.me/2016/04/getting-started-with-the-xv6-operating-system-date-2016-04-18-slug-getting-started-xv6" rel="alternate"></link><published>2016-04-21T23:15:41+10:00</published><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2016-04-21:2016/04/getting-started-with-the-xv6-operating-system-date-2016-04-18-slug-getting-started-xv6</id><summary type="html">&lt;p&gt;xv6 is a nifty operating system that is essentially a reimplementation of &lt;a href="https://en.wikipedia.org/wiki/Version_6_Unix"&gt;Sixth Edition Unix&lt;/a&gt; that, unlike most of the huge montholithic Linux or BSD distributions that you'd run on your workstation or server, is simple enough to be used as a learning tool. Though xv6 lacks in functionality that you'd expect from a modern operating system, much of the core unix concepts and structure remain the same. xv6 is also very lightweight, only taking a few seconds to compile and allows remote debugging. This all makes it great for understanding how modern operating systems hang together. &lt;/p&gt;
+&lt;p&gt;In fact, xv6 was developed by MIT as a teaching operating system for their &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6.html"&gt;6.828 course&lt;/a&gt;. The course page for 6.828 is a great resource that MIT are kind enough to have publicly avaliable. &lt;/p&gt;
+&lt;p&gt;MIT also produce a fantastic &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6/book-rev8.pdf"&gt;xv6 reference book&lt;/a&gt; that provides commentary on the structure of the xv6 operating system. Additionally, the xv6 source actually self documents - the xv6 &lt;code&gt;make&lt;/code&gt; file contains a target (&lt;code&gt;make xv6.pdf&lt;/code&gt;) that generates a &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6/xv6-rev8.pdf"&gt;pdf of the source code&lt;/a&gt;, which amazingly comes in under 100 pages and 10k lines of source (including comments!). Not bad for an entire, functional, operating system. &lt;/p&gt;
+&lt;p&gt;xv6 is typically run virtualized using qemu on a Linux host machine. To get started with xv6, clone the xv6 repo:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;git clone git://github.com/mit-pdos/xv6-public.git xv6
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Then to start it as a virtual machine under qemu:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;cd xv6
+make qemu
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;If make fails, make sure you have your compiler toolchain installed. There's some good info on the &lt;a href="https://pdos.csail.mit.edu/6.828/2014/tools.html"&gt;6.282 tools page&lt;/a&gt;. For me, on Fedora, I needed to install gcc with &lt;code&gt;dnf install gcc&lt;/code&gt;.&lt;/p&gt;
+&lt;p&gt;Once you have your compiler toolchain working, qemu will pop up and you'll be presented with the xv6 shell. &lt;/p&gt;
+&lt;p&gt;&lt;img alt="qemu xv6 shell" src="qemu.png" /&gt; &lt;/p&gt;
+&lt;p&gt;From here, you'll be able to run a few simple commands like &lt;code&gt;ls&lt;/code&gt; and &lt;code&gt;cat&lt;/code&gt; and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. &lt;/p&gt;
+&lt;p&gt;The core &lt;code&gt;while&lt;/code&gt; loop the shell executes is shown below. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt; // Read and run input commands.
+ while(getcmd(buf, sizeof(buf)) &amp;gt;= 0){
+    if(buf[0] == ’c’ &amp;amp;&amp;amp; buf[1] == ’d’ &amp;amp;&amp;amp; buf[2] == ’ ’){
+        // Clumsy but will have to do for now.
+        // Chdir has no effect on the parent if run in the child.
+        buf[strlen(buf)−1] = 0; // chop \n
+
+        if(chdir(buf+3) &amp;lt; 0)
+            printf(2, &amp;quot;cannot cd %s\n&amp;quot;, buf+3);
+        continue;
+    }
+    if(fork1() == 0)
+        runcmd(parsecmd(buf));
+    wait();
+ }
+ exit();
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;This loop gets a command from a user, checks if it's the &lt;code&gt;cd&lt;/code&gt; command and attempts to change directory if it is, otherwise it forks, and runs the entered command in the child process. I personally love how simple and enjoyable the code is to read - check out the rest of the listing for &lt;code&gt;sh.c&lt;/code&gt; in the xv6 source code pdf - it's only 400 pages of code and a delight to read.&lt;/p&gt;
+&lt;p&gt;This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll explore the xv6 bootstrap sequence!&lt;/p&gt;</summary></entry><entry><title>Startup Catalyst 2015: I'm off to Silicon Valley!</title><link href="http://www.samlewis.me/2015/09/startup-catalyst-2015" rel="alternate"></link><published>2015-09-24T00:00:00+10:00</published><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-09-24:2015/09/startup-catalyst-2015</id><summary type="html">&lt;p&gt;In just two short sleeps, I'll be jetting off to Silicon Valley as part of the &lt;a href="" title="http:/www.startupcatalyst.com.au/"&gt;Startup Catalyst&lt;/a&gt; program. The program was instigated by Australian entrepreneur/mentor/investor Steve Baxter (who is now a 'shark' on the Australian version of Shark Tank) and aims to expose a group of under 25s (affectionately referred to as 'youths') with technical backgrounds to the startup culture in Silicon Valley.&lt;/p&gt;
 &lt;p&gt;I'll be headed over with 19 other awesome youths from a variety of different backgrounds - spanning robotics to UI - and over the 10 days that we're in San Francisco we'll visit a whole bunch of tech companies (Google, Facebook and Twitter to name just a few!), have the chance to chat to startup founders and technical whizzes, attend tech meetups and even participate in a startup weekend. Sound like a lot for 10 days? It is! The schedule is completely packed with awesome events and as we were told by Steve and Colin (the project director and technology lead, respectively), they don’t want to kill us - just nearly kill us. &lt;/p&gt;
 &lt;p&gt;&lt;img alt="Catalyst Group" src="/images/cataylstgroup.png" /&gt;
 &lt;div style="text-align:center"&gt;
@@ -30,7 +69,7 @@
   href="https://twitter.com/awesamlewis"
   data-size="large"
 data-show-count=”false”&gt;
-Follow @awesamlewis&lt;/a&gt;&lt;/p&gt;</summary></entry><entry><title>Using the MSP432 serial (eUSCI) modules</title><link href="http://www.samlewis.me/2015/05/using-msp432-eUSCI" rel="alternate"></link><updated>2015-05-23T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-23:2015/05/using-msp432-eUSCI</id><summary type="html">&lt;p&gt;As a follow up to &lt;a href="../msp432-serial-printf/"&gt;my post on MSP432 printf functionality&lt;/a&gt;, this is a write-up of my notes on using the serial modules on the MSP432. &lt;/p&gt;
+Follow @awesamlewis&lt;/a&gt;&lt;/p&gt;</summary></entry><entry><title>Using the MSP432 serial (eUSCI) modules</title><link href="http://www.samlewis.me/2015/05/using-msp432-eUSCI" rel="alternate"></link><published>2015-05-23T00:00:00+10:00</published><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-23:2015/05/using-msp432-eUSCI</id><summary type="html">&lt;p&gt;As a follow up to &lt;a href="../msp432-serial-printf/"&gt;my post on MSP432 printf functionality&lt;/a&gt;, this is a write-up of my notes on using the serial modules on the MSP432. &lt;/p&gt;
 &lt;p&gt;The MSP432 has two different types of serial modules; eUSCI_A modules and eUSCI_B modules. The eUSCI_A modules support both the UART and SPI protocols while the eUSCI_B modules support the SPI and I2C protocols. Using the &lt;a href="http://www.ti.com/lit/ds/slas826a/slas826a.pdf"&gt;MSP432 datasheet&lt;/a&gt; you can find which MSP432 pins correspond to the modules. The following picture, which is an excerpt from page 10 of the data sheet shows the pin mapping for the first eUSCI_A and eUSCI_B modules.&lt;/p&gt;
 &lt;p&gt;&lt;img alt="MSP432 serial modules" src="/images/serial_modules.png" /&gt;&lt;/p&gt;
 &lt;p&gt;As each of the two modules support multiple protocols, you might not need to use all of the pins when you're using one of the modules. For example, if you wanted to use eUSCI_A0 for UART, you wouldn't need a 'slave transmit enable' pin or a 'clock signal input/output'. So you'd only be using P1.2 and P1.3. In fact, these are exactly the two pins you're using when you're communicating with your PC over UART as described in &lt;a href="../msp432-serial-printf/"&gt;my previous post&lt;/a&gt;! &lt;/p&gt;
@@ -42,14 +81,14 @@ Follow @awesamlewis&lt;/a&gt;&lt;/p&gt;</summary></entry><entry><title>Using the
 &lt;p&gt;An 'X' in the P3DIR column indicates a "don't care". So for both pins, it doesn't matter if we set them to an output or an input when configuring them for UART. For the P3SEL1 and P3SEL0 columns, we need to consult the family guide. The next picture is an excerpt from page 483 of the family guide. &lt;/p&gt;
 &lt;p&gt;&lt;img alt="MSP432 serial modules" src="/images/GPIO_selection.png" /&gt;&lt;/p&gt;
 &lt;p&gt;So to use the UART functionality of these pins, we're using the 'primary IO module function'. Now we have all the information we need to set the pins up in UART mode! Because it doesn't matter whether the pins are in output or input mode, we're able to use the &lt;code&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/code&gt; function or the &lt;code&gt;GPIO_setAsPeripheralModuleFunctionOutputPin&lt;/code&gt; function. For no reason whatsoever, I'll use the output variant. The result is the following line of code:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/* Set pins 2 and 3 of port 3 to the primary module function (UART) */&lt;/span&gt;
-&lt;span class="nx"&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;GPIO_PORT_P3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;GPIO_PIN2&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="nx"&gt;GPIO_PIN3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;GPIO_PRIMARY_MODULE_FUNCTION&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/* Set pins 2 and 3 of port 3 to the primary module function (UART) */&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+GPIO_setAsPeripheralModuleFunctionInputPin&lt;span class="o"&gt;(&lt;/span&gt;GPIO_PORT_P3&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;GPIO_PIN2&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;|&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;GPIO_PIN3&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;GPIO_PRIMARY_MODULE_FUNCTION&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="err"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;The next thing to do is to define a eUSCI config. This is basically from the TI provided examples. The only tricky bit is generating the BRDIV, UCxBRF and UCxBRS numbers which in this case are 78, 2 &amp;amp; 0. Luckily, once again TI have &lt;a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html"&gt;provided a tool&lt;/a&gt; to do this. This tool finds the optimal way of prescaling and modulating the clock source you're using to achieve your desired baud rate. More information about this process is on page 721 of the family guide. &lt;/p&gt;
 &lt;p&gt;Using the tool with a clock of 12MHz and baud rate of 9600 Hz, gives a clockPrescalar of 78, a firstModReg of 2, a secondModReg of 0 and oversampling turned on. Converting this into a config, we get the following:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;const eUSCI_UART_Config uartConfig =
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;const eUSCI_UART_Config uartConfig =
 {
     EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
     78,                                      // BRDIV = 78
@@ -65,24 +104,24 @@ Follow @awesamlewis&lt;/a&gt;&lt;/p&gt;</summary></entry><entry><title>Using the
 
 
 &lt;p&gt;The parity, MSB/LSB first and the amount of stop bits will all be determined by the device or chip that you want to communicate with. Now, to use that config to initialise the module using driverlib:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;UART_initModule(EUSCI_A2_MODULE, &amp;amp;uartConfig);
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;UART_initModule(EUSCI_A2_MODULE, &amp;amp;uartConfig);
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;This sets all the relevant registers to achieve the configuration earlier specified. If you're really interesting in understanding what exactly this is doing, it's worth reading the family guide. Now that the module is intialised, it can finally be enabled on!&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;UART_enableModule(EUSCI_A2_MODULE);
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;UART_enableModule(EUSCI_A2_MODULE);
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;From here, you can send a byte of data to the module with the following driverlib function call:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/* sends the &amp;#39;g&amp;#39; character to the A2 module&amp;#39; */&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/* sends the &amp;#39;g&amp;#39; character to the A2 module&amp;#39; */&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#39;g&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="err"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;If you want to simplify the process of sending individual characters (or instead want to send strings/numbers etc), check out &lt;a href="../msp432-serial-printf/"&gt;my post about a printf function for the MSP432&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;The whole code would then end up looking like this.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cp"&gt;#include &amp;quot;driverlib.h&amp;quot;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;driverlib.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
 
 &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="n"&gt;eUSCI_UART_Config&lt;/span&gt; &lt;span class="n"&gt;uartConfig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;
 &lt;span class="p"&gt;{&lt;/span&gt;
@@ -129,7 +168,7 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 
 
 &lt;p&gt;Hopefully that's helpful in understanding a little bit about configuring the serial modules on the MSP432. If you have a question or just want to yell at me for getting something completely wrong, don't hesitate to reach out. &lt;/p&gt;
-&lt;p&gt;If there's interest in learning more about the MSP432's serial, in particular setting up and using interrupts, let me know. :)&lt;/p&gt;</summary></entry><entry><title>MSP432 serial printf</title><link href="http://www.samlewis.me/2015/05/msp432-serial-printf" rel="alternate"></link><updated>2015-05-17T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-17:2015/05/msp432-serial-printf</id><summary type="html">&lt;p&gt;While the &lt;a href="http://www.ti.com/lsds/ti/microcontrollers_16-bit_32-bit/msp/low_power_performance/msp432p4x/getting_started.page?paramCriteria=no"&gt;MSP432&lt;/a&gt;, does seem to be an kickin' rad microcontroller, I've noticed a distinct lack of resources online to do the most basic microcontrolley stuff.&lt;/p&gt;
+&lt;p&gt;If there's interest in learning more about the MSP432's serial, in particular setting up and using interrupts, let me know. :)&lt;/p&gt;</summary></entry><entry><title>MSP432 serial printf</title><link href="http://www.samlewis.me/2015/05/msp432-serial-printf" rel="alternate"></link><published>2015-05-17T00:00:00+10:00</published><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-17:2015/05/msp432-serial-printf</id><summary type="html">&lt;p&gt;While the &lt;a href="http://www.ti.com/lsds/ti/microcontrollers_16-bit_32-bit/msp/low_power_performance/msp432p4x/getting_started.page?paramCriteria=no"&gt;MSP432&lt;/a&gt;, does seem to be an kickin' rad microcontroller, I've noticed a distinct lack of resources online to do the most basic microcontrolley stuff.&lt;/p&gt;
 &lt;p&gt;So this is a quick bit of code to get a serial/UART connection up and going from the MSP432 to your computer over the USB connection. Perfect for any debugging that you might want to do, or communication with other serial devices (for example the exciting ESP8266 which I'll cover in a later blog post).&lt;/p&gt;
 &lt;p&gt;The MSP432-printf library, which is largely from 43oh member OPossum (&lt;a href="http://www.msp430launchpad.com/2012/06/using-printf.html"&gt;printf for the MSP430&lt;/a&gt;), lets you print to any serial module using standard printf syntax. For example: &lt;code&gt;printf(EUSCI_A0_MODULE, "String one: %d", 1)&lt;/code&gt;. The code for the library can be &lt;a href="https://github.com/samvrlewis/MSP432-printf/blob/master/printf.c"&gt;found on my GitHub&lt;/a&gt;. &lt;/p&gt;
 &lt;p&gt;An example of using this printf library with the MSP432 is shown below. &lt;/p&gt;
@@ -137,7 +176,7 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 &lt;/script&gt;
 
 &lt;p&gt;The code configures &lt;code&gt;EUSCI_A0_MODULE&lt;/code&gt; to be used and then prints to it. &lt;code&gt;EUSCI_A0_MODULE&lt;/code&gt; is, by default the application UART that you can connect to over USB from your PC. One thing to note is to make sure that &lt;code&gt;EUSCI_A_UART_LSB_FIRST&lt;/code&gt; is set in the UART config, rather than &lt;code&gt;EUSCI_A_UART_MSB_FIRST&lt;/code&gt;. &lt;a href="http://en.wikipedia.org/wiki/Serial_port"&gt;According to wikipedia&lt;/a&gt;, MSB first serial communication is rarely used and it's much more common to use little endian or LSB first communications. If you use a program like PuTTY, it's likely that it'll interpret the serial stream as little endian.&lt;/p&gt;
-&lt;p&gt;To connect to the MSP432, I use &lt;a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/"&gt;PuTTY&lt;/a&gt;. On my PC, the MSP432 is on COM1. It's possible to configure and use serial modules other than &lt;code&gt;EUSCI_A0_MODULE&lt;/code&gt; but this may involve some &lt;a href="http://www.ti.com/lit/ds/slas826a/slas826a.pdf"&gt;datasheet&lt;/a&gt; investigation!&lt;/p&gt;</summary></entry><entry><title>AFL statistics SQL database</title><link href="http://www.samlewis.me/2015/02/afl-stats-sql" rel="alternate"></link><updated>2015-02-21T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-02-21:2015/02/afl-stats-sql</id><summary type="html">&lt;p&gt;The AFL stats database (and some relevant code) is &lt;a href="https://github.com/samvrlewis/afl-stats-database"&gt;on github&lt;/a&gt;!
+&lt;p&gt;To connect to the MSP432, I use &lt;a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/"&gt;PuTTY&lt;/a&gt;. On my PC, the MSP432 is on COM1. It's possible to configure and use serial modules other than &lt;code&gt;EUSCI_A0_MODULE&lt;/code&gt; but this may involve some &lt;a href="http://www.ti.com/lit/ds/slas826a/slas826a.pdf"&gt;datasheet&lt;/a&gt; investigation!&lt;/p&gt;</summary></entry><entry><title>AFL statistics SQL database</title><link href="http://www.samlewis.me/2015/02/afl-stats-sql" rel="alternate"></link><published>2015-02-21T00:00:00+10:00</published><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-02-21:2015/02/afl-stats-sql</id><summary type="html">&lt;p&gt;The AFL stats database (and some relevant code) is &lt;a href="https://github.com/samvrlewis/afl-stats-database"&gt;on github&lt;/a&gt;!
 &lt;iframe src="https://ghbtns.com/github-btn.html?user=samvrlewis&amp;repo=afl-stats-database&amp;type=star&amp;count=true" frameborder="0" scrolling="0" width="170px" height="20px"&gt;&lt;/iframe&gt;&lt;/p&gt;
 &lt;p&gt;Download the SQL(ite) stats database here: &lt;a href="https://github.com/samvrlewis/afl-stats-database/raw/master/afl-stats.sqlite"&gt;afl-stats.sqlite&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;The SQLite database has team statistics for each season and finals game for 1987-2014. In the earlier years not all stats are present as they were not all recorded. The database schema is shown below, which also shows the type of stats avaliable. &lt;/p&gt;
@@ -152,7 +191,7 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 &lt;li&gt;Are there any teams that consistently are outliers in certain areas despite their position on the ladder? For example, are there any teams that consistently have great goal kicking accuracy regardless of their position on the ladder?&lt;/li&gt;
 &lt;li&gt;Which teams do best at home? Away from home? Are there any teams that are consistently bad/good in certain stadiums/states?&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;Would love to hear from you if you do anything interesting with it though. I'm sure there are lots of cool things that could be done.sda&lt;/p&gt;</summary></entry><entry><title>Automatically tracking my thesis progress</title><link href="http://www.samlewis.me/2014/10/automated-thesis-tracking" rel="alternate"></link><updated>2014-10-03T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-10-03:2014/10/automated-thesis-tracking</id><summary type="html">&lt;script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"&gt;&lt;/script&gt;
+&lt;p&gt;Would love to hear from you if you do anything interesting with it though. I'm sure there are lots of cool things that could be done.sda&lt;/p&gt;</summary></entry><entry><title>Automatically tracking my thesis progress</title><link href="http://www.samlewis.me/2014/10/automated-thesis-tracking" rel="alternate"></link><published>2014-10-03T00:00:00+10:00</published><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-10-03:2014/10/automated-thesis-tracking</id><summary type="html">&lt;script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"&gt;&lt;/script&gt;
 
 &lt;script src="https://www.google.com/jsapi"&gt;&lt;/script&gt;
 
@@ -210,9 +249,9 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 &lt;p&gt;Conveniently, I'm using LaTeX to write the thesis report. This allowed me to use the cool &lt;a href="http://app.uio.no/ifi/texcount/"&gt;texcount&lt;/a&gt; script (included in most TeX distributions) to count the number of words in each of the .tex files in my thesis. The good thing about this script is it won't count the LaTeX markup towards my total word count. &lt;/p&gt;
 &lt;p&gt;Needing somewhere to store the word count, and because I've been looking for an excuse to use it, I used SparkFun's &lt;a href="https://data.sparkfun.com/"&gt;phant&lt;/a&gt; to create a quick and dirty data stream. The great thing about phant is once you've created the data stream, all that's needed to submit data to it is a single HTTP GET request which is doable in a single line of python. If you're that way inclined, you can see my data stream &lt;a href="https://data.sparkfun.com/streams/zDaZOadL0XUKgVp5ojgV"&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Because I'm using git as version control, all that was then needed to tie everything together was a &lt;a href="https://gist.github.com/samvrlewis/8a1522084bc99eda7651"&gt;quick python script&lt;/a&gt; for the pre-commit git hook to count the words in each of my different sections, add them together and submit the total to my data stream on phant. This runs whenever I commit to git -- so whenever I've actually written something useful. Easy! &lt;/p&gt;
-&lt;p&gt;It was then simple to hook into the data stream with google charts. A chart with my progress is shown above, will be interesting to see how the line behaves (I'm expecting an exponential rise closer to the due date!). &lt;/p&gt;</summary></entry><entry><title>Using C# to check if audio is playing in Windows</title><link href="http://www.samlewis.me/2014/08/is-audio-playing-windows" rel="alternate"></link><updated>2014-08-05T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-08-05:2014/08/is-audio-playing-windows</id><summary type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
+&lt;p&gt;It was then simple to hook into the data stream with google charts. A chart with my progress is shown above, will be interesting to see how the line behaves (I'm expecting an exponential rise closer to the due date!). &lt;/p&gt;</summary></entry><entry><title>Using C# to check if audio is playing in Windows</title><link href="http://www.samlewis.me/2014/08/is-audio-playing-windows" rel="alternate"></link><published>2014-08-05T00:00:00+10:00</published><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-08-05:2014/08/is-audio-playing-windows</id><summary type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
 &lt;p&gt;The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;using CSCore.CoreAudioAPI;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;using CSCore.CoreAudioAPI;
 using System;
 
 namespace AudioPlayingTest
