@@ -2,9 +2,9 @@ Title: Unit testing embedded code with cmocka
 Date: 2016-09-26
 Slug: embedded-unit-testing-with-cmocka
 
-# Why unit test embedded software? 
 [Unit testing](https://en.wikipedia.org/wiki/Unit_testing) is a great software testing practice that gets a lot of love in web and application development but unfortunately isn't practiced as often in embedded/firmware development. This is a shame as the impacts of having a bug in firmware can be considerably more catastrophic than having a bug in a webapp. I've written this article in the hope of demonstrating some of the benefits that come when writing unit tests for embedded software and have also given a small toy example of how it's possible to unit test firmware using the `cmocka` framework. 
 
+# Why unit test embedded software? 
 System level embedded software testing is notoriously difficult, mainly because embedded software runs on bare metal hardware. While you can never completely get away from testing embedded software on real hardware, testing the logic in the embedded software through unit testing is very valuable and gets you a lot of the way there. If you still need convincing, some of the things I really like about having unit tests for my embedded code:
 
 - Allows you to develop your application layer logic without the need for any hardware, saving lots of time
