@@ -4,7 +4,7 @@ Slug: embedded-unit-testing-with-cmocka
 
 [Unit testing](https://en.wikipedia.org/wiki/Unit_testing) is a great software testing practice that gets a lot of love in web and application development but unfortunately isn't practiced as often in embedded/firmware development. This is a shame as the impacts of having a bug in firmware can be considerably more catastrophic than having a bug in a webapp. I've written this article in the hope of demonstrating some of the benefits that come when writing unit tests for embedded software and have also given a small toy example of how it's possible to unit test firmware using the `cmocka` framework. 
 
-# Why unit test embedded software? 
+### Why unit test embedded software? 
 System level embedded software testing is notoriously difficult, mainly because embedded software runs on bare metal hardware. While you can never completely get away from testing embedded software on real hardware, testing the logic in the embedded software through unit testing is very valuable and gets you a lot of the way there. If you still need convincing, some of the things I really like about having unit tests for my embedded code:
 
 - Allows you to develop your application layer logic without the need for any hardware, saving lots of time
@@ -19,7 +19,7 @@ There are a lot of unit testing frameworks for `C` but for embedded testing, the
 
 On caveat worth mentioning is that to properly use these frameworks, you'll most likely need to compiler your code with a different compiler to what your compile with for your hardware - both so that the framework can run and so that you can execute the tests on your workstation. However, this shouldn't present a major problem as long as you're not relying on non-standard or undefined compiler behaviour. Logic errors in your code will still be logic errors no matter what compiler you use to compile the code. 
 
-# An example of unit testing C in an embedded context
+### An example of unit testing C in an embedded context
 To give a concrete example of how you could make use of `cmocka` in an embedded context, I'll show the process of unit testing code for a temperature sensor. I've chosen the TI [TMP101](http://www.ti.com/lit/ds/symlink/tmp101.pdf) as the temperature sensor, which is a temperature sensor that works over I2C. The complete listing of code [is checked in on my github](https://github.com/samvrlewis/cmocka-embedded-example/), the below text gives a rundown of how it all comes together. 
 
 The first step as normal, is to write some code for the tmp101 sensor that can fetch a temperature. You can find the full code listing [on my github](https://github.com/samvrlewis/cmocka-embedded-example/blob/master/src/tmp101.c). It's also reproduced below. 
