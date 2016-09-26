@@ -1,5 +1,99 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="http://www.samlewis.me/" rel="alternate"></link><link href="http://www.samlewis.me/feeds/09.atom.xml" rel="self"></link><id>http://www.samlewis.me/</id><updated>2015-09-24T00:00:00+10:00</updated><entry><title>Startup Catalyst 2015: I'm off to Silicon Valley!</title><link href="http://www.samlewis.me/2015/09/startup-catalyst-2015" rel="alternate"></link><published>2015-09-24T00:00:00+10:00</published><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-09-24:2015/09/startup-catalyst-2015</id><summary type="html">&lt;p&gt;In just two short sleeps, I'll be jetting off to Silicon Valley as part of the &lt;a href="" title="http:/www.startupcatalyst.com.au/"&gt;Startup Catalyst&lt;/a&gt; program. The program was instigated by Australian entrepreneur/mentor/investor Steve Baxter (who is now a 'shark' on the Australian version of Shark Tank) and aims to expose a group of under 25s (affectionately referred to as 'youths') with technical backgrounds to the startup culture in Silicon Valley.&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="http://www.samlewis.me/" rel="alternate"></link><link href="http://www.samlewis.me/feeds/09.atom.xml" rel="self"></link><id>http://www.samlewis.me/</id><updated>2016-09-26T00:00:00+10:00</updated><entry><title>Unit testing embedded code with cmocka</title><link href="http://www.samlewis.me/2016/09/embedded-unit-testing-with-cmocka" rel="alternate"></link><published>2016-09-26T00:00:00+10:00</published><updated>2016-09-26T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2016-09-26:2016/09/embedded-unit-testing-with-cmocka</id><summary type="html">&lt;p&gt;&lt;a href="https://en.wikipedia.org/wiki/Unit_testing"&gt;Unit testing&lt;/a&gt; is a great software testing practice that gets a lot of love in web and application development but unfortunately isn't practiced as often in embedded/firmware development. This is a shame as the impacts of having a bug in firmware can be considerably more catastrophic than having a bug in a webapp. I've written this article in the hope of demonstrating some of the benefits that come when writing unit tests for embedded software and have also given a small toy example of how it's possible to unit test firmware using the &lt;code&gt;cmocka&lt;/code&gt; framework. &lt;/p&gt;
+&lt;p&gt;System level embedded software testing is notoriously difficult, mainly because embedded software runs on bare metal hardware. While you can never completely get away from testing embedded software on real hardware, testing the logic in the embedded software through unit testing is very valuable and gets you a lot of the way there. If you still need convincing, some of the things I really like about having unit tests for my embedded code:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Allows you to develop your application layer logic without the need for any hardware, saving lots of time&lt;/li&gt;
+&lt;li&gt;Gives you a greater appreciation and understanding of your hardware periphereals, as you need to understand their interfaces to write tests against them&lt;/li&gt;
+&lt;li&gt;Less 'wtf' bugs that are impossible to track down in development/production&lt;/li&gt;
+&lt;li&gt;Allows you to test your code against edge cases that otherwise hard to reproduce (eg: testing how your firmware reacts when your temperature sensor is used in negative temperatures)&lt;/li&gt;
+&lt;li&gt;Testable code tends to be cleaner, modular and reusable code&lt;/li&gt;
+&lt;li&gt;Takes some amount of pressure off your systems level testing&lt;/li&gt;
+&lt;li&gt;Stops regressions, particularly if you integrate the tests into your build&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;There are a lot of unit testing frameworks for &lt;code&gt;C&lt;/code&gt; but for embedded testing, the framework I like best is &lt;a href="https://cmocka.org/"&gt;cmocka&lt;/a&gt;. I've looked at others in the past, such as &lt;a href="http://www.throwtheswitch.org/cmock/"&gt;cmock&lt;/a&gt; and &lt;a href="https://github.com/mity/cutest"&gt;cutest&lt;/a&gt; but cmocka stands out as having all testing &amp;amp; mocking functionality I need while having minimal dependencies. &lt;/p&gt;
+&lt;p&gt;On caveat worth mentioning is that to properly use these frameworks, you'll most likely need to compiler your code with a different compiler to what your compile with for your hardware - both so that the framework can run and so that you can execute the tests on your workstation. However, this shouldn't present a major problem as long as you're not relying on non-standard or undefined compiler behaviour. Logic errors in your code will still be logic errors no matter what compiler you use to compile the code. &lt;/p&gt;
+&lt;p&gt;To give a concrete example of how you could make use of &lt;code&gt;cmocka&lt;/code&gt; in an embedded context, I'll show the process of unit testing code for a temperature sensor. I've chosen the TI &lt;a href="http://www.ti.com/lit/ds/symlink/tmp101.pdf"&gt;TMP101&lt;/a&gt; as the temperature sensor, which is a temperature sensor that works over I2C. The complete listing of code &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/"&gt;is checked in on my github&lt;/a&gt;, the below text gives a rundown of how it all comes together. &lt;/p&gt;
+&lt;p&gt;The first step as normal, is to write some code for the tmp101 sensor that can fetch a temperature. You can find the full code listing &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/src/tmp101.c"&gt;on my github&lt;/a&gt;. It's also reproduced below. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;tmp101.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+
+&lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="kt"&gt;float&lt;/span&gt; &lt;span class="n"&gt;TMP_BIT_RESOLUTION&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.0625&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+&lt;span class="kt"&gt;float&lt;/span&gt; &lt;span class="nf"&gt;tmp101_get_temperature&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; 
+&lt;span class="p"&gt;{&lt;/span&gt;   
+    &lt;span class="c1"&gt;// Need to set the TMP101 pointer register to point to the temp register&lt;/span&gt;
+    &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;pointer_address&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="n"&gt;i2c_transmit_blocking&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TMP101_ADDRESS&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;pointer_address&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// The TMP101 stores 12 bit samples that are retrieved in two byte blocks&lt;/span&gt;
+    &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;];&lt;/span&gt;
+    &lt;span class="n"&gt;i2c_read_blocking&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TMP101_ADDRESS&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// the 1st byte is bits 12 to 4 of the sample and the 2nd byte is bits 4 to 0&lt;/span&gt;
+    &lt;span class="c1"&gt;// see page 16 of the TMP_101 datasheet&lt;/span&gt;
+    &lt;span class="kt"&gt;uint16_t&lt;/span&gt; &lt;span class="n"&gt;temperature_bits&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// The 12 bit sample is represented using 2s complement, for simplicity &lt;/span&gt;
+    &lt;span class="c1"&gt;// (and because there&amp;#39;s no 12 bit int representation), scale up the sample&lt;/span&gt;
+    &lt;span class="c1"&gt;// to 16 bits and adjust the bit resolution when converting later&lt;/span&gt;
+    &lt;span class="kt"&gt;int16_t&lt;/span&gt; &lt;span class="n"&gt;temperature&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;temperature_bits&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// shift the sample back down and convert by the TMP_101 bit resolution&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;temperature&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mf"&gt;0.0625f&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;This function isn't the most complicated function but there's enough bit manipulation to make me nervous and unsure if it'll do exactly what I want all the time. Sure, we could run it on my hardware platform and see how it responds but that'd only prove that it works as whatever temperature it is now. Instead, lets write some unit tests for this code. &lt;/p&gt;
+&lt;p&gt;Conveniently, for this particular temperature sensor, TI are kind enough to provide a table of example temperatures with their corresponding 12 bit digital outputs. These prove a nice place to start in testing our &lt;code&gt;get_temperature&lt;/code&gt; function. &lt;/p&gt;
+&lt;p&gt;&lt;img alt="table of sensor outputs" src="sensor_outputs.png" /&gt;&lt;/p&gt;
+&lt;p&gt;In essence, we want to control the data that &lt;code&gt;i2c_read_blocking&lt;/code&gt; returns to our &lt;code&gt;tmp101_get_temperature&lt;/code&gt; function so that we can check against our function works as it should. A simple (but somewhat ugly) way to this might be to have the function look something like:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;i2c_read_blocking&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;offset&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;pData&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;data_size&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="cp"&gt;#ifdef TESTING&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;DUMMY_VALUE&lt;/span&gt;
+    &lt;span class="cp"&gt;#endif&lt;/span&gt;
+
+    &lt;span class="c1"&gt;//normal i2c logic here&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;But mixing test code with production code is ugly and an antipattern that should be avoided if possible. A much better way that allows us to both completely separate our testing and source code is to use the &lt;code&gt;cmocka&lt;/code&gt; framework to help us (dynamically!) control what our &lt;code&gt;i2c_read_blocking&lt;/code&gt; function does. The first step of using &lt;code&gt;cmocka&lt;/code&gt; is to define mocks for the functions you want to mock out. The two mocked functions are shown below.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;void __wrap_i2c_transmit_blocking(uint8_t address, uint8_t offset, uint8_t* data, uint8_t data_size)
+{
+    // allows the calling test to check if the supplied parameters are as expected
+    check_expected(address);
+    check_expected(offset);
+}
+
+void __wrap_i2c_read_blocking(uint8_t address, uint8_t offset, uint8_t* pData, uint8_t data_size) 
+{
+    // allow the calling test to specify the data it wants back
+    // and copy it back out
+    for(int i=0; i &amp;lt; data_size; i++) {
+        pData[i] = mock_type(uint8_t);
+    }
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;&lt;code&gt;cmocka&lt;/code&gt; cleverly uses the linker to swap out the real function calls for the mocked ones. To allow for this, mocked out functions are prefixed with &lt;code&gt;__wrap_&lt;/code&gt;. The linker is then provided with the arguments &lt;code&gt;--wrap=i2c_read_blocking -Wl,--wrap=i2c_transmit_blocking&lt;/code&gt; which allows these functions to be mocked out. For a complete example of compiling/linking with cmocka, see the &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/Makefile"&gt;makefile&lt;/a&gt; in my example project.&lt;/p&gt;
+&lt;p&gt;With the mocks in place we can now write some tests! A complete look at the tests in my example project can be found &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/test_tmp101.c"&gt;on my github&lt;/a&gt; but, as an example, here's a single test:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;static void test_negative_temperature(void **state)
+{
+    will_return(__wrap_i2c_read_blocking, 0b11100111);
+    will_return(__wrap_i2c_read_blocking, 0b00000000);
+
+    assert_true(tmp101_get_temperature() == -25);
+}
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;The two calls to &lt;code&gt;will_return&lt;/code&gt; set what the &lt;code&gt;i2c_read_blocking&lt;/code&gt; function writes into the &lt;code&gt;pData&lt;/code&gt; array. As per the datasheet, the 12 bit sample is returned over two bytes so these values correspond (from the above TI table) to -25 degrees celsius, which we check against. Much easier than having to stick the temperature sensor in the freezer!&lt;/p&gt;
+&lt;p&gt;Running all of the tests through a Makefile gives this cool print out:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="cmocka output" src="cmocka_output.png" /&gt;&lt;/p&gt;
+&lt;p&gt;Although this is just a simple example, it hopefully demonstrates the utility that having unit tests can provide. Having a suite of unit tests for a project gives developers a lot of confidence - I find unit tests especially useful in developing  application layer protocols on top of lower level protocols.&lt;/p&gt;
+&lt;p&gt;If you're interested in poking around a little at the source for this example, see how it's all linked together an run as a test or even run it yourself, all code for this is avaliable &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/"&gt;on my github&lt;/a&gt; with instructions of how to run.&lt;/p&gt;</summary></entry><entry><title>Startup Catalyst 2015: I'm off to Silicon Valley!</title><link href="http://www.samlewis.me/2015/09/startup-catalyst-2015" rel="alternate"></link><published>2015-09-24T00:00:00+10:00</published><updated>2015-09-24T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-09-24:2015/09/startup-catalyst-2015</id><summary type="html">&lt;p&gt;In just two short sleeps, I'll be jetting off to Silicon Valley as part of the &lt;a href="" title="http:/www.startupcatalyst.com.au/"&gt;Startup Catalyst&lt;/a&gt; program. The program was instigated by Australian entrepreneur/mentor/investor Steve Baxter (who is now a 'shark' on the Australian version of Shark Tank) and aims to expose a group of under 25s (affectionately referred to as 'youths') with technical backgrounds to the startup culture in Silicon Valley.&lt;/p&gt;
 &lt;p&gt;I'll be headed over with 19 other awesome youths from a variety of different backgrounds - spanning robotics to UI - and over the 10 days that we're in San Francisco we'll visit a whole bunch of tech companies (Google, Facebook and Twitter to name just a few!), have the chance to chat to startup founders and technical whizzes, attend tech meetups and even participate in a startup weekend. Sound like a lot for 10 days? It is! The schedule is completely packed with awesome events and as we were told by Steve and Colin (the project director and technology lead, respectively), they don’t want to kill us - just nearly kill us. &lt;/p&gt;
 &lt;p&gt;&lt;img alt="Catalyst Group" src="/images/cataylstgroup.png" /&gt;
 &lt;div style="text-align:center"&gt;
