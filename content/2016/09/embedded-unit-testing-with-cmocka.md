@@ -106,7 +106,7 @@ Running all of the tests through a Makefile gives this cool print out:
 
 Although this is just a simple example, it hopefully demonstrates the utility that having unit tests can provide. Having a suite of unit tests for a project gives developers a lot of confidence - I find unit tests especially useful in developing  application layer protocols on top of lower level protocols.
 
-If you're interested in poking around a little at the source for this example, see how it's all linked together an run as a test or even run it yourself, all code for this is avaliable [on my github](https://github.com/samvrlewis/cmocka-embedded-example/) with instructions of how to run.
+> If you're interested in poking around a little at the source for this example, see how it's all linked together an run as a test or even run it yourself, all code for this is avaliable [on my github](https://github.com/samvrlewis/cmocka-embedded-example/) with instructions of how to run.
 
 <hr />
 
