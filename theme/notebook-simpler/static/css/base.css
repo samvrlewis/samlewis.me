@@ -45,7 +45,24 @@
 		content: none; }
 	table {
 		border-collapse: collapse;
-		border-spacing: 0; }
+		border-spacing: 0;
+		margin-bottom: 20px;
+		margin-top: 20px;
+	}
+
+	th:last-child, td:last-child {
+	    padding-right: 0;
+	}
+
+	th, td {
+	    padding: 7px 18px;
+	    text-align: left;
+	    border-bottom: 1px solid #E1E1E1;
+	}
+	
+	th {
+	    font-weight: bold;
+	}
 
 
 /* #Basic Styles
@@ -265,5 +282,4 @@
 	.remove-bottom { margin-bottom: 0 !important; }
 	.half-bottom { margin-bottom: 10px !important; }
 	.add-bottom { margin-bottom: 20px !important; }
-
 
