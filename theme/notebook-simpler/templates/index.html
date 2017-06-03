@@ -5,7 +5,7 @@
 
   {% for article in articles %}
     {% if article.status != 'draft' %}
-      <h3 class="article-title"><a href="{{ article.url }}" title="{{ article.title }}">{{ article.title }}</a></h3>
+      <h1 class="article-title"><a href="{{ article.url }}" title="{{ article.title }}">{{ article.title }}</a></h3>
       <h6 class="article-date">{{ article.locale_date }}</h6>
       <hr class="large">
     {% endif %}
