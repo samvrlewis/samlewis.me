@@ -422,7 +422,7 @@ del raw["hash_code_type"]
 transaction = get_packed_transaction(raw)
 ```
  
-## Publishing the transaction
+### Publishing the transaction
 With the transaction packed and signed, it's a matter of telling the network about it. Using a few functions previously defined in this article in [bitcoin_p2p_message_utils.py](https://github.com/samvrlewis/simple-bitcoin/blob/master/bitcoin_p2p_message_utils.py),  the below piece of code puts the Bitcoin message header on the transmission and transmits it to a peer. As mentioned earlier, it's first necessary to send a version message to the peer so that it accepts subsequent messages. 
  
 ```
