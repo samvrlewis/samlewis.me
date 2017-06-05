@@ -437,7 +437,7 @@ OP_CHECKSIG
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;h2&gt;Publishing the transaction&lt;/h2&gt;
+&lt;h3&gt;Publishing the transaction&lt;/h3&gt;
 &lt;p&gt;With the transaction packed and signed, it's a matter of telling the network about it. Using a few functions previously defined in this article in &lt;a href="https://github.com/samvrlewis/simple-bitcoin/blob/master/bitcoin_p2p_message_utils.py"&gt;bitcoin_p2p_message_utils.py&lt;/a&gt;,  the below piece of code puts the Bitcoin message header on the transmission and transmits it to a peer. As mentioned earlier, it's first necessary to send a version message to the peer so that it accepts subsequent messages. &lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;connect&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_peer&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; &lt;span class="mi"&gt;8333&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
