@@ -8,7 +8,7 @@ Unfortunately, while there's a lot of resources out there that give high level e
  
 As someone relatively new to the space, I found myself hungry to understand the mechanics of how Bitcoin works. Luckily, because Bitcoin is decentralised and peer to peer by its nature, anyone is able to develop a client that conforms to the protocol. In order to get a greater appreciation of how Bitcoin works, I decided to write my own small toy Bitcoin client that was able to publish a transaction to the Bitcoin blockchain. 
  
-This post walks through the process of creating a minimally viable Bitcoin client that can create a transaction and submit it to the Bitcoin peer to peer network so that it is included in the Blockchain. If you'd rather just read the raw code, feel free to check out my [Github repo](https://github.com/samvrlewis/simple-bitcoin).
+This post walks through the process of creating a minimally viable Bitcoin client that can create a transaction and submit it to the Bitcoin peer to peer network so that it is included in the Blockchain. If you'd rather just read the raw code, feel free to check out my [Github repo](https://github.com/samvrlewis/simple-bitcoin). <iframe src="https://ghbtns.com/github-btn.html?user=samvrlewis&repo=simple-bitcoin&type=star&count=true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
  
 ## Address generation
  
@@ -448,7 +448,7 @@ If you'd like to peruse the code, or play around further with the toy examples, 
  
 If you've read this far you might have realised that the 380000 Satoshi (or 0.0038 BTC) that I transferred into `1QGNXLzGXhWTKF3HTSjuBMpQyUYFkWfgVC` can, with enough smarts, be taken by anyone.. as the private key for the address exists within this article. I'm very interested to see how long it takes to be transferred away and hope that whoever takes it has the decency to do so using some of the techniques I've detailed here! It'd be pretty lame if you just loaded the private key into a wallet app to take it, but I guess I can't stop you! At the time of writing this amount is worth about $10 USD, but if Bitcoin "goes to the moon" who knows how much it might be worth!
 
-And just in case you're looking for an address to send Bitcoin to when you're playing around with this stuff, or if you think this post was valuable enough to warrant a tip - my address of 18uKa5c9S84tkN1ktuG568CR23vmeU7F5H is happy to take any small donations!
+And just in case you're looking for an address to send Bitcoin to when you're playing around with this stuff, or if you think this post was valuable enough to warrant a tip - my address of 18uKa5c9S84tkN1ktuG568CR23vmeU7F5H is happy to take any small donations! Alternatively, if you want to yell at me about getting anything wrong, I'd love to hear it.
  
 ## Further resources
  
@@ -459,3 +459,4 @@ If you found this article interesting, some further resources to check out:
 - Mentioned earlier, but Anders Brownworth's fantastic [blockchain visual 101](https://anders.com/blockchain/) video is an excellent top level view of how blockchain technologies work.
 - Unless you're a masochist for pain, I'd also recommend not doing everything from scratch unless you're interested in doing so for learning purposes. The [pycoin](https://github.com/richardkiss/pycoin) library is a Python Bitcoin library that will save you a few headaches. 
 - To also save yourself pain, it's probably advisable to use the [Bitcoin testnet](https://en.bitcoin.it/wiki/Testnet) to play around with, rather than using the mainnet like I did. That said, it's more fun when the risk of your code being wrong is losing real money!
+- Lastly, it is probably worth repeating that the accompanying code for this article can be found in my [Github repo](https://github.com/samvrlewis/simple-bitcoin).
