@@ -8,7 +8,7 @@ Unfortunately, while there's a lot of resources out there that give high level e
  
 As someone relatively new to the space, I found myself hungry to understand the mechanics of how Bitcoin works. Luckily, because Bitcoin is decentralised and peer to peer by its nature, anyone is able to develop a client that conforms to the protocol. In order to get a greater appreciation of how Bitcoin works, I decided to write my own small toy Bitcoin client that was able to publish a transaction to the Bitcoin blockchain. 
  
-This post walks through the process of creating a minimally viable Bitcoin client that can create a transaction and submit it to the Bitcoin peer to peer network so that it is included in the Blockchain. If you'd rather just read the raw code, feel free to check out my [Github repo](https://github.com/samvrlewis/simple-bitcoin). <iframe src="https://ghbtns.com/github-btn.html?user=samvrlewis&repo=simple-bitcoin&type=star&count=true" frameborder="0" scrolling="0" width="170px" height="20px"></iframe>
+This post walks through the process of creating a minimally viable Bitcoin client that can create a transaction and submit it to the Bitcoin peer to peer network so that it is included in the Blockchain. If you'd rather just read the raw code, feel free to check out my [Github repo](https://github.com/samvrlewis/simple-bitcoin).
  
 ## Address generation
  
