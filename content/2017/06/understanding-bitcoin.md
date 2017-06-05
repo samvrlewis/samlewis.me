@@ -448,7 +448,7 @@ If you'd like to peruse the code, or play around further with the toy examples, 
  
 If you've read this far you might have realised that the 380000 Satoshi (or 0.0038 BTC) that I transferred into `1QGNXLzGXhWTKF3HTSjuBMpQyUYFkWfgVC` can, with enough smarts, be taken by anyone.. as the private key for the address exists within this article. I'm very interested to see how long it takes to be transferred away and hope that whoever takes it has the decency to do so using some of the techniques I've detailed here! It'd be pretty lame if you just loaded the private key into a wallet app to take it, but I guess I can't stop you! At the time of writing this amount is worth about $10 USD, but if Bitcoin "goes to the moon" who knows how much it might be worth!
 
-And just in case you're looking for an address to send Bitcoin to when you're playing around with this stuff, or if you think this post was valuable enough to warrant a tip - my address of 18uKa5c9S84tkN1ktuG568CR23vmeU7F5H is happy to take any small donations! Alternatively, if you want to yell at me about getting anything wrong, I'd love to hear it.
+And just in case you're looking for an address to send Bitcoin to when you're playing around with this stuff, or if you think this post was valuable enough to warrant a tip - my address of `18uKa5c9S84tkN1ktuG568CR23vmeU7F5H` is happy to take any small donations! Alternatively, if you want to yell at me about getting anything wrong, I'd love to hear it.
  
 ## Further resources
  
