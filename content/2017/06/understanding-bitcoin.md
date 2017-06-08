@@ -54,9 +54,9 @@ And the public key (in hex) of
 04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28
 ``` 
  
-The `0x04` that prepends the public key signifies that this is an *uncompressed* public key, meaning that the *x* and *y* coordinates from the ECDSA are simply concatenated. Because of the way ECSDA works, if you know the *x* value, the *y* value can only take two values, one even and one odd. Using this information, it is possible to express a public key using only one of *x* and the polarity of *y*. This reduces the public key size from 65 bits to 33 bits and the key (and subsequent computed address) are referred to as *compressed*. For compressed public keys, the prepended value will be `0x02` or `0x03` depending on the polarity of *y*. *Uncompressed* public keys are most commonly used in Bitcoin, so that's what I'll use here too.
+The `0x04` that prepends the public key signifies that this is an *uncompressed* public key, meaning that the *x* and *y* coordinates from the ECDSA are simply concatenated. Because of the way ECSDA works, if you know the *x* value, the *y* value can only take two values, one even and one odd. Using this information, it is possible to express a public key using *x* and the polarity of *y*. This reduces the public key size from 65 bits to 33 bits and the key (and subsequent computed address) are referred to as *compressed*. For compressed public keys, the prepended value will be `0x02` or `0x03` depending on the polarity of *y*. *Uncompressed* public keys are most commonly used in Bitcoin, so that's what I'll use here too.
  
-From here, to generate the Bitcoin address from the public key, the public key is sha256 hashed and then ripemd160 hashed. This double hashing provides an extra layer of security and a ripemd160 hash provides a 160 bit hash of sha256's 256 hash, shortening the length of the address. An interesting result of this is that it is possible for two different public keys to hash to the same address! However, with 2^160 different addresses, this isn't likely to happen any time soon.
+From here, to generate the Bitcoin address from the public key, the public key is sha256 hashed and then ripemd160 hashed. This double hashing provides an extra layer of security and a ripemd160 hash provides a 160 bit hash of sha256's 256 bit hash, shortening the length of the address. An interesting result of this is that it is possible for two different public keys to hash to the same address! However, with 2^160 different addresses, this isn't likely to happen any time soon.
  
 ```
 :::python
@@ -74,13 +74,13 @@ def get_public_address(public_key):
 public_address = get_public_address(public_key)
 ```
  
-This generates a public address of `c8db639c24f6dc026378225e40459ba8a9e54d1a`. This is sometimes referred to as the *hash 160 address*.
+The code above generates a public address of `c8db639c24f6dc026378225e40459ba8a9e54d1a`. This is sometimes referred to as the *hash 160 address*.
  
 As alluded to before, an interesting point is that both the conversion from private key to public key and the conversion from public key to public address are one way conversions. If you have an address, the only way to work backwards to find the associated public key is to solve a SHA256 hash. This is a little different to most public key cryptography, where your public key is published and your private key hidden. In this case, both public and private keys are hidden and the address (hashed public key) is published. 
  
-> Public keys are hidden for good reason. Although it is normally infeasible to compute a private key from the corresponding public key, if the method of generating private keys has been compromised then it having access to the public key makes it a lot easier to deduce the private key. In 2013, this [infamously occurred for Android Bitcoin wallets](https://bitcoin.org/en/alert/2013-08-11-android). Android had a critical weakness generating random numbers, which opened a vector for attackers to find private keys from public keys. This is also why address reuse in Bitcoin is discouraged as to sign a transaction you need to reveal your public key. If you don't reuse an address after sending a transaction from the address, you don't need worry about the private key of that address being exposed. 
+> Public keys are hidden for good reason. Although it is normally infeasible to compute a private key from the corresponding public key, if the method of generating private keys has been compromised then having access to the public key makes it a lot easier to deduce the private key. In 2013, this [infamously occurred for Android Bitcoin wallets](https://bitcoin.org/en/alert/2013-08-11-android). Android had a critical weakness generating random numbers, which opened a vector for attackers to find private keys from public keys. This is also why address reuse in Bitcoin is discouraged - to sign a transaction, you need to reveal your public key. If you don't reuse an address after sending a transaction from the address, you don't need worry about the public key of that address being exposed. 
  
-That standard way of expressing a Bitcoin address is to use the [Base58Check](https://en.bitcoin.it/wiki/base58Check_encoding) encoding of it. This encoding is only a representation of an address (and so can be decoded/reversed). It generates addresses of the form *1661HxZpSy5jhcJ2k6av2dxuspa8aafDac*. The Base58Check encoding provides a shorter address to express and also has an inbuilt checksum, that allows detection of mistyped address. In just about every Bitcoin client, the Base58Check encoding of your address is the address that you'll see. A Base58Check also includes a version number, which I'm setting to 0 in the code below - this represents that the address is a pubkey hash.
+That standard way of expressing a Bitcoin address is to use the [Base58Check](https://en.bitcoin.it/wiki/base58Check_encoding) encoding of it. This encoding is only a representation of an address (and so can be decoded/reversed). Base58Check generates addresses of the form *1661HxZpSy5jhcJ2k6av2dxuspa8aafDac*. The Base58Check encoding provides a shorter address to express and also has an inbuilt checksum, that allows detection of mistyped address. In just about every Bitcoin client, the Base58Check encoding of your address is the address that you'll see. A Base58Check also includes a version number, which I'm setting to 0 in the code below - this represents that the address is a pubkey hash.
  
 ```
 :::python
@@ -122,13 +122,13 @@ Now that I have an address with some Bitcoin in it, things get more interesting.
 ### Bootstrapping
 One of the sticking points I had when first learning about Bitcoin was, given the decentralised nature of the network, how do peers of the network find other peers? Without a centralised authority, how does a Bitcoin client know how to bootstrap and start talking to the rest of the network? 
  
-As it turns out, idealism submits to practicality and there is the slightest amount of centralisation in the initial peer discovery process. The principle way for a new peer to find peers to connect is to use a DNS lookup to any number of "DNS seed" servers that are maintained by members of the Bitcoin community.
+As it turns out, idealism submits to practicality and there is the slightest amount of centralisation in the initial peer discovery process. The principle way for a new client to find peers to connect to is to use a DNS lookup to any number of "DNS seed" servers that are maintained by members of the Bitcoin community.
  
-It turns out DNS is well suited to this purpose of bootstrapping clients as the DNS protocol, which runs over UDP and is lightweight, is hard to DDoS. IRC was used as a previous bootstrapping method but was discontinued to its weakness to DDoS attacks.  
+It turns out DNS is well suited to this purpose of bootstrapping clients as the DNS protocol, which runs over UDP and is lightweight, is hard to DDoS. IRC was used as a previous bootstrapping method but was discontinued due to its weakness to DDoS attacks.  
  
 The seeds are hardcoded into [Bitcoin core's source code](https://github.com/bitcoin/bitcoin/blob/aab1e55860dea1e40fc02bc0e535c1d1474a5ae3/src/chainparams.cpp#L123) but are subject to change by the core developers. 
  
-The Python code below connects to a DNS seed and prints out a list of peers that I'm able to connect to. Using the `socket` library, this basically performs a `nslookup` and returns the ipv4 address of the first result on running a query against the seed node `seed.bitcoin.sipa.be`.
+The Python code below connects to a DNS seed and arbitrarily chooses the first peer to connect to. Using the `socket` library, the code basically performs a `nslookup` and returns the ipv4 address of the first result on running a query against the seed node `seed.bitcoin.sipa.be`.
  
 ```
 import socket
@@ -140,12 +140,12 @@ nodes = socket.getaddrinfo("seed.bitcoin.sipa.be", None)
 node = nodes[0][4][0]
 ```
  
-The address is `208.67.251.126` which is a friendly peer that I can connect to!
+After running this, the address returned was `208.67.251.126` which is a friendly peer that I can connect to!
  
 ### Saying hi to my new peer friend
 Bitcoin connections between peers are through TCP. Upon connecting to a peer, the beginning handshake message of the Bitcoin protocol is a *Version* message. Until peers swap Version messages, no other messages will be accepted. 
  
-Bitcoin protocol messages are well documented in the [Bitcoin developer reference](https://bitcoin.org/en/developer-reference). Using the developer reference as guide, the [version](https://bitcoin.org/en/developer-reference#version) message can be constructed in Python as the snippet below shows. Most of the data is fairly uninteresting, administrative data used to open a connection to the peer. If you're interested in more details than the attached comments provide, check the developer reference.
+Bitcoin protocol messages are well documented in the [Bitcoin developer reference](https://bitcoin.org/en/developer-reference). Using the developer reference as guide, the [version](https://bitcoin.org/en/developer-reference#version) message can be constructed in Python as the snippet below shows. Most of the data is fairly uninteresting, administrative data which is used to establish the peer connection. If you're interested in more details than the attached comments provide, have a read of the developer reference.
  
 ```
 :::python
@@ -182,7 +182,7 @@ payload += struct.pack("<H", user_agentbytes)
 payload += struct.pack("<I", start_height)
 ```
  
-Again, the way in which this data can be found is available in the developer reference. Finally, each payload transmitted on the Bitcoin network needs to be prepended with a header, that contains the length of the payload, a checksum and the type of message the payload is. The header also contains the magic constant `0xF9BEB4D9` which is set for all mainnet Bitcoin messages. The following function gets a Bitcoin message with header attached.
+Again, the way in which this data should be packed is available in the developer reference. Finally, each payload transmitted on the Bitcoin network needs to be prepended with a header, that contains the length of the payload, a checksum and the type of message the payload is. The header also contains the magic constant `0xF9BEB4D9` which is set for all mainnet Bitcoin messages. The following function gets a Bitcoin message with header attached.
  
 ```
 :::python
@@ -216,7 +216,7 @@ b'\xf9\xbe\xb4\xd9version\x00\x00\x00\x00\x00f\x00\x00\x00\xf8\xdd\x9aL\x7f\x11\
 ## Bitcoin transactions
 To transfer Bitcoin it's necessary to broadcast a *transaction* to the Bitcoin network.
  
-Critically, the most important idea to understand is that the balance of a Bitcoin address is comprised solely by the number of "Unspent Transaction Outputs" (UTXO) that an address can spend. When Bob sends a Bitcoin to Alice, he's really just creating a UTXO that Alice (and only Alice) can later use to create another UTXO and send that Bitcoin on. The balance of a Bitcoin address is therefore defined by the amount of Bitcoin it is able to transfer to another address, rather than the amount of Bitcoin it *has*. 
+Critically, the most important idea to understand is that the balance of a Bitcoin address is comprised solely by the number of "Unspent Transaction Outputs" (UTXO) that the address can spend. When Bob sends a Bitcoin to Alice, he's really just creating a UTXO that Alice (and only Alice) can later use to create another UTXO and send that Bitcoin on. The balance of a Bitcoin address is therefore defined by the amount of Bitcoin it is able to transfer to another address, rather than the amount of Bitcoin it *has*. 
  
 To emphasize, when someone says that they have X bitcoin, they're really saying that all of the UTXOs that they can spend sum to X bitcoin of value. The distinction is subtle but important, the balance of a Bitcoin address isn't recorded anywhere directly but rather can be found by summing the UTXOs that it can spend. When I came to this realisation it was definitely a "oh, that's how it works!" moment.
  
