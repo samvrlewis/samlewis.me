@@ -21,4 +21,4 @@ git add -A .
 git commit -a -m "Travis #$TRAVIS_BUILD_NUMBER"
 
 #hide the output so token isn't leaked
-git push --quiet origin master > /dev/null 2>&1
+git push origin master
