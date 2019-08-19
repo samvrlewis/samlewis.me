@@ -2,35 +2,35 @@
 <feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis - 08</title><link href="http://www.samlewis.me/" rel="alternate"></link><link href="http://www.samlewis.me/feeds/08.atom.xml" rel="self"></link><id>http://www.samlewis.me/</id><updated>2014-08-05T00:00:00+10:00</updated><entry><title>Using C# to check if audio is playing in Windows</title><link href="http://www.samlewis.me/2014/08/is-audio-playing-windows" rel="alternate"></link><published>2014-08-05T00:00:00+10:00</published><updated>2014-08-05T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-08-05:/2014/08/is-audio-playing-windows</id><summary type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
 &lt;p&gt;The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
 &lt;p&gt;The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;using CSCore.CoreAudioAPI;
-using System;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nv"&gt;using&lt;/span&gt; &lt;span class="nv"&gt;CSCore&lt;/span&gt;.&lt;span class="nv"&gt;CoreAudioAPI&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
+&lt;span class="nv"&gt;using&lt;/span&gt; &lt;span class="nv"&gt;System&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
 
-namespace AudioPlayingTest
+&lt;span class="nv"&gt;namespace&lt;/span&gt; &lt;span class="nv"&gt;AudioPlayingTest&lt;/span&gt;
 {
-    class AudioPlayChecker
+    &lt;span class="nv"&gt;class&lt;/span&gt; &lt;span class="nv"&gt;AudioPlayChecker&lt;/span&gt;
     {
-        // Gets the default device for the system
-        public static MMDevice GetDefaultRenderDevice()
+        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;Gets&lt;/span&gt; &lt;span class="nv"&gt;the&lt;/span&gt; &lt;span class="nv"&gt;default&lt;/span&gt; &lt;span class="nv"&gt;device&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="nv"&gt;the&lt;/span&gt; &lt;span class="nv"&gt;system&lt;/span&gt;
+        &lt;span class="nv"&gt;public&lt;/span&gt; &lt;span class="nv"&gt;static&lt;/span&gt; &lt;span class="nv"&gt;MMDevice&lt;/span&gt; &lt;span class="nv"&gt;GetDefaultRenderDevice&lt;/span&gt;&lt;span class="ss"&gt;()&lt;/span&gt;
         {
-            using (var enumerator = new MMDeviceEnumerator())
+            &lt;span class="nv"&gt;using&lt;/span&gt; &lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;var&lt;/span&gt; &lt;span class="nv"&gt;enumerator&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nv"&gt;new&lt;/span&gt; &lt;span class="nv"&gt;MMDeviceEnumerator&lt;/span&gt;&lt;span class="ss"&gt;())&lt;/span&gt;
             {
-                return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
+                &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nv"&gt;enumerator&lt;/span&gt;.&lt;span class="nv"&gt;GetDefaultAudioEndpoint&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;DataFlow&lt;/span&gt;.&lt;span class="nv"&gt;Render&lt;/span&gt;, &lt;span class="nv"&gt;Role&lt;/span&gt;.&lt;span class="nv"&gt;Console&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
             }
         }
 
-        // Checks if audio is playing on a certain device
-        public static bool IsAudioPlaying(MMDevice device)
+        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;Checks&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nv"&gt;audio&lt;/span&gt; &lt;span class="nv"&gt;is&lt;/span&gt; &lt;span class="nv"&gt;playing&lt;/span&gt; &lt;span class="nv"&gt;on&lt;/span&gt; &lt;span class="nv"&gt;a&lt;/span&gt; &lt;span class="nv"&gt;certain&lt;/span&gt; &lt;span class="nv"&gt;device&lt;/span&gt;
+        &lt;span class="nv"&gt;public&lt;/span&gt; &lt;span class="nv"&gt;static&lt;/span&gt; &lt;span class="nv"&gt;bool&lt;/span&gt; &lt;span class="nv"&gt;IsAudioPlaying&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;MMDevice&lt;/span&gt; &lt;span class="nv"&gt;device&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;
         {
-            using (var meter = AudioMeterInformation.FromDevice(device))
+            &lt;span class="nv"&gt;using&lt;/span&gt; &lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;var&lt;/span&gt; &lt;span class="nv"&gt;meter&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nv"&gt;AudioMeterInformation&lt;/span&gt;.&lt;span class="nv"&gt;FromDevice&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;device&lt;/span&gt;&lt;span class="ss"&gt;))&lt;/span&gt;
             {
-                return meter.PeakValue &amp;gt; 0;
+                &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nv"&gt;meter&lt;/span&gt;.&lt;span class="nv"&gt;PeakValue&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
             }
         }
 
-        static void Main(string[] args)
+        &lt;span class="nv"&gt;static&lt;/span&gt; &lt;span class="nv"&gt;void&lt;/span&gt; &lt;span class="nv"&gt;Main&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;string&lt;/span&gt;[] &lt;span class="nv"&gt;args&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;
         {
-            Console.WriteLine(IsAudioPlaying(GetDefaultRenderDevice()));
-            Console.ReadLine(); //Just so the console window doesn&amp;#39;t close
+            &lt;span class="nv"&gt;Console&lt;/span&gt;.&lt;span class="nv"&gt;WriteLine&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;IsAudioPlaying&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;GetDefaultRenderDevice&lt;/span&gt;&lt;span class="ss"&gt;()))&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
+            &lt;span class="nv"&gt;Console&lt;/span&gt;.&lt;span class="nv"&gt;ReadLine&lt;/span&gt;&lt;span class="ss"&gt;()&lt;/span&gt;&lt;span class="c1"&gt;; //Just so the console window doesn&amp;#39;t close&lt;/span&gt;
         }
     }
 }

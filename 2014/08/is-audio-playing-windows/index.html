@@ -97,35 +97,35 @@
   <div class="article-content">
     <p>Using the <a href="http://cscore.codeplex.com/">CSCore</a> library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.</p>
 <p>The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore.</p>
-<div class="highlight"><pre><span></span>using CSCore.CoreAudioAPI;
-using System;
+<div class="highlight"><pre><span></span><span class="nv">using</span> <span class="nv">CSCore</span>.<span class="nv">CoreAudioAPI</span><span class="c1">;</span>
+<span class="nv">using</span> <span class="nv">System</span><span class="c1">;</span>
 
-namespace AudioPlayingTest
+<span class="nv">namespace</span> <span class="nv">AudioPlayingTest</span>
 {
-    class AudioPlayChecker
+    <span class="nv">class</span> <span class="nv">AudioPlayChecker</span>
     {
-        // Gets the default device for the system
-        public static MMDevice GetDefaultRenderDevice()
+        <span class="o">//</span> <span class="nv">Gets</span> <span class="nv">the</span> <span class="nv">default</span> <span class="nv">device</span> <span class="k">for</span> <span class="nv">the</span> <span class="nv">system</span>
+        <span class="nv">public</span> <span class="nv">static</span> <span class="nv">MMDevice</span> <span class="nv">GetDefaultRenderDevice</span><span class="ss">()</span>
         {
-            using (var enumerator = new MMDeviceEnumerator())
+            <span class="nv">using</span> <span class="ss">(</span><span class="nv">var</span> <span class="nv">enumerator</span> <span class="o">=</span> <span class="nv">new</span> <span class="nv">MMDeviceEnumerator</span><span class="ss">())</span>
             {
-                return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
+                <span class="k">return</span> <span class="nv">enumerator</span>.<span class="nv">GetDefaultAudioEndpoint</span><span class="ss">(</span><span class="nv">DataFlow</span>.<span class="nv">Render</span>, <span class="nv">Role</span>.<span class="nv">Console</span><span class="ss">)</span><span class="c1">;</span>
             }
         }
 
-        // Checks if audio is playing on a certain device
-        public static bool IsAudioPlaying(MMDevice device)
+        <span class="o">//</span> <span class="nv">Checks</span> <span class="k">if</span> <span class="nv">audio</span> <span class="nv">is</span> <span class="nv">playing</span> <span class="nv">on</span> <span class="nv">a</span> <span class="nv">certain</span> <span class="nv">device</span>
+        <span class="nv">public</span> <span class="nv">static</span> <span class="nv">bool</span> <span class="nv">IsAudioPlaying</span><span class="ss">(</span><span class="nv">MMDevice</span> <span class="nv">device</span><span class="ss">)</span>
         {
-            using (var meter = AudioMeterInformation.FromDevice(device))
+            <span class="nv">using</span> <span class="ss">(</span><span class="nv">var</span> <span class="nv">meter</span> <span class="o">=</span> <span class="nv">AudioMeterInformation</span>.<span class="nv">FromDevice</span><span class="ss">(</span><span class="nv">device</span><span class="ss">))</span>
             {
-                return meter.PeakValue &gt; 0;
+                <span class="k">return</span> <span class="nv">meter</span>.<span class="nv">PeakValue</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="c1">;</span>
             }
         }
 
-        static void Main(string[] args)
+        <span class="nv">static</span> <span class="nv">void</span> <span class="nv">Main</span><span class="ss">(</span><span class="nv">string</span>[] <span class="nv">args</span><span class="ss">)</span>
         {
-            Console.WriteLine(IsAudioPlaying(GetDefaultRenderDevice()));
-            Console.ReadLine(); //Just so the console window doesn&#39;t close
+            <span class="nv">Console</span>.<span class="nv">WriteLine</span><span class="ss">(</span><span class="nv">IsAudioPlaying</span><span class="ss">(</span><span class="nv">GetDefaultRenderDevice</span><span class="ss">()))</span><span class="c1">;</span>
+            <span class="nv">Console</span>.<span class="nv">ReadLine</span><span class="ss">()</span><span class="c1">; //Just so the console window doesn&#39;t close</span>
         }
     }
 }

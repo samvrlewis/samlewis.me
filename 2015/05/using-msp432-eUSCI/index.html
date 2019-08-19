@@ -114,28 +114,28 @@ GPIO_setAsPeripheralModuleFunctionInputPin<span class="o">(</span>GPIO_PORT_P3<s
 
 <p>The next thing to do is to define a eUSCI config. This is basically from the TI provided examples. The only tricky bit is generating the BRDIV, UCxBRF and UCxBRS numbers which in this case are 78, 2 &amp; 0. Luckily, once again TI have <a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html">provided a tool</a> to do this. This tool finds the optimal way of prescaling and modulating the clock source you're using to achieve your desired baud rate. More information about this process is on page 721 of the family guide. </p>
 <p>Using the tool with a clock of 12MHz and baud rate of 9600 Hz, gives a clockPrescalar of 78, a firstModReg of 2, a secondModReg of 0 and oversampling turned on. Converting this into a config, we get the following:</p>
-<div class="highlight"><pre><span></span>const eUSCI_UART_Config uartConfig =
-{
-    EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
-    78,                                      // BRDIV = 78
-    2,                                       // UCxBRF = 2
-    0,                                       // UCxBRS = 0
-    EUSCI_A_UART_NO_PARITY,                  // No Parity
-    EUSCI_A_UART_LSB_FIRST,                  // MSB First
-    EUSCI_A_UART_ONE_STOP_BIT,               // One stop bit
-    EUSCI_A_UART_MODE,                       // UART mode
-    EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION  // Oversampling
-};
+<div class="highlight"><pre><span></span><span class="n">const</span> <span class="n">eUSCI_UART_Config</span> <span class="n">uartConfig</span> <span class="o">=</span>
+<span class="err">{</span>
+    <span class="n">EUSCI_A_UART_CLOCKSOURCE_SMCLK</span><span class="p">,</span>          <span class="o">//</span> <span class="n">SMCLK</span> <span class="n">Clock</span> <span class="k">Source</span>
+    <span class="mi">78</span><span class="p">,</span>                                      <span class="o">//</span> <span class="n">BRDIV</span> <span class="o">=</span> <span class="mi">78</span>
+    <span class="mi">2</span><span class="p">,</span>                                       <span class="o">//</span> <span class="n">UCxBRF</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="mi">0</span><span class="p">,</span>                                       <span class="o">//</span> <span class="n">UCxBRS</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">EUSCI_A_UART_NO_PARITY</span><span class="p">,</span>                  <span class="o">//</span> <span class="k">No</span> <span class="n">Parity</span>
+    <span class="n">EUSCI_A_UART_LSB_FIRST</span><span class="p">,</span>                  <span class="o">//</span> <span class="n">MSB</span> <span class="k">First</span>
+    <span class="n">EUSCI_A_UART_ONE_STOP_BIT</span><span class="p">,</span>               <span class="o">//</span> <span class="n">One</span> <span class="n">stop</span> <span class="nb">bit</span>
+    <span class="n">EUSCI_A_UART_MODE</span><span class="p">,</span>                       <span class="o">//</span> <span class="n">UART</span> <span class="k">mode</span>
+    <span class="n">EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION</span>  <span class="o">//</span> <span class="n">Oversampling</span>
+<span class="err">}</span><span class="p">;</span>
 </pre></div>
 
 
 <p>The parity, MSB/LSB first and the amount of stop bits will all be determined by the device or chip that you want to communicate with. Now, to use that config to initialise the module using driverlib:</p>
-<div class="highlight"><pre><span></span>UART_initModule(EUSCI_A2_MODULE, &amp;uartConfig);
+<div class="highlight"><pre><span></span><span class="n">UART_initModule</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">uartConfig</span><span class="p">);</span>
 </pre></div>
 
 
 <p>This sets all the relevant registers to achieve the configuration earlier specified. If you're really interesting in understanding what exactly this is doing, it's worth reading the family guide. Now that the module is intialised, it can finally be enabled on!</p>
-<div class="highlight"><pre><span></span>UART_enableModule(EUSCI_A2_MODULE);
+<div class="highlight"><pre><span></span><span class="n">UART_enableModule</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">);</span>
 </pre></div>
 
 
@@ -147,49 +147,49 @@ UART_transmitData<span class="o">(</span>EUSCI_A2_MODULE<span class="o">,</span>
 
 <p>If you want to simplify the process of sending individual characters (or instead want to send strings/numbers etc), check out <a href="../msp432-serial-printf/">my post about a printf function for the MSP432</a>.</p>
 <p>The whole code would then end up looking like this.</p>
-<div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;driverlib.h&quot;</span><span class="cp"></span>
+<div class="highlight"><pre><span></span>#<span class="k">include</span> <span class="s2">&quot;</span><span class="s">driverlib.h</span><span class="s2">&quot;</span>
 
-<span class="k">const</span> <span class="n">eUSCI_UART_Config</span> <span class="n">uartConfig</span> <span class="o">=</span>
-<span class="p">{</span>
-    <span class="n">EUSCI_A_UART_CLOCKSOURCE_SMCLK</span><span class="p">,</span>          <span class="c1">// SMCLK Clock Source</span>
-    <span class="mi">78</span><span class="p">,</span>                                     <span class="c1">// BRDIV = 78</span>
-    <span class="mi">2</span><span class="p">,</span>                                       <span class="c1">// UCxBRF = 2</span>
-    <span class="mi">0</span><span class="p">,</span>                                       <span class="c1">// UCxBRS = 0</span>
-    <span class="n">EUSCI_A_UART_NO_PARITY</span><span class="p">,</span>                  <span class="c1">// No Parity</span>
-    <span class="n">EUSCI_A_UART_LSB_FIRST</span><span class="p">,</span>                  <span class="c1">// MSB First</span>
-    <span class="n">EUSCI_A_UART_ONE_STOP_BIT</span><span class="p">,</span>               <span class="c1">// One stop bit</span>
-    <span class="n">EUSCI_A_UART_MODE</span><span class="p">,</span>                       <span class="c1">// UART mode</span>
-    <span class="n">EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION</span>  <span class="c1">// Oversampling</span>
-<span class="p">};</span>
+<span class="nv">const</span> <span class="nv">eUSCI_UART_Config</span> <span class="nv">uartConfig</span> <span class="o">=</span>
+{
+    <span class="nv">EUSCI_A_UART_CLOCKSOURCE_SMCLK</span>,          <span class="o">//</span> <span class="nv">SMCLK</span> <span class="nv">Clock</span> <span class="nv">Source</span>
+    <span class="mi">78</span>,                                     <span class="o">//</span> <span class="nv">BRDIV</span> <span class="o">=</span> <span class="mi">78</span>
+    <span class="mi">2</span>,                                       <span class="o">//</span> <span class="nv">UCxBRF</span> <span class="o">=</span> <span class="mi">2</span>
+    <span class="mi">0</span>,                                       <span class="o">//</span> <span class="nv">UCxBRS</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="nv">EUSCI_A_UART_NO_PARITY</span>,                  <span class="o">//</span> <span class="nv">No</span> <span class="nv">Parity</span>
+    <span class="nv">EUSCI_A_UART_LSB_FIRST</span>,                  <span class="o">//</span> <span class="nv">MSB</span> <span class="nv">First</span>
+    <span class="nv">EUSCI_A_UART_ONE_STOP_BIT</span>,               <span class="o">//</span> <span class="nv">One</span> <span class="nv">stop</span> <span class="nv">bit</span>
+    <span class="nv">EUSCI_A_UART_MODE</span>,                       <span class="o">//</span> <span class="nv">UART</span> <span class="nv">mode</span>
+    <span class="nv">EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION</span>  <span class="o">//</span> <span class="nv">Oversampling</span>
+}<span class="c1">;</span>
 
 
-<span class="kt">int</span> <span class="nf">main</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span>
-<span class="p">{</span>
+<span class="nv">int</span> <span class="nv">main</span><span class="ss">(</span><span class="nv">void</span><span class="ss">)</span>
+{
     <span class="cm">/* Halting WDT  */</span>
-    <span class="n">WDT_A_holdTimer</span><span class="p">();</span>
+    <span class="nv">WDT_A_holdTimer</span><span class="ss">()</span><span class="c1">;</span>
 
 
     <span class="cm">/* Configure pins P3.2 and P3.3 in UART mode.</span>
 <span class="cm">     * Doesn&#39;t matter if they are set to inputs or outputs</span>
 <span class="cm">     */</span>
-    <span class="n">GPIO_setAsPeripheralModuleFunctionInputPin</span><span class="p">(</span><span class="n">GPIO_PORT_P3</span><span class="p">,</span>
-                <span class="n">GPIO_PIN2</span> <span class="o">|</span> <span class="n">GPIO_PIN3</span><span class="p">,</span> <span class="n">GPIO_PRIMARY_MODULE_FUNCTION</span><span class="p">);</span>
+    <span class="nv">GPIO_setAsPeripheralModuleFunctionInputPin</span><span class="ss">(</span><span class="nv">GPIO_PORT_P3</span>,
+                <span class="nv">GPIO_PIN2</span> <span class="o">|</span> <span class="nv">GPIO_PIN3</span>, <span class="nv">GPIO_PRIMARY_MODULE_FUNCTION</span><span class="ss">)</span><span class="c1">;</span>
 
     <span class="cm">/* Setting DCO (clock) to 12MHz */</span>
-    <span class="n">CS_setDCOCenteredFrequency</span><span class="p">(</span><span class="n">CS_DCO_FREQUENCY_12</span><span class="p">);</span>
+    <span class="nv">CS_setDCOCenteredFrequency</span><span class="ss">(</span><span class="nv">CS_DCO_FREQUENCY_12</span><span class="ss">)</span><span class="c1">;</span>
 
     <span class="cm">/* Configuring UART Module */</span>
-    <span class="n">UART_initModule</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">uartConfig</span><span class="p">);</span>
+    <span class="nv">UART_initModule</span><span class="ss">(</span><span class="nv">EUSCI_A2_MODULE</span>, <span class="o">&amp;</span><span class="nv">uartConfig</span><span class="ss">)</span><span class="c1">;</span>
 
     <span class="cm">/* Enable UART module */</span>
-    <span class="n">UART_enableModule</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">);</span>
+    <span class="nv">UART_enableModule</span><span class="ss">(</span><span class="nv">EUSCI_A2_MODULE</span><span class="ss">)</span><span class="c1">;</span>
 
-    <span class="k">while</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
-    <span class="p">{</span>
+    <span class="k">while</span><span class="ss">(</span><span class="mi">1</span><span class="ss">)</span>
+    {
         <span class="cm">/* Send the &#39;g&#39; character over UART */</span>
-        <span class="n">UART_transmitData</span><span class="p">(</span><span class="n">EUSCI_A2_MODULE</span><span class="p">,</span> <span class="sc">&#39;g&#39;</span><span class="p">);</span>
-    <span class="p">}</span>
-<span class="p">}</span>
+        <span class="nv">UART_transmitData</span><span class="ss">(</span><span class="nv">EUSCI_A2_MODULE</span>, <span class="s1">&#39;</span><span class="s">g</span><span class="s1">&#39;</span><span class="ss">)</span><span class="c1">;</span>
+    }
+}
 </pre></div>
 
 

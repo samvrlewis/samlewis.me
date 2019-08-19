@@ -19,28 +19,28 @@ GPIO_setAsPeripheralModuleFunctionInputPin&lt;span class="o"&gt;(&lt;/span&gt;GP
 
 &lt;p&gt;The next thing to do is to define a eUSCI config. This is basically from the TI provided examples. The only tricky bit is generating the BRDIV, UCxBRF and UCxBRS numbers which in this case are 78, 2 &amp;amp; 0. Luckily, once again TI have &lt;a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html"&gt;provided a tool&lt;/a&gt; to do this. This tool finds the optimal way of prescaling and modulating the clock source you're using to achieve your desired baud rate. More information about this process is on page 721 of the family guide. &lt;/p&gt;
 &lt;p&gt;Using the tool with a clock of 12MHz and baud rate of 9600 Hz, gives a clockPrescalar of 78, a firstModReg of 2, a secondModReg of 0 and oversampling turned on. Converting this into a config, we get the following:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;const eUSCI_UART_Config uartConfig =
-{
-    EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
-    78,                                      // BRDIV = 78
-    2,                                       // UCxBRF = 2
-    0,                                       // UCxBRS = 0
-    EUSCI_A_UART_NO_PARITY,                  // No Parity
-    EUSCI_A_UART_LSB_FIRST,                  // MSB First
-    EUSCI_A_UART_ONE_STOP_BIT,               // One stop bit
-    EUSCI_A_UART_MODE,                       // UART mode
-    EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION  // Oversampling
-};
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;const&lt;/span&gt; &lt;span class="n"&gt;eUSCI_UART_Config&lt;/span&gt; &lt;span class="n"&gt;uartConfig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;
+&lt;span class="err"&gt;{&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_CLOCKSOURCE_SMCLK&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;          &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;SMCLK&lt;/span&gt; &lt;span class="n"&gt;Clock&lt;/span&gt; &lt;span class="k"&gt;Source&lt;/span&gt;
+    &lt;span class="mi"&gt;78&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                      &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;BRDIV&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;78&lt;/span&gt;
+    &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;UCxBRF&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;
+    &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;UCxBRS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_NO_PARITY&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="k"&gt;No&lt;/span&gt; &lt;span class="n"&gt;Parity&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_LSB_FIRST&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;MSB&lt;/span&gt; &lt;span class="k"&gt;First&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_ONE_STOP_BIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;               &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;One&lt;/span&gt; &lt;span class="n"&gt;stop&lt;/span&gt; &lt;span class="nb"&gt;bit&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_MODE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;UART&lt;/span&gt; &lt;span class="k"&gt;mode&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION&lt;/span&gt;  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Oversampling&lt;/span&gt;
+&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;The parity, MSB/LSB first and the amount of stop bits will all be determined by the device or chip that you want to communicate with. Now, to use that config to initialise the module using driverlib:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;UART_initModule(EUSCI_A2_MODULE, &amp;amp;uartConfig);
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;UART_initModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;uartConfig&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;This sets all the relevant registers to achieve the configuration earlier specified. If you're really interesting in understanding what exactly this is doing, it's worth reading the family guide. Now that the module is intialised, it can finally be enabled on!&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;UART_enableModule(EUSCI_A2_MODULE);
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;UART_enableModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -52,49 +52,49 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 
 &lt;p&gt;If you want to simplify the process of sending individual characters (or instead want to send strings/numbers etc), check out &lt;a href="../msp432-serial-printf/"&gt;my post about a printf function for the MSP432&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;The whole code would then end up looking like this.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;driverlib.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;#&lt;span class="k"&gt;include&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="s"&gt;driverlib.h&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;
 
-&lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="n"&gt;eUSCI_UART_Config&lt;/span&gt; &lt;span class="n"&gt;uartConfig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;
-&lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_CLOCKSOURCE_SMCLK&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;          &lt;span class="c1"&gt;// SMCLK Clock Source&lt;/span&gt;
-    &lt;span class="mi"&gt;78&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                     &lt;span class="c1"&gt;// BRDIV = 78&lt;/span&gt;
-    &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="c1"&gt;// UCxBRF = 2&lt;/span&gt;
-    &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="c1"&gt;// UCxBRS = 0&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_NO_PARITY&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="c1"&gt;// No Parity&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_LSB_FIRST&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="c1"&gt;// MSB First&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_ONE_STOP_BIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;               &lt;span class="c1"&gt;// One stop bit&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_MODE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                       &lt;span class="c1"&gt;// UART mode&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION&lt;/span&gt;  &lt;span class="c1"&gt;// Oversampling&lt;/span&gt;
-&lt;span class="p"&gt;};&lt;/span&gt;
+&lt;span class="nv"&gt;const&lt;/span&gt; &lt;span class="nv"&gt;eUSCI_UART_Config&lt;/span&gt; &lt;span class="nv"&gt;uartConfig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;
+{
+    &lt;span class="nv"&gt;EUSCI_A_UART_CLOCKSOURCE_SMCLK&lt;/span&gt;,          &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;SMCLK&lt;/span&gt; &lt;span class="nv"&gt;Clock&lt;/span&gt; &lt;span class="nv"&gt;Source&lt;/span&gt;
+    &lt;span class="mi"&gt;78&lt;/span&gt;,                                     &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;BRDIV&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;78&lt;/span&gt;
+    &lt;span class="mi"&gt;2&lt;/span&gt;,                                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;UCxBRF&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;
+    &lt;span class="mi"&gt;0&lt;/span&gt;,                                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;UCxBRS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+    &lt;span class="nv"&gt;EUSCI_A_UART_NO_PARITY&lt;/span&gt;,                  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;No&lt;/span&gt; &lt;span class="nv"&gt;Parity&lt;/span&gt;
+    &lt;span class="nv"&gt;EUSCI_A_UART_LSB_FIRST&lt;/span&gt;,                  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;MSB&lt;/span&gt; &lt;span class="nv"&gt;First&lt;/span&gt;
+    &lt;span class="nv"&gt;EUSCI_A_UART_ONE_STOP_BIT&lt;/span&gt;,               &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;One&lt;/span&gt; &lt;span class="nv"&gt;stop&lt;/span&gt; &lt;span class="nv"&gt;bit&lt;/span&gt;
+    &lt;span class="nv"&gt;EUSCI_A_UART_MODE&lt;/span&gt;,                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;UART&lt;/span&gt; &lt;span class="nv"&gt;mode&lt;/span&gt;
+    &lt;span class="nv"&gt;EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION&lt;/span&gt;  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="nv"&gt;Oversampling&lt;/span&gt;
+}&lt;span class="c1"&gt;;&lt;/span&gt;
 
 
-&lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="nf"&gt;main&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-&lt;span class="p"&gt;{&lt;/span&gt;
+&lt;span class="nv"&gt;int&lt;/span&gt; &lt;span class="nv"&gt;main&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;void&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;
+{
     &lt;span class="cm"&gt;/* Halting WDT  */&lt;/span&gt;
-    &lt;span class="n"&gt;WDT_A_holdTimer&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+    &lt;span class="nv"&gt;WDT_A_holdTimer&lt;/span&gt;&lt;span class="ss"&gt;()&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
 
 
     &lt;span class="cm"&gt;/* Configure pins P3.2 and P3.3 in UART mode.&lt;/span&gt;
 &lt;span class="cm"&gt;     * Doesn&amp;#39;t matter if they are set to inputs or outputs&lt;/span&gt;
 &lt;span class="cm"&gt;     */&lt;/span&gt;
-    &lt;span class="n"&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;GPIO_PORT_P3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
-                &lt;span class="n"&gt;GPIO_PIN2&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="n"&gt;GPIO_PIN3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;GPIO_PRIMARY_MODULE_FUNCTION&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="nv"&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;GPIO_PORT_P3&lt;/span&gt;,
+                &lt;span class="nv"&gt;GPIO_PIN2&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="nv"&gt;GPIO_PIN3&lt;/span&gt;, &lt;span class="nv"&gt;GPIO_PRIMARY_MODULE_FUNCTION&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
 
     &lt;span class="cm"&gt;/* Setting DCO (clock) to 12MHz */&lt;/span&gt;
-    &lt;span class="n"&gt;CS_setDCOCenteredFrequency&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;CS_DCO_FREQUENCY_12&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="nv"&gt;CS_setDCOCenteredFrequency&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;CS_DCO_FREQUENCY_12&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
 
     &lt;span class="cm"&gt;/* Configuring UART Module */&lt;/span&gt;
-    &lt;span class="n"&gt;UART_initModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;uartConfig&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="nv"&gt;UART_initModule&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;EUSCI_A2_MODULE&lt;/span&gt;, &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="nv"&gt;uartConfig&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
 
     &lt;span class="cm"&gt;/* Enable UART module */&lt;/span&gt;
-    &lt;span class="n"&gt;UART_enableModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="nv"&gt;UART_enableModule&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
 
-    &lt;span class="k"&gt;while&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-    &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;while&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;
+    {
         &lt;span class="cm"&gt;/* Send the &amp;#39;g&amp;#39; character over UART */&lt;/span&gt;
-        &lt;span class="n"&gt;UART_transmitData&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="sc"&gt;&amp;#39;g&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-    &lt;span class="p"&gt;}&lt;/span&gt;
-&lt;span class="p"&gt;}&lt;/span&gt;
+        &lt;span class="nv"&gt;UART_transmitData&lt;/span&gt;&lt;span class="ss"&gt;(&lt;/span&gt;&lt;span class="nv"&gt;EUSCI_A2_MODULE&lt;/span&gt;, &lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="s"&gt;g&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="ss"&gt;)&lt;/span&gt;&lt;span class="c1"&gt;;&lt;/span&gt;
+    }
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
