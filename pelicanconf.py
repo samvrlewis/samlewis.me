@@ -3,7 +3,7 @@
 
 AUTHOR = u'Sam Lewis'
 SITENAME = u'Sam Lewis'
-SITEURL = 'http://www.samlewis.me'
+SITEURL = 'https://www.samlewis.me'
 TIMEZONE = 'Australia/Brisbane'
 THEME = './theme/notebook-simpler'
 SUMMARY_MAX_LENGTH = 50
