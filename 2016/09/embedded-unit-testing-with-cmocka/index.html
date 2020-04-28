@@ -112,32 +112,32 @@
 <h3>An example of unit testing C in an embedded context</h3>
 <p>To give a concrete example of how you could make use of <code>cmocka</code> in an embedded context, I'll show the process of unit testing code for a temperature sensor. I've chosen the TI <a href="http://www.ti.com/lit/ds/symlink/tmp101.pdf">TMP101</a> as the temperature sensor, which is a temperature sensor that works over I2C. The complete listing of code <a href="https://github.com/samvrlewis/cmocka-embedded-example/">is checked in on my github</a>, the below text gives a rundown of how it all comes together. </p>
 <p>The first step as normal, is to write some code for the tmp101 sensor that can fetch a temperature. You can find the full code listing <a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/src/tmp101.c">on my github</a>. It's also reproduced below. </p>
-<div class="highlight"><pre><span></span>#<span class="k">include</span> <span class="s2">&quot;</span><span class="s">tmp101.h</span><span class="s2">&quot;</span>
+<div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;tmp101.h&quot;</span><span class="cp"></span>
 
-<span class="nv">static</span> <span class="nv">const</span> <span class="nv">float</span> <span class="nv">TMP_BIT_RESOLUTION</span> <span class="o">=</span> <span class="mi">0</span>.<span class="mi">0625</span><span class="c1">;</span>
+<span class="k">static</span> <span class="k">const</span> <span class="kt">float</span> <span class="n">TMP_BIT_RESOLUTION</span> <span class="o">=</span> <span class="mf">0.0625</span><span class="p">;</span>
 
-<span class="nv">float</span> <span class="nv">tmp101_get_temperature</span><span class="ss">(</span><span class="nv">void</span><span class="ss">)</span> 
-{   
-    <span class="o">//</span> <span class="nv">Need</span> <span class="nv">to</span> <span class="nv">set</span> <span class="nv">the</span> <span class="nv">TMP101</span> <span class="nv">pointer</span> <span class="nv">register</span> <span class="nv">to</span> <span class="nv">point</span> <span class="nv">to</span> <span class="nv">the</span> <span class="nv">temp</span> <span class="nv">register</span>
-    <span class="nv">uint8_t</span> <span class="nv">pointer_address</span> <span class="o">=</span> <span class="mi">0</span><span class="c1">;</span>
-    <span class="nv">i2c_transmit_blocking</span><span class="ss">(</span><span class="nv">TMP101_ADDRESS</span>, <span class="mi">0</span>, <span class="o">&amp;</span><span class="nv">pointer_address</span>, <span class="mi">1</span><span class="ss">)</span><span class="c1">;</span>
+<span class="kt">float</span> <span class="nf">tmp101_get_temperature</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> 
+<span class="p">{</span>   
+    <span class="c1">// Need to set the TMP101 pointer register to point to the temp register</span>
+    <span class="kt">uint8_t</span> <span class="n">pointer_address</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="n">i2c_transmit_blocking</span><span class="p">(</span><span class="n">TMP101_ADDRESS</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pointer_address</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 
-    <span class="o">//</span> <span class="nv">The</span> <span class="nv">TMP101</span> <span class="nv">stores</span> <span class="mi">12</span> <span class="nv">bit</span> <span class="nv">samples</span> <span class="nv">that</span> <span class="nv">are</span> <span class="nv">retrieved</span> <span class="nv">in</span> <span class="nv">two</span> <span class="nv">byte</span> <span class="nv">blocks</span>
-    <span class="nv">uint8_t</span> <span class="nv">data</span>[<span class="mi">2</span>]<span class="c1">;</span>
-    <span class="nv">i2c_read_blocking</span><span class="ss">(</span><span class="nv">TMP101_ADDRESS</span>, <span class="mi">0</span>, <span class="o">&amp;</span><span class="nv">data</span>[<span class="mi">0</span>], <span class="mi">2</span><span class="ss">)</span><span class="c1">;</span>
+    <span class="c1">// The TMP101 stores 12 bit samples that are retrieved in two byte blocks</span>
+    <span class="kt">uint8_t</span> <span class="n">data</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+    <span class="n">i2c_read_blocking</span><span class="p">(</span><span class="n">TMP101_ADDRESS</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">2</span><span class="p">);</span>
 
-    <span class="o">//</span> <span class="nv">the</span> <span class="mi">1</span><span class="nv">st</span> <span class="nv">byte</span> <span class="nv">is</span> <span class="nv">bits</span> <span class="mi">12</span> <span class="nv">to</span> <span class="mi">4</span> <span class="nv">of</span> <span class="nv">the</span> <span class="nv">sample</span> <span class="nv">and</span> <span class="nv">the</span> <span class="mi">2</span><span class="nv">nd</span> <span class="nv">byte</span> <span class="nv">is</span> <span class="nv">bits</span> <span class="mi">4</span> <span class="nv">to</span> <span class="mi">0</span>
-    <span class="o">//</span> <span class="nv">see</span> <span class="nv">page</span> <span class="mi">16</span> <span class="nv">of</span> <span class="nv">the</span> <span class="nv">TMP_101</span> <span class="nv">datasheet</span>
-    <span class="nv">uint16_t</span> <span class="nv">temperature_bits</span> <span class="o">=</span> <span class="ss">(</span><span class="nv">data</span>[<span class="mi">0</span>] <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="ss">)</span> <span class="o">|</span> <span class="ss">(</span><span class="nv">data</span>[<span class="mi">1</span>] <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="ss">)</span><span class="c1">;</span>
+    <span class="c1">// the 1st byte is bits 12 to 4 of the sample and the 2nd byte is bits 4 to 0</span>
+    <span class="c1">// see page 16 of the TMP_101 datasheet</span>
+    <span class="kt">uint16_t</span> <span class="n">temperature_bits</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">);</span>
 
-    <span class="o">//</span> <span class="nv">The</span> <span class="mi">12</span> <span class="nv">bit</span> <span class="nv">sample</span> <span class="nv">is</span> <span class="nv">represented</span> <span class="nv">using</span> <span class="mi">2</span><span class="nv">s</span> <span class="nv">complement</span>, <span class="k">for</span> <span class="nv">simplicity</span> 
-    <span class="o">//</span> <span class="ss">(</span><span class="nv">and</span> <span class="nv">because</span> <span class="nv">there</span><span class="s1">&#39;</span><span class="s">s no 12 bit int representation), scale up the sample</span>
-    <span class="o">//</span> <span class="nv">to</span> <span class="mi">16</span> <span class="nv">bits</span> <span class="nv">and</span> <span class="nv">adjust</span> <span class="nv">the</span> <span class="nv">bit</span> <span class="nv">resolution</span> <span class="nv">when</span> <span class="nv">converting</span> <span class="nv">later</span>
-    <span class="nv">int16_t</span> <span class="nv">temperature</span> <span class="o">=</span> <span class="nv">temperature_bits</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="c1">;</span>
+    <span class="c1">// The 12 bit sample is represented using 2s complement, for simplicity </span>
+    <span class="c1">// (and because there&#39;s no 12 bit int representation), scale up the sample</span>
+    <span class="c1">// to 16 bits and adjust the bit resolution when converting later</span>
+    <span class="kt">int16_t</span> <span class="n">temperature</span> <span class="o">=</span> <span class="n">temperature_bits</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="p">;</span>
 
-    <span class="o">//</span> <span class="nv">shift</span> <span class="nv">the</span> <span class="nv">sample</span> <span class="nv">back</span> <span class="nv">down</span> <span class="nv">and</span> <span class="nv">convert</span> <span class="nv">by</span> <span class="nv">the</span> <span class="nv">TMP_101</span> <span class="nv">bit</span> <span class="nv">resolution</span>
-    <span class="k">return</span> <span class="ss">((</span><span class="nv">temperature</span> <span class="o">/</span> <span class="mi">16</span><span class="ss">)</span> <span class="o">*</span> <span class="mi">0</span>.<span class="mi">0625</span><span class="nv">f</span><span class="ss">)</span><span class="c1">;</span>
-}
+    <span class="c1">// shift the sample back down and convert by the TMP_101 bit resolution</span>
+    <span class="k">return</span> <span class="p">((</span><span class="n">temperature</span> <span class="o">/</span> <span class="mi">16</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.0625f</span><span class="p">);</span>
+<span class="p">}</span>
 </pre></div>
 
 
@@ -145,33 +145,33 @@
 <p>Conveniently, for this particular temperature sensor, TI are kind enough to provide a table of example temperatures with their corresponding 12 bit digital outputs. These prove a nice place to start in testing our <code>get_temperature</code> function. </p>
 <p><img alt="table of sensor outputs" src="sensor_outputs.png"></p>
 <p>In essence, we want to control the data that <code>i2c_read_blocking</code> returns to our <code>tmp101_get_temperature</code> function so that we can check against our function works as it should. A simple (but somewhat ugly) way to this might be to have the function look something like:</p>
-<div class="highlight"><pre><span></span><span class="nv">void</span> <span class="nv">i2c_read_blocking</span><span class="ss">(</span><span class="nv">uint8_t</span> <span class="nv">address</span>, <span class="nv">uint8_t</span> <span class="nv">offset</span>, <span class="nv">uint8_t</span><span class="o">*</span> <span class="nv">pData</span>, <span class="nv">uint8_t</span> <span class="nv">data_size</span><span class="ss">)</span>
-{
-    #<span class="nv">ifdef</span> <span class="nv">TESTING</span>
-    <span class="k">return</span> <span class="nv">DUMMY_VALUE</span>
-    #<span class="k">endif</span>
+<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">i2c_read_blocking</span><span class="p">(</span><span class="kt">uint8_t</span> <span class="n">address</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">pData</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">data_size</span><span class="p">)</span>
+<span class="p">{</span>
+    <span class="cp">#ifdef TESTING</span>
+    <span class="k">return</span> <span class="n">DUMMY_VALUE</span>
+    <span class="cp">#endif</span>
 
-    <span class="o">//</span><span class="nv">normal</span> <span class="nv">i2c</span> <span class="nv">logic</span> <span class="nv">here</span>
-}
+    <span class="c1">//normal i2c logic here</span>
+<span class="p">}</span>
 </pre></div>
 
 
 <p>But mixing test code with production code is ugly and an antipattern that should be avoided if possible. A much better way that allows us to both completely separate our testing and source code is to use the <code>cmocka</code> framework to help us (dynamically!) control what our <code>i2c_read_blocking</code> function does. The first step of using <code>cmocka</code> is to define mocks for the functions you want to mock out. The two mocked functions are shown below.</p>
-<div class="highlight"><pre><span></span><span class="nv">void</span> <span class="nv">__wrap_i2c_transmit_blocking</span><span class="ss">(</span><span class="nv">uint8_t</span> <span class="nv">address</span>, <span class="nv">uint8_t</span> <span class="nv">offset</span>, <span class="nv">uint8_t</span><span class="o">*</span> <span class="nv">data</span>, <span class="nv">uint8_t</span> <span class="nv">data_size</span><span class="ss">)</span>
-{
-    <span class="o">//</span> <span class="nv">allows</span> <span class="nv">the</span> <span class="nv">calling</span> <span class="nv">test</span> <span class="nv">to</span> <span class="nv">check</span> <span class="k">if</span> <span class="nv">the</span> <span class="nv">supplied</span> <span class="nv">parameters</span> <span class="nv">are</span> <span class="nv">as</span> <span class="nv">expected</span>
-    <span class="nv">check_expected</span><span class="ss">(</span><span class="nv">address</span><span class="ss">)</span><span class="c1">;</span>
-    <span class="nv">check_expected</span><span class="ss">(</span><span class="nv">offset</span><span class="ss">)</span><span class="c1">;</span>
-}
+<div class="highlight"><pre><span></span><span class="n">void</span><span class="w"> </span><span class="n">__wrap_i2c_transmit_blocking</span><span class="p">(</span><span class="n">uint8_t</span><span class="w"> </span><span class="n">address</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">)</span><span class="w"></span>
+<span class="err">{</span><span class="w"></span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">allows</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">calling</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="k">check</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">supplied</span><span class="w"> </span><span class="k">parameters</span><span class="w"> </span><span class="k">are</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">expected</span><span class="w"></span>
+<span class="w">    </span><span class="n">check_expected</span><span class="p">(</span><span class="n">address</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">check_expected</span><span class="p">(</span><span class="n">offset</span><span class="p">);</span><span class="w"></span>
+<span class="err">}</span><span class="w"></span>
 
-<span class="nv">void</span> <span class="nv">__wrap_i2c_read_blocking</span><span class="ss">(</span><span class="nv">uint8_t</span> <span class="nv">address</span>, <span class="nv">uint8_t</span> <span class="nv">offset</span>, <span class="nv">uint8_t</span><span class="o">*</span> <span class="nv">pData</span>, <span class="nv">uint8_t</span> <span class="nv">data_size</span><span class="ss">)</span> 
-{
-    <span class="o">//</span> <span class="nv">allow</span> <span class="nv">the</span> <span class="nv">calling</span> <span class="nv">test</span> <span class="nv">to</span> <span class="nv">specify</span> <span class="nv">the</span> <span class="nv">data</span> <span class="nv">it</span> <span class="nv">wants</span> <span class="nv">back</span>
-    <span class="o">//</span> <span class="nv">and</span> <span class="nv">copy</span> <span class="nv">it</span> <span class="nv">back</span> <span class="nv">out</span>
-    <span class="k">for</span><span class="ss">(</span><span class="nv">int</span> <span class="nv">i</span><span class="o">=</span><span class="mi">0</span><span class="c1">; i &lt; data_size; i++) {</span>
-        <span class="nv">pData</span>[<span class="nv">i</span>] <span class="o">=</span> <span class="nv">mock_type</span><span class="ss">(</span><span class="nv">uint8_t</span><span class="ss">)</span><span class="c1">;</span>
-    }
-}
+<span class="n">void</span><span class="w"> </span><span class="n">__wrap_i2c_read_blocking</span><span class="p">(</span><span class="n">uint8_t</span><span class="w"> </span><span class="n">address</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="n">pData</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">)</span><span class="w"> </span>
+<span class="err">{</span><span class="w"></span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">allow</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">calling</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">specify</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">wants</span><span class="w"> </span><span class="n">back</span><span class="w"></span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">copy</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">back</span><span class="w"> </span><span class="k">out</span><span class="w"></span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="nc">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">data_size</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">pData</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mock_type</span><span class="p">(</span><span class="n">uint8_t</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="err">}</span><span class="w"></span>
+<span class="err">}</span><span class="w"></span>
 </pre></div>
 
 

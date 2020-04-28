@@ -99,13 +99,13 @@
 <p>In fact, xv6 was developed by MIT as a teaching operating system for their <a href="https://pdos.csail.mit.edu/6.828/2014/xv6.html">6.828 course</a>. The course page for 6.828 is a great resource that MIT are kind enough to have publicly avaliable. </p>
 <p>MIT also produce a fantastic <a href="https://pdos.csail.mit.edu/6.828/2014/xv6/book-rev8.pdf">xv6 reference book</a> that provides commentary on the structure of the xv6 operating system. Additionally, the xv6 source actually self documents - the xv6 <code>make</code> file contains a target (<code>make xv6.pdf</code>) that generates a <a href="https://pdos.csail.mit.edu/6.828/2014/xv6/xv6-rev8.pdf">pdf of the source code</a>, which amazingly comes in under 100 pages and 10k lines of source (including comments!). Not bad for an entire, functional, operating system. </p>
 <p>xv6 is typically run virtualized using qemu on a Linux host machine. To get started with xv6, clone the xv6 repo:</p>
-<div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">git</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="p">.</span><span class="n">com</span><span class="o">/</span><span class="n">mit</span><span class="o">-</span><span class="n">pdos</span><span class="o">/</span><span class="n">xv6</span><span class="o">-</span><span class="k">public</span><span class="p">.</span><span class="n">git</span> <span class="n">xv6</span>
+<div class="highlight"><pre><span></span><span class="err">git clone git://github.com/mit-pdos/xv6-public.git xv6</span>
 </pre></div>
 
 
 <p>Then to start it as a virtual machine under qemu:</p>
-<div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">xv6</span>
-<span class="n">make</span> <span class="n">qemu</span>
+<div class="highlight"><pre><span></span><span class="err">cd xv6</span>
+<span class="err">make qemu</span>
 </pre></div>
 
 
@@ -114,22 +114,22 @@
 <p><img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png"> </p>
 <p>From here, you'll be able to run a few simple commands like <code>ls</code> and <code>cat</code> and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. </p>
 <p>The core <code>while</code> loop the shell executes is shown below. </p>
-<div class="highlight"><pre><span></span> <span class="o">//</span> <span class="nv">Read</span> <span class="nv">and</span> <span class="nv">run</span> <span class="nv">input</span> <span class="nv">commands</span>.
- <span class="k">while</span><span class="ss">(</span><span class="nv">getcmd</span><span class="ss">(</span><span class="nv">buf</span>, <span class="nv">sizeof</span><span class="ss">(</span><span class="nv">buf</span><span class="ss">))</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="ss">)</span>{
-    <span class="k">if</span><span class="ss">(</span><span class="nv">buf</span>[<span class="mi">0</span>] <span class="o">==</span> ’<span class="nv">c</span>’ <span class="o">&amp;&amp;</span> <span class="nv">buf</span>[<span class="mi">1</span>] <span class="o">==</span> ’<span class="nv">d</span>’ <span class="o">&amp;&amp;</span> <span class="nv">buf</span>[<span class="mi">2</span>] <span class="o">==</span> ’ ’<span class="ss">)</span>{
-        <span class="o">//</span> <span class="nv">Clumsy</span> <span class="nv">but</span> <span class="nv">will</span> <span class="nv">have</span> <span class="nv">to</span> <span class="k">do</span> <span class="k">for</span> <span class="nv">now</span>.
-        <span class="o">//</span> <span class="nv">Chdir</span> <span class="nv">has</span> <span class="nv">no</span> <span class="nv">effect</span> <span class="nv">on</span> <span class="nv">the</span> <span class="nv">parent</span> <span class="k">if</span> <span class="nv">run</span> <span class="nv">in</span> <span class="nv">the</span> <span class="nv">child</span>.
-        <span class="nv">buf</span>[<span class="k">strlen</span><span class="ss">(</span><span class="nv">buf</span><span class="ss">)</span>−<span class="mi">1</span>] <span class="o">=</span> <span class="mi">0</span><span class="c1">; // chop \n</span>
+<div class="highlight"><pre><span></span> <span class="o">//</span> <span class="k">Read</span> <span class="k">and</span> <span class="n">run</span> <span class="k">input</span> <span class="n">commands</span><span class="p">.</span>
+ <span class="n">while</span><span class="p">(</span><span class="n">getcmd</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span><span class="err">{</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="err">’</span><span class="k">c</span><span class="err">’</span> <span class="o">&amp;&amp;</span> <span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="err">’</span><span class="n">d</span><span class="err">’</span> <span class="o">&amp;&amp;</span> <span class="n">buf</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="err">’</span> <span class="err">’</span><span class="p">)</span><span class="err">{</span>
+        <span class="o">//</span> <span class="n">Clumsy</span> <span class="n">but</span> <span class="n">will</span> <span class="n">have</span> <span class="k">to</span> <span class="k">do</span> <span class="k">for</span> <span class="n">now</span><span class="p">.</span>
+        <span class="o">//</span> <span class="n">Chdir</span> <span class="n">has</span> <span class="k">no</span> <span class="n">effect</span> <span class="k">on</span> <span class="n">the</span> <span class="n">parent</span> <span class="k">if</span> <span class="n">run</span> <span class="k">in</span> <span class="n">the</span> <span class="n">child</span><span class="p">.</span>
+        <span class="n">buf</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="err">−</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="o">//</span> <span class="n">chop</span> <span class="err">\</span><span class="n">n</span>
 
-        <span class="k">if</span><span class="ss">(</span><span class="nv">chdir</span><span class="ss">(</span><span class="nv">buf</span><span class="o">+</span><span class="mi">3</span><span class="ss">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="ss">)</span>
-            <span class="nv">printf</span><span class="ss">(</span><span class="mi">2</span>, <span class="s2">&quot;</span><span class="s">cannot cd %s</span><span class="se">\n</span><span class="s2">&quot;</span>, <span class="nv">buf</span><span class="o">+</span><span class="mi">3</span><span class="ss">)</span><span class="c1">;</span>
-        <span class="k">continue</span><span class="c1">;</span>
-    }
-    <span class="k">if</span><span class="ss">(</span><span class="nv">fork1</span><span class="ss">()</span> <span class="o">==</span> <span class="mi">0</span><span class="ss">)</span>
-        <span class="nv">runcmd</span><span class="ss">(</span><span class="nv">parsecmd</span><span class="ss">(</span><span class="nv">buf</span><span class="ss">))</span><span class="c1">;</span>
-    <span class="k">wait</span><span class="ss">()</span><span class="c1">;</span>
- }
- <span class="k">exit</span><span class="ss">()</span><span class="c1">;</span>
+        <span class="k">if</span><span class="p">(</span><span class="n">chdir</span><span class="p">(</span><span class="n">buf</span><span class="o">+</span><span class="mi">3</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+            <span class="n">printf</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="ss">&quot;cannot cd %s\n&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="o">+</span><span class="mi">3</span><span class="p">);</span>
+        <span class="k">continue</span><span class="p">;</span>
+    <span class="err">}</span>
+    <span class="k">if</span><span class="p">(</span><span class="n">fork1</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">runcmd</span><span class="p">(</span><span class="n">parsecmd</span><span class="p">(</span><span class="n">buf</span><span class="p">));</span>
+    <span class="n">wait</span><span class="p">();</span>
+ <span class="err">}</span>
+ <span class="n">exit</span><span class="p">();</span>
 </pre></div>
 
 

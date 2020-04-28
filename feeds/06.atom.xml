@@ -31,12 +31,12 @@
 
 
 &lt;p&gt;Running this code gets the private key (in hex) of  &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="mi"&gt;0000000000000000000000000000000000000000000000000&lt;/span&gt;&lt;span class="n"&gt;feedb0bdeadbeef&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;0000000000000000000000000000000000000000000000000feedb0bdeadbeef&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;And the public key (in hex) of &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="mi"&gt;04&lt;/span&gt;&lt;span class="n"&gt;d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -77,7 +77,7 @@
 
     &lt;span class="n"&gt;result&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;from_bytes&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;byteorder&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;big&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-    &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;result&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;result&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
     &lt;span class="c1"&gt;# count the leading 0s&lt;/span&gt;
     &lt;span class="n"&gt;padding&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lstrip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;b&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\0&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
@@ -164,7 +164,7 @@
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;connect&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;node&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;8333&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;send&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_message&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;version&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
-&lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -264,22 +264,22 @@
 &lt;p&gt;For the Pubkey script of our transaction, we use a &lt;a href="https://en.bitcoin.it/wiki/Transaction#Pay-to-PubkeyHash"&gt;Pay to Pubkey hash&lt;/a&gt; (or p2pk) script. The script ensures that only the person that holds the public key that hashes to the provided Bitcoin address is able to spend the created output and that a supplied signature has been generated by the person that holds the corresponding private key to the public key.&lt;/p&gt;
 &lt;p&gt;To unlock a transaction that has been locked by a p2pk script, the user provides their public key and a signature of the hash of the raw transaction. The public key is hashed and compared to the address that the script was created with and the signature is verified for the supplied public key. If the hash of the public key and the address are equal, and the signature is verified, the output can be spent.&lt;/p&gt;
 &lt;p&gt;In Bitcoin script operands, the p2pk script looks as follows.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;OP_DUP&lt;/span&gt;
-&lt;span class="n"&gt;OP_HASH160&lt;/span&gt;
-&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="k"&gt;Length&lt;/span&gt; &lt;span class="k"&gt;of&lt;/span&gt; &lt;span class="n"&gt;address&lt;/span&gt; &lt;span class="k"&gt;in&lt;/span&gt; &lt;span class="n"&gt;bytes&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;
-&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="n"&gt;Bitcoin&lt;/span&gt; &lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="o"&gt;&amp;gt;&lt;/span&gt;
-&lt;span class="n"&gt;OP_EQUALVERIFY&lt;/span&gt;
-&lt;span class="n"&gt;OP_CHECKSIG&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;OP_DUP&lt;/span&gt;
+&lt;span class="err"&gt;OP_HASH160&lt;/span&gt;
+&lt;span class="err"&gt;&amp;lt;Length of address in bytes&amp;gt;&lt;/span&gt;
+&lt;span class="err"&gt;&amp;lt;Bitcoin address&amp;gt;&lt;/span&gt;
+&lt;span class="err"&gt;OP_EQUALVERIFY&lt;/span&gt;
+&lt;span class="err"&gt;OP_CHECKSIG&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;Converting the operands to their values (these can be found on the &lt;a href="https://en.bitcoin.it/wiki/Script"&gt;wiki&lt;/a&gt;) and inputting the public address (before it has been Base58Check encoded) gives the following script in hex:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="n"&gt;x76&lt;/span&gt;
-&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="n"&gt;xA9&lt;/span&gt;
-&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="n"&gt;x14&lt;/span&gt;
-&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="n"&gt;xFF33195EC053D6E58D5FD3CC67747D3E1C71B280&lt;/span&gt;
-&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="n"&gt;x88&lt;/span&gt;
-&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="n"&gt;xAC&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;0x76&lt;/span&gt;
+&lt;span class="err"&gt;0xA9&lt;/span&gt;
+&lt;span class="err"&gt;0x14&lt;/span&gt;
+&lt;span class="err"&gt;0xFF33195EC053D6E58D5FD3CC67747D3E1C71B280&lt;/span&gt;
+&lt;span class="err"&gt;0x88&lt;/span&gt;
+&lt;span class="err"&gt;0xAC&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -464,4 +464,4 @@
 &lt;li&gt;Unless you're a masochist for pain, I'd also recommend not doing everything from scratch unless you're interested in doing so for learning purposes. The &lt;a href="https://github.com/richardkiss/pycoin"&gt;pycoin&lt;/a&gt; library is a Python Bitcoin library that will save you a few headaches. &lt;/li&gt;
 &lt;li&gt;To also save yourself pain, it's probably advisable to use the &lt;a href="https://en.bitcoin.it/wiki/Testnet"&gt;Bitcoin testnet&lt;/a&gt; to play around with, rather than using the mainnet like I did. That said, it's more fun when the risk of your code being wrong is losing real money!&lt;/li&gt;
 &lt;li&gt;Lastly, it is probably worth repeating that the accompanying code for this article can be found in my &lt;a href="https://github.com/samvrlewis/simple-bitcoin"&gt;Github repo&lt;/a&gt;.&lt;/li&gt;
-&lt;/ul&gt;</content></entry></feed>
+&lt;/ul&gt;</content><category term="06"></category></entry></feed>

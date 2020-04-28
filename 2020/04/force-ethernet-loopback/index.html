@@ -5,15 +5,17 @@
 <!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
 <head>
 
+<!-- Extra Header for IPython Notebooks
+================================================== -->
 
 	<!-- Basic Page Needs
   ================================================== -->
 	<meta charset="utf-8">
-	<title>Home | Sam Lewis</title>
+	<title>Forcing ethernet traffic onto physical interfaces | Sam Lewis</title>
 
 	<meta name="google-site-verification" content="0wRDUL1uay7MXb9mC8tycRBay0xX5RCY4n8inQCY498" />
 
-	<meta name="description" content="Sam Lewis is a Brisbane based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
+	<meta name="description" content="">
 	<meta name="author" content="Sam Lewis">
         <link rel="canonical" href="http://www.samlewis.me"/>
 
@@ -90,37 +92,91 @@
 
 		<section id="content" class="twelve columns offset-by-one">
 
-      <h1 class="article-title"><a href="2020/04/force-ethernet-loopback" title="Forcing ethernet traffic onto physical interfaces">Forcing ethernet traffic onto physical interfaces</a></h3>
-      <h6 class="article-date">28 Apr 2020</h6>
-      <hr class="large">
-      <h1 class="article-title"><a href="2017/06/a-peek-under-bitcoins-hood" title="A peek under Bitcoin's hood">A peek under Bitcoin's hood</a></h3>
-      <h6 class="article-date">05 Jun 2017</h6>
-      <hr class="large">
-      <h1 class="article-title"><a href="2016/09/embedded-unit-testing-with-cmocka" title="Unit testing embedded code with cmocka">Unit testing embedded code with cmocka</a></h3>
-      <h6 class="article-date">26 Sep 2016</h6>
-      <hr class="large">
-      <h1 class="article-title"><a href="2016/04/getting-started-xv6" title="Getting started with the xv6 operating system">Getting started with the xv6 operating system</a></h3>
-      <h6 class="article-date">18 Apr 2016</h6>
-      <hr class="large">
-      <h1 class="article-title"><a href="2015/09/startup-catalyst-2015" title="Startup Catalyst 2015: I'm off to Silicon Valley!">Startup Catalyst 2015: I'm off to Silicon Valley!</a></h3>
-      <h6 class="article-date">24 Sep 2015</h6>
-      <hr class="large">
-      <h1 class="article-title"><a href="2015/05/using-msp432-eUSCI" title="Using the MSP432 serial (eUSCI) modules">Using the MSP432 serial (eUSCI) modules</a></h3>
-      <h6 class="article-date">23 May 2015</h6>
-      <hr class="large">
-      <h1 class="article-title"><a href="2015/05/msp432-serial-printf" title="MSP432 serial printf">MSP432 serial printf</a></h3>
-      <h6 class="article-date">17 May 2015</h6>
-      <hr class="large">
-      <h1 class="article-title"><a href="2015/02/afl-stats-sql" title="AFL statistics SQL database">AFL statistics SQL database</a></h3>
-      <h6 class="article-date">21 Feb 2015</h6>
-      <hr class="large">
-      <h1 class="article-title"><a href="2014/10/automated-thesis-tracking" title="Automatically tracking my thesis progress">Automatically tracking my thesis progress</a></h3>
-      <h6 class="article-date">03 Oct 2014</h6>
-      <hr class="large">
-      <h1 class="article-title"><a href="2014/08/is-audio-playing-windows" title="Using C# to check if audio is playing in Windows">Using C# to check if audio is playing in Windows</a></h3>
-      <h6 class="article-date">05 Aug 2014</h6>
-      <hr class="large">
+  <h1 class="article-title"><a href="/2020/04/force-ethernet-loopback" title="Permalink to Forcing ethernet traffic onto physical interfaces">Forcing ethernet traffic onto physical interfaces</a></h1>
+  <h6 class="article-date">28 Apr 2020</h6>
+  <div class="article-content">
+    <p>When you're working with a device that has two ethernet ports, it can be sometimes useful for hardware benchmarking or testing purposes to do a loopback test where one port connects directly to the other.</p>
+<p><img alt="ethernet loopback" src="/images/ethernetloopback.png"></p>
+<p>By default, and somewhat annoyingly, Linux is smart about routing traffic between ethernet adapters on the same system, leading to results from iperf like this:</p>
+<div class="highlight"><pre><span></span><span class="err">[ ID] Interval           Transfer     Bitrate         Retr</span>
+<span class="err">[  5]   0.00-10.00  sec  3.70 GBytes  3.18 Gbits/sec    0             sender</span>
+<span class="err">[  5]   0.00-10.04  sec  3.70 GBytes  3.16 Gbits/sec                  receiver</span>
+</pre></div>
 
+
+<p>Which is impressive, but obviously means that no data is being put out  through the physical interface.</p>
+<p>Luckily <a href="https://en.wikipedia.org/wiki/Linux_namespaces#Network_(net)">network namespaces</a> can be used to force traffic out across the physical medium. By placing each adapter into its own namespace, the namespaces can't see each other and so the traffic is forced out on the wire.</p>
+<p>To do this:</p>
+<ol>
+<li>Create a namespace for each adapter</li>
+</ol>
+<div class="highlight"><pre><span></span><span class="err">ip netns add ns_eth0</span>
+<span class="err">ip netns add ns_eth1</span>
+</pre></div>
+
+
+<ol>
+<li>Move the adapters into the namespaces</li>
+</ol>
+<div class="highlight"><pre><span></span><span class="err">ip netns set eth0 ns ns_eth0</span>
+<span class="err">ip netns set eth1 ns ns_eth1</span>
+</pre></div>
+
+
+<ol>
+<li>Assign ip addresses to each adapter</li>
+</ol>
+<div class="highlight"><pre><span></span><span class="err">ip netns exec ns_eth0 ip addr add dev eth0 192.168.1.1/24</span>
+<span class="err">ip netns exec ns_eth1 ip addr add dev eth1 192.168.1.2/24</span>
+</pre></div>
+
+
+<ol>
+<li>Bring the adapters up</li>
+</ol>
+<div class="highlight"><pre><span></span><span class="err">ip netns exec ns_eth0 ip link set eth0 up</span>
+<span class="err">ip netns exec ns_eth1 ip link set eth1 up</span>
+</pre></div>
+
+
+<ol>
+<li>Check that each adapter can ping the other</li>
+</ol>
+<div class="highlight"><pre><span></span><span class="err">ip netns exec ns_eth0 ping 192.168.1.2</span>
+<span class="err">ip netns exec ns_eth1 ping 192.168.1.1</span>
+</pre></div>
+
+
+<ol>
+<li>Run your tests, happy in the knowledge that the traffic is really going out on the physical interface!</li>
+</ol>
+<div class="highlight"><pre><span></span><span class="err">ip netns exec ns_eth0 iperf3 -s</span>
+<span class="err">ip netns exec ns_eth1 iperf3 -c 192.168.1.1</span>
+</pre></div>
+  </div>
+    
+
+       <div class="back-to-home"><a href="/">← Back to Home</a></div>
+    <hr class="large">
+    
+    <!-- DISQUS -->
+      <div id="disqus_thread"></div>
+      <script type="text/javascript">
+          /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+          var disqus_shortname = 'sam-lewis'; // required: replace example with your forum shortname
+
+          /* * * DON'T EDIT BELOW THIS LINE * * */
+          (function() {
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+      <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+<!-- twitter.js -->
+<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
 		</section>
 
 	</div><!-- container -->
