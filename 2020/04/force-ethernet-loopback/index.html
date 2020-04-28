@@ -98,9 +98,9 @@
     <p>When you're working with a device that has two ethernet ports, it can be sometimes useful for hardware benchmarking or testing purposes to do a loopback test where one port connects directly to the other.</p>
 <p><img alt="ethernet loopback" src="/images/ethernetloopback.png"></p>
 <p>By default, and somewhat annoyingly, Linux is smart about routing traffic between ethernet adapters on the same system, leading to results from iperf like this:</p>
-<div class="highlight"><pre><span></span><span class="err">[ ID] Interval           Transfer     Bitrate         Retr</span>
-<span class="err">[  5]   0.00-10.00  sec  3.70 GBytes  3.18 Gbits/sec    0             sender</span>
-<span class="err">[  5]   0.00-10.04  sec  3.70 GBytes  3.16 Gbits/sec                  receiver</span>
+<div class="highlight"><pre><span></span><span class="o">[</span> ID<span class="o">]</span> Interval           Transfer     Bitrate         Retr
+<span class="o">[</span>  <span class="m">5</span><span class="o">]</span>   <span class="m">0</span>.00-10.00  sec  <span class="m">3</span>.70 GBytes  <span class="m">3</span>.18 Gbits/sec    <span class="m">0</span>             sender
+<span class="o">[</span>  <span class="m">5</span><span class="o">]</span>   <span class="m">0</span>.00-10.04  sec  <span class="m">3</span>.70 GBytes  <span class="m">3</span>.16 Gbits/sec                  receiver
 </pre></div>
 
 
@@ -110,48 +110,48 @@
 <ol>
 <li>Create a namespace for each adapter</li>
 </ol>
-<div class="highlight"><pre><span></span><span class="err">ip netns add ns_eth0</span>
-<span class="err">ip netns add ns_eth1</span>
+<div class="highlight"><pre><span></span>ip netns add ns_eth0
+ip netns add ns_eth1
 </pre></div>
 
 
 <ol>
 <li>Move the adapters into the namespaces</li>
 </ol>
-<div class="highlight"><pre><span></span><span class="err">ip netns set eth0 ns ns_eth0</span>
-<span class="err">ip netns set eth1 ns ns_eth1</span>
+<div class="highlight"><pre><span></span>ip netns <span class="nb">set</span> eth0 ns ns_eth0
+ip netns <span class="nb">set</span> eth1 ns ns_eth1
 </pre></div>
 
 
 <ol>
 <li>Assign ip addresses to each adapter</li>
 </ol>
-<div class="highlight"><pre><span></span><span class="err">ip netns exec ns_eth0 ip addr add dev eth0 192.168.1.1/24</span>
-<span class="err">ip netns exec ns_eth1 ip addr add dev eth1 192.168.1.2/24</span>
+<div class="highlight"><pre><span></span>ip netns <span class="nb">exec</span> ns_eth0 ip addr add dev eth0 <span class="m">192</span>.168.1.1/24
+ip netns <span class="nb">exec</span> ns_eth1 ip addr add dev eth1 <span class="m">192</span>.168.1.2/24
 </pre></div>
 
 
 <ol>
 <li>Bring the adapters up</li>
 </ol>
-<div class="highlight"><pre><span></span><span class="err">ip netns exec ns_eth0 ip link set eth0 up</span>
-<span class="err">ip netns exec ns_eth1 ip link set eth1 up</span>
+<div class="highlight"><pre><span></span>ip netns <span class="nb">exec</span> ns_eth0 ip link <span class="nb">set</span> eth0 up
+ip netns <span class="nb">exec</span> ns_eth1 ip link <span class="nb">set</span> eth1 up
 </pre></div>
 
 
 <ol>
 <li>Check that each adapter can ping the other</li>
 </ol>
-<div class="highlight"><pre><span></span><span class="err">ip netns exec ns_eth0 ping 192.168.1.2</span>
-<span class="err">ip netns exec ns_eth1 ping 192.168.1.1</span>
+<div class="highlight"><pre><span></span>ip netns <span class="nb">exec</span> ns_eth0 ping <span class="m">192</span>.168.1.2
+ip netns <span class="nb">exec</span> ns_eth1 ping <span class="m">192</span>.168.1.1
 </pre></div>
 
 
 <ol>
 <li>Run your tests, happy in the knowledge that the traffic is really going out on the physical interface!</li>
 </ol>
-<div class="highlight"><pre><span></span><span class="err">ip netns exec ns_eth0 iperf3 -s</span>
-<span class="err">ip netns exec ns_eth1 iperf3 -c 192.168.1.1</span>
+<div class="highlight"><pre><span></span>ip netns <span class="nb">exec</span> ns_eth0 iperf3 -s
+ip netns <span class="nb">exec</span> ns_eth1 iperf3 -c <span class="m">192</span>.168.1.1
 </pre></div>
   </div>
     
