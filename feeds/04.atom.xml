@@ -24,8 +24,8 @@ ip netns add ns_eth1
 &lt;ol&gt;
 &lt;li&gt;Move the adapters into the namespaces&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns &lt;span class="nb"&gt;set&lt;/span&gt; eth0 ns ns_eth0
-ip netns &lt;span class="nb"&gt;set&lt;/span&gt; eth1 ns ns_eth1
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth0 netns ns_eth0
+ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth1 netns ns_eth1
 &lt;/pre&gt;&lt;/div&gt;
 
 

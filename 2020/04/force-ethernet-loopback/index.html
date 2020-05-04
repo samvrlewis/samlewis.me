@@ -118,8 +118,8 @@ ip netns add ns_eth1
 <ol>
 <li>Move the adapters into the namespaces</li>
 </ol>
-<div class="highlight"><pre><span></span>ip netns <span class="nb">set</span> eth0 ns ns_eth0
-ip netns <span class="nb">set</span> eth1 ns ns_eth1
+<div class="highlight"><pre><span></span>ip link <span class="nb">set</span> eth0 netns ns_eth0
+ip link <span class="nb">set</span> eth1 netns ns_eth1
 </pre></div>
 
 
