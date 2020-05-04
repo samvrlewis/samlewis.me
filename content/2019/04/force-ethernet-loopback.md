@@ -30,8 +30,8 @@ ip netns add ns_eth1
 2. Move the adapters into the namespaces
 ```
 :::bash
-ip netns set eth0 ns ns_eth0
-ip netns set eth1 ns ns_eth1
+ip link set eth0 netns ns_eth0
+ip link set eth1 netns ns_eth1
 ```
 3. Assign ip addresses to each adapter
 ```
