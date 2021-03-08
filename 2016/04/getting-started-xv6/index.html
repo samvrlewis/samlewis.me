@@ -29,7 +29,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.samlewis.me">
   <meta property="og:image" content="/theme/images/avatar.jpg">
-  <meta property="og:description" content="Sam Lewis is a Brisbane based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
+  <meta property="og:description" content="Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
 
   <!-- Twitter Cards
   ================================================== -->
@@ -99,37 +99,37 @@
 <p>In fact, xv6 was developed by MIT as a teaching operating system for their <a href="https://pdos.csail.mit.edu/6.828/2014/xv6.html">6.828 course</a>. The course page for 6.828 is a great resource that MIT are kind enough to have publicly avaliable. </p>
 <p>MIT also produce a fantastic <a href="https://pdos.csail.mit.edu/6.828/2014/xv6/book-rev8.pdf">xv6 reference book</a> that provides commentary on the structure of the xv6 operating system. Additionally, the xv6 source actually self documents - the xv6 <code>make</code> file contains a target (<code>make xv6.pdf</code>) that generates a <a href="https://pdos.csail.mit.edu/6.828/2014/xv6/xv6-rev8.pdf">pdf of the source code</a>, which amazingly comes in under 100 pages and 10k lines of source (including comments!). Not bad for an entire, functional, operating system. </p>
 <p>xv6 is typically run virtualized using qemu on a Linux host machine. To get started with xv6, clone the xv6 repo:</p>
-<div class="highlight"><pre><span></span><span class="err">git clone git://github.com/mit-pdos/xv6-public.git xv6</span>
+<div class="highlight"><pre>git clone git://github.com/mit-pdos/xv6-public.git xv6
 </pre></div>
 
 
 <p>Then to start it as a virtual machine under qemu:</p>
-<div class="highlight"><pre><span></span><span class="err">cd xv6</span>
-<span class="err">make qemu</span>
+<div class="highlight"><pre>cd xv6
+make qemu
 </pre></div>
 
 
 <p>If make fails, make sure you have your compiler toolchain installed. There's some good info on the <a href="https://pdos.csail.mit.edu/6.828/2014/tools.html">6.282 tools page</a>. For me, on Fedora, I needed to install gcc with <code>dnf install gcc</code>.</p>
 <p>Once you have your compiler toolchain working, qemu will pop up and you'll be presented with the xv6 shell. </p>
-<p><img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png"> </p>
+<p><img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png" /> </p>
 <p>From here, you'll be able to run a few simple commands like <code>ls</code> and <code>cat</code> and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. </p>
 <p>The core <code>while</code> loop the shell executes is shown below. </p>
-<div class="highlight"><pre><span></span> <span class="o">//</span> <span class="k">Read</span> <span class="k">and</span> <span class="n">run</span> <span class="k">input</span> <span class="n">commands</span><span class="p">.</span>
- <span class="n">while</span><span class="p">(</span><span class="n">getcmd</span><span class="p">(</span><span class="n">buf</span><span class="p">,</span> <span class="n">sizeof</span><span class="p">(</span><span class="n">buf</span><span class="p">))</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span><span class="err">{</span>
-    <span class="k">if</span><span class="p">(</span><span class="n">buf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="err">’</span><span class="k">c</span><span class="err">’</span> <span class="o">&amp;&amp;</span> <span class="n">buf</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="err">’</span><span class="n">d</span><span class="err">’</span> <span class="o">&amp;&amp;</span> <span class="n">buf</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">==</span> <span class="err">’</span> <span class="err">’</span><span class="p">)</span><span class="err">{</span>
-        <span class="o">//</span> <span class="n">Clumsy</span> <span class="n">but</span> <span class="n">will</span> <span class="n">have</span> <span class="k">to</span> <span class="k">do</span> <span class="k">for</span> <span class="n">now</span><span class="p">.</span>
-        <span class="o">//</span> <span class="n">Chdir</span> <span class="n">has</span> <span class="k">no</span> <span class="n">effect</span> <span class="k">on</span> <span class="n">the</span> <span class="n">parent</span> <span class="k">if</span> <span class="n">run</span> <span class="k">in</span> <span class="n">the</span> <span class="n">child</span><span class="p">.</span>
-        <span class="n">buf</span><span class="p">[</span><span class="n">strlen</span><span class="p">(</span><span class="n">buf</span><span class="p">)</span><span class="err">−</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="o">//</span> <span class="n">chop</span> <span class="err">\</span><span class="n">n</span>
+<div class="highlight"><pre> // Read and run input commands.
+ while(getcmd(buf, sizeof(buf)) &gt;= 0){
+    if(buf[0] == ’c’ &amp;&amp; buf[1] == ’d’ &amp;&amp; buf[2] == ’ ’){
+        // Clumsy but will have to do for now.
+        // Chdir has no effect on the parent if run in the child.
+        buf[strlen(buf)−1] = 0; // chop \n
 
-        <span class="k">if</span><span class="p">(</span><span class="n">chdir</span><span class="p">(</span><span class="n">buf</span><span class="o">+</span><span class="mi">3</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
-            <span class="n">printf</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="ss">&quot;cannot cd %s\n&quot;</span><span class="p">,</span> <span class="n">buf</span><span class="o">+</span><span class="mi">3</span><span class="p">);</span>
-        <span class="k">continue</span><span class="p">;</span>
-    <span class="err">}</span>
-    <span class="k">if</span><span class="p">(</span><span class="n">fork1</span><span class="p">()</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
-        <span class="n">runcmd</span><span class="p">(</span><span class="n">parsecmd</span><span class="p">(</span><span class="n">buf</span><span class="p">));</span>
-    <span class="n">wait</span><span class="p">();</span>
- <span class="err">}</span>
- <span class="n">exit</span><span class="p">();</span>
+        if(chdir(buf+3) &lt; 0)
+            printf(2, &quot;cannot cd %s\n&quot;, buf+3);
+        continue;
+    }
+    if(fork1() == 0)
+        runcmd(parsecmd(buf));
+    wait();
+ }
+ exit();
 </pre></div>
 
 
@@ -137,8 +137,38 @@
 <p>This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll step through and explore the xv6 bootstrap sequence!</p>
   </div>
     
-
-       <div class="back-to-home"><a href="/">← Back to Home</a></div>
+   <!--End mc_embed_signup-->
+   <hr class="large">
+        <!-- Begin Mailchimp Signup Form -->
+        <link href="//cdn-images.mailchimp.com/embedcode/horizontal-slim-10_7.css" rel="stylesheet" type="text/css">
+        <style type="text/css">
+          #mc_embed_signup {
+            background: #fff;
+            clear: left;
+            font: 14px Helvetica, Arial, sans-serif;
+            width: 100%;
+          }
+        
+          /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
+             We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+        </style>
+        <div id="mc_embed_signup">
+          <form action="https://samlewis.us1.list-manage.com/subscribe/post?u=42af8068ea0295eafe2477482&amp;id=35efa8dbeb"
+            method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank"
+            novalidate>
+            <div id="mc_embed_signup_scroll">
+              <label for="mce-EMAIL">Enjoyed this and want to hear about new posts?</label>
+              <input type="email" value="" name="EMAIL" class="email" id="mce-EMAIL" placeholder="email address" required>
+              <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+              <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text"
+                  name="b_42af8068ea0295eafe2477482_35efa8dbeb" tabindex="-1" value=""></div>
+              <div><input type="submit" value="Subscribe" name="subscribe" id="mc-embedded-subscribe"
+                  class="button" style="margin-top: 5px;background: orange;"></div>
+            </div>
+          </form>
+        </div>
+    
+    <!--End mc_embed_signup-->
     <hr class="large">
     
     <!-- DISQUS -->
@@ -164,16 +194,6 @@
 	</div><!-- container -->
 
 <!-- Google Analytics -->
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-50600593-1', 'auto');
-  ga('send', 'pageview');
-
-</script>
 
   <script type="text/javascript">
     $("a").on('click', function(e) {

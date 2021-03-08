@@ -29,7 +29,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.samlewis.me">
   <meta property="og:image" content="/theme/images/avatar.jpg">
-  <meta property="og:description" content="Sam Lewis is a Brisbane based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
+  <meta property="og:description" content="Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
 
   <!-- Twitter Cards
   ================================================== -->
@@ -96,11 +96,11 @@
   <h6 class="article-date">28 Apr 2020</h6>
   <div class="article-content">
     <p>When you're working with a device that has two ethernet ports, it can be sometimes useful for hardware benchmarking or testing purposes to do a loopback test where one port connects directly to the other.</p>
-<p><img alt="ethernet loopback" src="/images/ethernetloopback.png"></p>
+<p><img alt="ethernet loopback" src="/images/ethernetloopback.png" /></p>
 <p>By default, and somewhat annoyingly, Linux is smart about routing traffic between ethernet adapters on the same system, leading to results from iperf like this:</p>
-<div class="highlight"><pre><span></span><span class="o">[</span> ID<span class="o">]</span> Interval           Transfer     Bitrate         Retr
-<span class="o">[</span>  <span class="m">5</span><span class="o">]</span>   <span class="m">0</span>.00-10.00  sec  <span class="m">3</span>.70 GBytes  <span class="m">3</span>.18 Gbits/sec    <span class="m">0</span>             sender
-<span class="o">[</span>  <span class="m">5</span><span class="o">]</span>   <span class="m">0</span>.00-10.04  sec  <span class="m">3</span>.70 GBytes  <span class="m">3</span>.16 Gbits/sec                  receiver
+<div class="highlight"><pre><span class="o">[</span> ID<span class="o">]</span> Interval           Transfer     Bitrate         Retr
+<span class="o">[</span>  5<span class="o">]</span>   0.00-10.00  sec  3.70 GBytes  3.18 Gbits/sec    <span class="m">0</span>             sender
+<span class="o">[</span>  5<span class="o">]</span>   0.00-10.04  sec  3.70 GBytes  3.16 Gbits/sec                  receiver
 </pre></div>
 
 
@@ -110,7 +110,7 @@
 <ol>
 <li>Create a namespace for each adapter</li>
 </ol>
-<div class="highlight"><pre><span></span>ip netns add ns_eth0
+<div class="highlight"><pre>ip netns add ns_eth0
 ip netns add ns_eth1
 </pre></div>
 
@@ -118,7 +118,7 @@ ip netns add ns_eth1
 <ol>
 <li>Move the adapters into the namespaces</li>
 </ol>
-<div class="highlight"><pre><span></span>ip link <span class="nb">set</span> eth0 netns ns_eth0
+<div class="highlight"><pre>ip link <span class="nb">set</span> eth0 netns ns_eth0
 ip link <span class="nb">set</span> eth1 netns ns_eth1
 </pre></div>
 
@@ -126,15 +126,15 @@ ip link <span class="nb">set</span> eth1 netns ns_eth1
 <ol>
 <li>Assign ip addresses to each adapter</li>
 </ol>
-<div class="highlight"><pre><span></span>ip netns <span class="nb">exec</span> ns_eth0 ip addr add dev eth0 <span class="m">192</span>.168.1.1/24
-ip netns <span class="nb">exec</span> ns_eth1 ip addr add dev eth1 <span class="m">192</span>.168.1.2/24
+<div class="highlight"><pre>ip netns <span class="nb">exec</span> ns_eth0 ip addr add dev eth0 192.168.1.1/24
+ip netns <span class="nb">exec</span> ns_eth1 ip addr add dev eth1 192.168.1.2/24
 </pre></div>
 
 
 <ol>
 <li>Bring the adapters up</li>
 </ol>
-<div class="highlight"><pre><span></span>ip netns <span class="nb">exec</span> ns_eth0 ip link <span class="nb">set</span> eth0 up
+<div class="highlight"><pre>ip netns <span class="nb">exec</span> ns_eth0 ip link <span class="nb">set</span> eth0 up
 ip netns <span class="nb">exec</span> ns_eth1 ip link <span class="nb">set</span> eth1 up
 </pre></div>
 
@@ -142,21 +142,51 @@ ip netns <span class="nb">exec</span> ns_eth1 ip link <span class="nb">set</span
 <ol>
 <li>Check that each adapter can ping the other</li>
 </ol>
-<div class="highlight"><pre><span></span>ip netns <span class="nb">exec</span> ns_eth0 ping <span class="m">192</span>.168.1.2
-ip netns <span class="nb">exec</span> ns_eth1 ping <span class="m">192</span>.168.1.1
+<div class="highlight"><pre>ip netns <span class="nb">exec</span> ns_eth0 ping 192.168.1.2
+ip netns <span class="nb">exec</span> ns_eth1 ping 192.168.1.1
 </pre></div>
 
 
 <ol>
 <li>Run your tests, happy in the knowledge that the traffic is really going out on the physical interface!</li>
 </ol>
-<div class="highlight"><pre><span></span>ip netns <span class="nb">exec</span> ns_eth0 iperf3 -s
-ip netns <span class="nb">exec</span> ns_eth1 iperf3 -c <span class="m">192</span>.168.1.1
+<div class="highlight"><pre>ip netns <span class="nb">exec</span> ns_eth0 iperf3 -s
+ip netns <span class="nb">exec</span> ns_eth1 iperf3 -c 192.168.1.1
 </pre></div>
   </div>
     
-
-       <div class="back-to-home"><a href="/">← Back to Home</a></div>
+   <!--End mc_embed_signup-->
+   <hr class="large">
+        <!-- Begin Mailchimp Signup Form -->
+        <link href="//cdn-images.mailchimp.com/embedcode/horizontal-slim-10_7.css" rel="stylesheet" type="text/css">
+        <style type="text/css">
+          #mc_embed_signup {
+            background: #fff;
+            clear: left;
+            font: 14px Helvetica, Arial, sans-serif;
+            width: 100%;
+          }
+        
+          /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
+             We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+        </style>
+        <div id="mc_embed_signup">
+          <form action="https://samlewis.us1.list-manage.com/subscribe/post?u=42af8068ea0295eafe2477482&amp;id=35efa8dbeb"
+            method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank"
+            novalidate>
+            <div id="mc_embed_signup_scroll">
+              <label for="mce-EMAIL">Enjoyed this and want to hear about new posts?</label>
+              <input type="email" value="" name="EMAIL" class="email" id="mce-EMAIL" placeholder="email address" required>
+              <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+              <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text"
+                  name="b_42af8068ea0295eafe2477482_35efa8dbeb" tabindex="-1" value=""></div>
+              <div><input type="submit" value="Subscribe" name="subscribe" id="mc-embedded-subscribe"
+                  class="button" style="margin-top: 5px;background: orange;"></div>
+            </div>
+          </form>
+        </div>
+    
+    <!--End mc_embed_signup-->
     <hr class="large">
     
     <!-- DISQUS -->
@@ -182,16 +212,6 @@ ip netns <span class="nb">exec</span> ns_eth1 iperf3 -c <span class="m">192</spa
 	</div><!-- container -->
 
 <!-- Google Analytics -->
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-50600593-1', 'auto');
-  ga('send', 'pageview');
-
-</script>
 
   <script type="text/javascript">
     $("a").on('click', function(e) {

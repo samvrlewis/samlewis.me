@@ -1,12 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis - 04</title><link href="https://www.samlewis.me/" rel="alternate"></link><link href="https://www.samlewis.me/feeds/04.atom.xml" rel="self"></link><id>https://www.samlewis.me/</id><updated>2020-04-28T00:00:00+10:00</updated><entry><title>Forcing ethernet traffic onto physical interfaces</title><link href="https://www.samlewis.me/2020/04/force-ethernet-loopback" rel="alternate"></link><published>2020-04-28T00:00:00+10:00</published><updated>2020-04-28T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2020-04-28:/2020/04/force-ethernet-loopback</id><summary type="html">&lt;p&gt;When you're working with a device that has two ethernet ports, it can be sometimes useful for hardware benchmarking or testing purposes to do a loopback test where one port connects directly to the other.&lt;/p&gt;
-&lt;p&gt;&lt;img alt="ethernet loopback" src="/images/ethernetloopback.png"&gt;&lt;/p&gt;
-&lt;p&gt;By default, and somewhat annoyingly, Linux is smart about routing traffic between ethernet adapters on …&lt;/p&gt;</summary><content type="html">&lt;p&gt;When you're working with a device that has two ethernet ports, it can be sometimes useful for hardware benchmarking or testing purposes to do a loopback test where one port connects directly to the other.&lt;/p&gt;
-&lt;p&gt;&lt;img alt="ethernet loopback" src="/images/ethernetloopback.png"&gt;&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="https://www.samlewis.me/" rel="alternate"></link><link href="https://www.samlewis.me/feeds/04.atom.xml" rel="self"></link><id>https://www.samlewis.me/</id><updated>2020-04-28T00:00:00+10:00</updated><entry><title>Forcing ethernet traffic onto physical interfaces</title><link href="https://www.samlewis.me/2020/04/force-ethernet-loopback" rel="alternate"></link><updated>2020-04-28T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2020-04-28:2020/04/force-ethernet-loopback</id><summary type="html">&lt;p&gt;When you're working with a device that has two ethernet ports, it can be sometimes useful for hardware benchmarking or testing purposes to do a loopback test where one port connects directly to the other.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="ethernet loopback" src="/images/ethernetloopback.png" /&gt;&lt;/p&gt;
 &lt;p&gt;By default, and somewhat annoyingly, Linux is smart about routing traffic between ethernet adapters on the same system, leading to results from iperf like this:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt; ID&lt;span class="o"&gt;]&lt;/span&gt; Interval           Transfer     Bitrate         Retr
-&lt;span class="o"&gt;[&lt;/span&gt;  &lt;span class="m"&gt;5&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;   &lt;span class="m"&gt;0&lt;/span&gt;.00-10.00  sec  &lt;span class="m"&gt;3&lt;/span&gt;.70 GBytes  &lt;span class="m"&gt;3&lt;/span&gt;.18 Gbits/sec    &lt;span class="m"&gt;0&lt;/span&gt;             sender
-&lt;span class="o"&gt;[&lt;/span&gt;  &lt;span class="m"&gt;5&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;   &lt;span class="m"&gt;0&lt;/span&gt;.00-10.04  sec  &lt;span class="m"&gt;3&lt;/span&gt;.70 GBytes  &lt;span class="m"&gt;3&lt;/span&gt;.16 Gbits/sec                  receiver
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="o"&gt;[&lt;/span&gt; ID&lt;span class="o"&gt;]&lt;/span&gt; Interval           Transfer     Bitrate         Retr
+&lt;span class="o"&gt;[&lt;/span&gt;  5&lt;span class="o"&gt;]&lt;/span&gt;   0.00-10.00  sec  3.70 GBytes  3.18 Gbits/sec    &lt;span class="m"&gt;0&lt;/span&gt;             sender
+&lt;span class="o"&gt;[&lt;/span&gt;  5&lt;span class="o"&gt;]&lt;/span&gt;   0.00-10.04  sec  3.70 GBytes  3.16 Gbits/sec                  receiver
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -16,7 +14,7 @@
 &lt;ol&gt;
 &lt;li&gt;Create a namespace for each adapter&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns add ns_eth0
+&lt;div class="highlight"&gt;&lt;pre&gt;ip netns add ns_eth0
 ip netns add ns_eth1
 &lt;/pre&gt;&lt;/div&gt;
 
@@ -24,7 +22,7 @@ ip netns add ns_eth1
 &lt;ol&gt;
 &lt;li&gt;Move the adapters into the namespaces&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth0 netns ns_eth0
+&lt;div class="highlight"&gt;&lt;pre&gt;ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth0 netns ns_eth0
 ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth1 netns ns_eth1
 &lt;/pre&gt;&lt;/div&gt;
 
@@ -32,15 +30,15 @@ ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth1 netns ns_eth1
 &lt;ol&gt;
 &lt;li&gt;Assign ip addresses to each adapter&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ip addr add dev eth0 &lt;span class="m"&gt;192&lt;/span&gt;.168.1.1/24
-ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ip addr add dev eth1 &lt;span class="m"&gt;192&lt;/span&gt;.168.1.2/24
+&lt;div class="highlight"&gt;&lt;pre&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ip addr add dev eth0 192.168.1.1/24
+ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ip addr add dev eth1 192.168.1.2/24
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;ol&gt;
 &lt;li&gt;Bring the adapters up&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth0 up
+&lt;div class="highlight"&gt;&lt;pre&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth0 up
 ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth1 up
 &lt;/pre&gt;&lt;/div&gt;
 
@@ -48,53 +46,53 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ip link &lt;span class
 &lt;ol&gt;
 &lt;li&gt;Check that each adapter can ping the other&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ping &lt;span class="m"&gt;192&lt;/span&gt;.168.1.2
-ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ping &lt;span class="m"&gt;192&lt;/span&gt;.168.1.1
+&lt;div class="highlight"&gt;&lt;pre&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ping 192.168.1.2
+ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ping 192.168.1.1
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;ol&gt;
 &lt;li&gt;Run your tests, happy in the knowledge that the traffic is really going out on the physical interface!&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 iperf3 -s
-ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span class="m"&gt;192&lt;/span&gt;.168.1.1
-&lt;/pre&gt;&lt;/div&gt;</content><category term="04"></category></entry><entry><title>Getting started with the xv6 operating system</title><link href="https://www.samlewis.me/2016/04/getting-started-xv6" rel="alternate"></link><published>2016-04-18T00:00:00+10:00</published><updated>2016-04-18T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2016-04-18:/2016/04/getting-started-xv6</id><summary type="html">&lt;p&gt;xv6 is a nifty operating system that is essentially a reimplementation of &lt;a href="https://en.wikipedia.org/wiki/Version_6_Unix"&gt;Sixth Edition Unix&lt;/a&gt; that, unlike most of the huge montholithic Linux or BSD distributions that you'd run on your workstation or server, is simple enough to be used as a learning tool. Though xv6 lacks in functionality that …&lt;/p&gt;</summary><content type="html">&lt;p&gt;xv6 is a nifty operating system that is essentially a reimplementation of &lt;a href="https://en.wikipedia.org/wiki/Version_6_Unix"&gt;Sixth Edition Unix&lt;/a&gt; that, unlike most of the huge montholithic Linux or BSD distributions that you'd run on your workstation or server, is simple enough to be used as a learning tool. Though xv6 lacks in functionality that you'd expect from a modern operating system, much of the core unix concepts and structure remain the same. xv6 is also very lightweight, only taking a few seconds to compile and allows remote debugging. This all makes it great for understanding how modern operating systems hang together. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 iperf3 -s
+ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
+&lt;/pre&gt;&lt;/div&gt;</summary></entry><entry><title>Getting started with the xv6 operating system</title><link href="https://www.samlewis.me/2016/04/getting-started-xv6" rel="alternate"></link><updated>2016-04-18T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2016-04-18:2016/04/getting-started-xv6</id><summary type="html">&lt;p&gt;xv6 is a nifty operating system that is essentially a reimplementation of &lt;a href="https://en.wikipedia.org/wiki/Version_6_Unix"&gt;Sixth Edition Unix&lt;/a&gt; that, unlike most of the huge montholithic Linux or BSD distributions that you'd run on your workstation or server, is simple enough to be used as a learning tool. Though xv6 lacks in functionality that you'd expect from a modern operating system, much of the core unix concepts and structure remain the same. xv6 is also very lightweight, only taking a few seconds to compile and allows remote debugging. This all makes it great for understanding how modern operating systems hang together. &lt;/p&gt;
 &lt;p&gt;In fact, xv6 was developed by MIT as a teaching operating system for their &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6.html"&gt;6.828 course&lt;/a&gt;. The course page for 6.828 is a great resource that MIT are kind enough to have publicly avaliable. &lt;/p&gt;
 &lt;p&gt;MIT also produce a fantastic &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6/book-rev8.pdf"&gt;xv6 reference book&lt;/a&gt; that provides commentary on the structure of the xv6 operating system. Additionally, the xv6 source actually self documents - the xv6 &lt;code&gt;make&lt;/code&gt; file contains a target (&lt;code&gt;make xv6.pdf&lt;/code&gt;) that generates a &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6/xv6-rev8.pdf"&gt;pdf of the source code&lt;/a&gt;, which amazingly comes in under 100 pages and 10k lines of source (including comments!). Not bad for an entire, functional, operating system. &lt;/p&gt;
 &lt;p&gt;xv6 is typically run virtualized using qemu on a Linux host machine. To get started with xv6, clone the xv6 repo:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;git clone git://github.com/mit-pdos/xv6-public.git xv6&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;git clone git://github.com/mit-pdos/xv6-public.git xv6
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;Then to start it as a virtual machine under qemu:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;cd xv6&lt;/span&gt;
-&lt;span class="err"&gt;make qemu&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;cd xv6
+make qemu
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;If make fails, make sure you have your compiler toolchain installed. There's some good info on the &lt;a href="https://pdos.csail.mit.edu/6.828/2014/tools.html"&gt;6.282 tools page&lt;/a&gt;. For me, on Fedora, I needed to install gcc with &lt;code&gt;dnf install gcc&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;Once you have your compiler toolchain working, qemu will pop up and you'll be presented with the xv6 shell. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png"&gt; &lt;/p&gt;
+&lt;p&gt;&lt;img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png" /&gt; &lt;/p&gt;
 &lt;p&gt;From here, you'll be able to run a few simple commands like &lt;code&gt;ls&lt;/code&gt; and &lt;code&gt;cat&lt;/code&gt; and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. &lt;/p&gt;
 &lt;p&gt;The core &lt;code&gt;while&lt;/code&gt; loop the shell executes is shown below. &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt; &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="k"&gt;Read&lt;/span&gt; &lt;span class="k"&gt;and&lt;/span&gt; &lt;span class="n"&gt;run&lt;/span&gt; &lt;span class="k"&gt;input&lt;/span&gt; &lt;span class="n"&gt;commands&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
- &lt;span class="n"&gt;while&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;getcmd&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;sizeof&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="err"&gt;{&lt;/span&gt;
-    &lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="err"&gt;’&lt;/span&gt;&lt;span class="k"&gt;c&lt;/span&gt;&lt;span class="err"&gt;’&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="err"&gt;’&lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="err"&gt;’&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="err"&gt;’&lt;/span&gt; &lt;span class="err"&gt;’&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="err"&gt;{&lt;/span&gt;
-        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Clumsy&lt;/span&gt; &lt;span class="n"&gt;but&lt;/span&gt; &lt;span class="n"&gt;will&lt;/span&gt; &lt;span class="n"&gt;have&lt;/span&gt; &lt;span class="k"&gt;to&lt;/span&gt; &lt;span class="k"&gt;do&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
-        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Chdir&lt;/span&gt; &lt;span class="n"&gt;has&lt;/span&gt; &lt;span class="k"&gt;no&lt;/span&gt; &lt;span class="n"&gt;effect&lt;/span&gt; &lt;span class="k"&gt;on&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;parent&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;run&lt;/span&gt; &lt;span class="k"&gt;in&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;child&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
-        &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;strlen&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="err"&gt;−&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;chop&lt;/span&gt; &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt; // Read and run input commands.
+ while(getcmd(buf, sizeof(buf)) &amp;gt;= 0){
+    if(buf[0] == ’c’ &amp;amp;&amp;amp; buf[1] == ’d’ &amp;amp;&amp;amp; buf[2] == ’ ’){
+        // Clumsy but will have to do for now.
+        // Chdir has no effect on the parent if run in the child.
+        buf[strlen(buf)−1] = 0; // chop \n
 
-        &lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;chdir&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-            &lt;span class="n"&gt;printf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="ss"&gt;&amp;quot;cannot cd %s\n&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-        &lt;span class="k"&gt;continue&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-    &lt;span class="err"&gt;}&lt;/span&gt;
-    &lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;fork1&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-        &lt;span class="n"&gt;runcmd&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;parsecmd&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
-    &lt;span class="n"&gt;wait&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
- &lt;span class="err"&gt;}&lt;/span&gt;
- &lt;span class="n"&gt;exit&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+        if(chdir(buf+3) &amp;lt; 0)
+            printf(2, &amp;quot;cannot cd %s\n&amp;quot;, buf+3);
+        continue;
+    }
+    if(fork1() == 0)
+        runcmd(parsecmd(buf));
+    wait();
+ }
+ exit();
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;This loop gets a command from a user, checks if it's the &lt;code&gt;cd&lt;/code&gt; command and attempts to change directory if it is, otherwise it forks, and runs the entered command in the child process. I personally love how simple and enjoyable the code is to read - check out the rest of the listing for &lt;code&gt;sh.c&lt;/code&gt; in the xv6 source code pdf - it's only 400 lines of code and a delight to read.&lt;/p&gt;
-&lt;p&gt;This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll step through and explore the xv6 bootstrap sequence!&lt;/p&gt;</content><category term="04"></category></entry></feed>
+&lt;p&gt;This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll step through and explore the xv6 bootstrap sequence!&lt;/p&gt;</summary></entry></feed>

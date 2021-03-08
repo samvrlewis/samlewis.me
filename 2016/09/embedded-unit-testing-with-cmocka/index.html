@@ -29,7 +29,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.samlewis.me">
   <meta property="og:image" content="/theme/images/avatar.jpg">
-  <meta property="og:description" content="Sam Lewis is a Brisbane based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
+  <meta property="og:description" content="Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
 
   <!-- Twitter Cards
   ================================================== -->
@@ -112,7 +112,7 @@
 <h3>An example of unit testing C in an embedded context</h3>
 <p>To give a concrete example of how you could make use of <code>cmocka</code> in an embedded context, I'll show the process of unit testing code for a temperature sensor. I've chosen the TI <a href="http://www.ti.com/lit/ds/symlink/tmp101.pdf">TMP101</a> as the temperature sensor, which is a temperature sensor that works over I2C. The complete listing of code <a href="https://github.com/samvrlewis/cmocka-embedded-example/">is checked in on my github</a>, the below text gives a rundown of how it all comes together. </p>
 <p>The first step as normal, is to write some code for the tmp101 sensor that can fetch a temperature. You can find the full code listing <a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/src/tmp101.c">on my github</a>. It's also reproduced below. </p>
-<div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;tmp101.h&quot;</span><span class="cp"></span>
+<div class="highlight"><pre><span class="cp">#include</span> <span class="cpf">&quot;tmp101.h&quot;</span><span class="cp"></span>
 
 <span class="k">static</span> <span class="k">const</span> <span class="kt">float</span> <span class="n">TMP_BIT_RESOLUTION</span> <span class="o">=</span> <span class="mf">0.0625</span><span class="p">;</span>
 
@@ -143,9 +143,9 @@
 
 <p>This function isn't the most complicated function but there's enough bit manipulation to make me nervous and unsure if it'll do exactly what I want all the time. Sure, we could run it on my hardware platform and see how it responds but that'd only prove that it works as whatever temperature it is now. Instead, lets write some unit tests for this code. </p>
 <p>Conveniently, for this particular temperature sensor, TI are kind enough to provide a table of example temperatures with their corresponding 12 bit digital outputs. These prove a nice place to start in testing our <code>get_temperature</code> function. </p>
-<p><img alt="table of sensor outputs" src="sensor_outputs.png"></p>
+<p><img alt="table of sensor outputs" src="sensor_outputs.png" /></p>
 <p>In essence, we want to control the data that <code>i2c_read_blocking</code> returns to our <code>tmp101_get_temperature</code> function so that we can check against our function works as it should. A simple (but somewhat ugly) way to this might be to have the function look something like:</p>
-<div class="highlight"><pre><span></span><span class="kt">void</span> <span class="nf">i2c_read_blocking</span><span class="p">(</span><span class="kt">uint8_t</span> <span class="n">address</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">pData</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">data_size</span><span class="p">)</span>
+<div class="highlight"><pre><span class="kt">void</span> <span class="nf">i2c_read_blocking</span><span class="p">(</span><span class="kt">uint8_t</span> <span class="n">address</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">offset</span><span class="p">,</span> <span class="kt">uint8_t</span><span class="o">*</span> <span class="n">pData</span><span class="p">,</span> <span class="kt">uint8_t</span> <span class="n">data_size</span><span class="p">)</span>
 <span class="p">{</span>
     <span class="cp">#ifdef TESTING</span>
     <span class="k">return</span> <span class="n">DUMMY_VALUE</span>
@@ -157,39 +157,39 @@
 
 
 <p>But mixing test code with production code is ugly and an antipattern that should be avoided if possible. A much better way that allows us to both completely separate our testing and source code is to use the <code>cmocka</code> framework to help us (dynamically!) control what our <code>i2c_read_blocking</code> function does. The first step of using <code>cmocka</code> is to define mocks for the functions you want to mock out. The two mocked functions are shown below.</p>
-<div class="highlight"><pre><span></span><span class="n">void</span><span class="w"> </span><span class="n">__wrap_i2c_transmit_blocking</span><span class="p">(</span><span class="n">uint8_t</span><span class="w"> </span><span class="n">address</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">)</span><span class="w"></span>
-<span class="err">{</span><span class="w"></span>
-<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">allows</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">calling</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="k">check</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">supplied</span><span class="w"> </span><span class="k">parameters</span><span class="w"> </span><span class="k">are</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">expected</span><span class="w"></span>
-<span class="w">    </span><span class="n">check_expected</span><span class="p">(</span><span class="n">address</span><span class="p">);</span><span class="w"></span>
-<span class="w">    </span><span class="n">check_expected</span><span class="p">(</span><span class="n">offset</span><span class="p">);</span><span class="w"></span>
-<span class="err">}</span><span class="w"></span>
+<div class="highlight"><pre>void __wrap_i2c_transmit_blocking(uint8_t address, uint8_t offset, uint8_t* data, uint8_t data_size)
+{
+    // allows the calling test to check if the supplied parameters are as expected
+    check_expected(address);
+    check_expected(offset);
+}
 
-<span class="n">void</span><span class="w"> </span><span class="n">__wrap_i2c_read_blocking</span><span class="p">(</span><span class="n">uint8_t</span><span class="w"> </span><span class="n">address</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="n">pData</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">)</span><span class="w"> </span>
-<span class="err">{</span><span class="w"></span>
-<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">allow</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">calling</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">specify</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">wants</span><span class="w"> </span><span class="n">back</span><span class="w"></span>
-<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">copy</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">back</span><span class="w"> </span><span class="k">out</span><span class="w"></span>
-<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="nc">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">data_size</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
-<span class="w">        </span><span class="n">pData</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mock_type</span><span class="p">(</span><span class="n">uint8_t</span><span class="p">);</span><span class="w"></span>
-<span class="w">    </span><span class="err">}</span><span class="w"></span>
-<span class="err">}</span><span class="w"></span>
+void __wrap_i2c_read_blocking(uint8_t address, uint8_t offset, uint8_t* pData, uint8_t data_size) 
+{
+    // allow the calling test to specify the data it wants back
+    // and copy it back out
+    for(int i=0; i &lt; data_size; i++) {
+        pData[i] = mock_type(uint8_t);
+    }
+}
 </pre></div>
 
 
 <p><code>cmocka</code> cleverly uses the linker to swap out the real function calls for the mocked ones. To allow for this, mocked out functions are prefixed with <code>__wrap_</code>. The linker is then provided with the arguments <code>--wrap=i2c_read_blocking -Wl,--wrap=i2c_transmit_blocking</code> which allows these functions to be mocked out. For a complete example of compiling/linking with cmocka, see the <a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/Makefile">makefile</a> in my example project.</p>
 <p>With the mocks in place we can now write some tests! A complete look at the tests in my example project can be found <a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/test_tmp101.c">on my github</a> but, as an example, here's a single test:</p>
-<div class="highlight"><pre><span></span><span class="k">static</span> <span class="n">void</span> <span class="n">test_negative_temperature</span><span class="p">(</span><span class="n">void</span> <span class="o">**</span><span class="k">state</span><span class="p">)</span>
-<span class="err">{</span>
-    <span class="n">will_return</span><span class="p">(</span><span class="n">__wrap_i2c_read_blocking</span><span class="p">,</span> <span class="mi">0</span><span class="n">b11100111</span><span class="p">);</span>
-    <span class="n">will_return</span><span class="p">(</span><span class="n">__wrap_i2c_read_blocking</span><span class="p">,</span> <span class="mi">0</span><span class="n">b00000000</span><span class="p">);</span>
+<div class="highlight"><pre>static void test_negative_temperature(void **state)
+{
+    will_return(__wrap_i2c_read_blocking, 0b11100111);
+    will_return(__wrap_i2c_read_blocking, 0b00000000);
 
-    <span class="n">assert_true</span><span class="p">(</span><span class="n">tmp101_get_temperature</span><span class="p">()</span> <span class="o">==</span> <span class="o">-</span><span class="mi">25</span><span class="p">);</span>
-<span class="err">}</span>
+    assert_true(tmp101_get_temperature() == -25);
+}
 </pre></div>
 
 
 <p>The two calls to <code>will_return</code> set what the <code>i2c_read_blocking</code> function writes into the <code>pData</code> array. As per the datasheet, the 12 bit sample is returned over two bytes so these values correspond (from the above TI table) to -25 degrees celsius, which we check against. Much easier than having to stick the temperature sensor in the freezer!</p>
 <p>Running all of the tests through a Makefile gives this cool print out:</p>
-<p><img alt="cmocka output" src="cmocka_output.png"></p>
+<p><img alt="cmocka output" src="cmocka_output.png" /></p>
 <p>Although this is just a simple example, it hopefully demonstrates the utility that having unit tests can provide. Having a suite of unit tests for a project gives developers a lot of confidence - I find unit tests especially useful in developing  application layer protocols on top of lower level protocols.</p>
 <blockquote>
 <p>If you're interested in poking around a little at the source for this example, see how it's all linked together an run as a test or even run it yourself, all code for this is avaliable <a href="https://github.com/samvrlewis/cmocka-embedded-example/">on my github</a> with instructions of how to run.</p>
@@ -199,8 +199,38 @@
 <p>I hope you found this article interesting, if you have any question please don't hesitate to let me know! </p>
   </div>
     
-
-       <div class="back-to-home"><a href="/">← Back to Home</a></div>
+   <!--End mc_embed_signup-->
+   <hr class="large">
+        <!-- Begin Mailchimp Signup Form -->
+        <link href="//cdn-images.mailchimp.com/embedcode/horizontal-slim-10_7.css" rel="stylesheet" type="text/css">
+        <style type="text/css">
+          #mc_embed_signup {
+            background: #fff;
+            clear: left;
+            font: 14px Helvetica, Arial, sans-serif;
+            width: 100%;
+          }
+        
+          /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
+             We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+        </style>
+        <div id="mc_embed_signup">
+          <form action="https://samlewis.us1.list-manage.com/subscribe/post?u=42af8068ea0295eafe2477482&amp;id=35efa8dbeb"
+            method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank"
+            novalidate>
+            <div id="mc_embed_signup_scroll">
+              <label for="mce-EMAIL">Enjoyed this and want to hear about new posts?</label>
+              <input type="email" value="" name="EMAIL" class="email" id="mce-EMAIL" placeholder="email address" required>
+              <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+              <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text"
+                  name="b_42af8068ea0295eafe2477482_35efa8dbeb" tabindex="-1" value=""></div>
+              <div><input type="submit" value="Subscribe" name="subscribe" id="mc-embedded-subscribe"
+                  class="button" style="margin-top: 5px;background: orange;"></div>
+            </div>
+          </form>
+        </div>
+    
+    <!--End mc_embed_signup-->
     <hr class="large">
     
     <!-- DISQUS -->
@@ -226,16 +256,6 @@
 	</div><!-- container -->
 
 <!-- Google Analytics -->
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-50600593-1', 'auto');
-  ga('send', 'pageview');
-
-</script>
 
   <script type="text/javascript">
     $("a").on('click', function(e) {

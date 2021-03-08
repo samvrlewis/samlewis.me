@@ -29,7 +29,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.samlewis.me">
   <meta property="og:image" content="/theme/images/avatar.jpg">
-  <meta property="og:description" content="Sam Lewis is a Brisbane based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
+  <meta property="og:description" content="Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
 
   <!-- Twitter Cards
   ================================================== -->
@@ -97,46 +97,76 @@
   <div class="article-content">
     <p>Using the <a href="http://cscore.codeplex.com/">CSCore</a> library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.</p>
 <p>The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore.</p>
-<div class="highlight"><pre><span></span><span class="k">using</span> <span class="n">CSCore</span><span class="p">.</span><span class="n">CoreAudioAPI</span><span class="p">;</span>
-<span class="k">using</span> <span class="k">System</span><span class="p">;</span>
+<div class="highlight"><pre>using CSCore.CoreAudioAPI;
+using System;
 
-<span class="n">namespace</span> <span class="n">AudioPlayingTest</span>
-<span class="err">{</span>
-    <span class="k">class</span> <span class="n">AudioPlayChecker</span>
-    <span class="err">{</span>
-        <span class="o">//</span> <span class="n">Gets</span> <span class="n">the</span> <span class="k">default</span> <span class="n">device</span> <span class="k">for</span> <span class="n">the</span> <span class="k">system</span>
-        <span class="k">public</span> <span class="k">static</span> <span class="n">MMDevice</span> <span class="n">GetDefaultRenderDevice</span><span class="p">()</span>
-        <span class="err">{</span>
-            <span class="k">using</span> <span class="p">(</span><span class="n">var</span> <span class="n">enumerator</span> <span class="o">=</span> <span class="k">new</span> <span class="n">MMDeviceEnumerator</span><span class="p">())</span>
-            <span class="err">{</span>
-                <span class="k">return</span> <span class="n">enumerator</span><span class="p">.</span><span class="n">GetDefaultAudioEndpoint</span><span class="p">(</span><span class="n">DataFlow</span><span class="p">.</span><span class="n">Render</span><span class="p">,</span> <span class="k">Role</span><span class="p">.</span><span class="n">Console</span><span class="p">);</span>
-            <span class="err">}</span>
-        <span class="err">}</span>
+namespace AudioPlayingTest
+{
+    class AudioPlayChecker
+    {
+        // Gets the default device for the system
+        public static MMDevice GetDefaultRenderDevice()
+        {
+            using (var enumerator = new MMDeviceEnumerator())
+            {
+                return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
+            }
+        }
 
-        <span class="o">//</span> <span class="n">Checks</span> <span class="k">if</span> <span class="n">audio</span> <span class="k">is</span> <span class="n">playing</span> <span class="k">on</span> <span class="n">a</span> <span class="n">certain</span> <span class="n">device</span>
-        <span class="k">public</span> <span class="k">static</span> <span class="n">bool</span> <span class="n">IsAudioPlaying</span><span class="p">(</span><span class="n">MMDevice</span> <span class="n">device</span><span class="p">)</span>
-        <span class="err">{</span>
-            <span class="k">using</span> <span class="p">(</span><span class="n">var</span> <span class="n">meter</span> <span class="o">=</span> <span class="n">AudioMeterInformation</span><span class="p">.</span><span class="n">FromDevice</span><span class="p">(</span><span class="n">device</span><span class="p">))</span>
-            <span class="err">{</span>
-                <span class="k">return</span> <span class="n">meter</span><span class="p">.</span><span class="n">PeakValue</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">;</span>
-            <span class="err">}</span>
-        <span class="err">}</span>
+        // Checks if audio is playing on a certain device
+        public static bool IsAudioPlaying(MMDevice device)
+        {
+            using (var meter = AudioMeterInformation.FromDevice(device))
+            {
+                return meter.PeakValue &gt; 0;
+            }
+        }
 
-        <span class="k">static</span> <span class="n">void</span> <span class="n">Main</span><span class="p">(</span><span class="n">string</span><span class="p">[]</span> <span class="n">args</span><span class="p">)</span>
-        <span class="err">{</span>
-            <span class="n">Console</span><span class="p">.</span><span class="n">WriteLine</span><span class="p">(</span><span class="n">IsAudioPlaying</span><span class="p">(</span><span class="n">GetDefaultRenderDevice</span><span class="p">()));</span>
-            <span class="n">Console</span><span class="p">.</span><span class="n">ReadLine</span><span class="p">();</span> <span class="o">//</span><span class="n">Just</span> <span class="n">so</span> <span class="n">the</span> <span class="n">console</span> <span class="n">window</span> <span class="n">doesn</span><span class="err">&#39;</span><span class="n">t</span> <span class="k">close</span>
-        <span class="err">}</span>
-    <span class="err">}</span>
-<span class="err">}</span>
+        static void Main(string[] args)
+        {
+            Console.WriteLine(IsAudioPlaying(GetDefaultRenderDevice()));
+            Console.ReadLine(); //Just so the console window doesn&#39;t close
+        }
+    }
+}
 </pre></div>
 
 
 <p>The code is hopefully self explanatory but basically gets the default system audio device, then uses the peak value from a audio meter to determine whether audio is playing.</p>
   </div>
     
-
-       <div class="back-to-home"><a href="/">← Back to Home</a></div>
+   <!--End mc_embed_signup-->
+   <hr class="large">
+        <!-- Begin Mailchimp Signup Form -->
+        <link href="//cdn-images.mailchimp.com/embedcode/horizontal-slim-10_7.css" rel="stylesheet" type="text/css">
+        <style type="text/css">
+          #mc_embed_signup {
+            background: #fff;
+            clear: left;
+            font: 14px Helvetica, Arial, sans-serif;
+            width: 100%;
+          }
+        
+          /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
+             We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+        </style>
+        <div id="mc_embed_signup">
+          <form action="https://samlewis.us1.list-manage.com/subscribe/post?u=42af8068ea0295eafe2477482&amp;id=35efa8dbeb"
+            method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank"
+            novalidate>
+            <div id="mc_embed_signup_scroll">
+              <label for="mce-EMAIL">Enjoyed this and want to hear about new posts?</label>
+              <input type="email" value="" name="EMAIL" class="email" id="mce-EMAIL" placeholder="email address" required>
+              <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+              <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text"
+                  name="b_42af8068ea0295eafe2477482_35efa8dbeb" tabindex="-1" value=""></div>
+              <div><input type="submit" value="Subscribe" name="subscribe" id="mc-embedded-subscribe"
+                  class="button" style="margin-top: 5px;background: orange;"></div>
+            </div>
+          </form>
+        </div>
+    
+    <!--End mc_embed_signup-->
     <hr class="large">
     
     <!-- DISQUS -->
@@ -162,16 +192,6 @@
 	</div><!-- container -->
 
 <!-- Google Analytics -->
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-50600593-1', 'auto');
-  ga('send', 'pageview');
-
-</script>
 
   <script type="text/javascript">
     $("a").on('click', function(e) {

@@ -1,40 +1,39 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis - 08</title><link href="https://www.samlewis.me/" rel="alternate"></link><link href="https://www.samlewis.me/feeds/08.atom.xml" rel="self"></link><id>https://www.samlewis.me/</id><updated>2014-08-05T00:00:00+10:00</updated><entry><title>Using C# to check if audio is playing in Windows</title><link href="https://www.samlewis.me/2014/08/is-audio-playing-windows" rel="alternate"></link><published>2014-08-05T00:00:00+10:00</published><updated>2014-08-05T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-08-05:/2014/08/is-audio-playing-windows</id><summary type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
-&lt;p&gt;The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="https://www.samlewis.me/" rel="alternate"></link><link href="https://www.samlewis.me/feeds/08.atom.xml" rel="self"></link><id>https://www.samlewis.me/</id><updated>2014-08-05T00:00:00+10:00</updated><entry><title>Using C# to check if audio is playing in Windows</title><link href="https://www.samlewis.me/2014/08/is-audio-playing-windows" rel="alternate"></link><updated>2014-08-05T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-08-05:2014/08/is-audio-playing-windows</id><summary type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
 &lt;p&gt;The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;using&lt;/span&gt; &lt;span class="n"&gt;CSCore&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;CoreAudioAPI&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-&lt;span class="k"&gt;using&lt;/span&gt; &lt;span class="k"&gt;System&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;using CSCore.CoreAudioAPI;
+using System;
 
-&lt;span class="n"&gt;namespace&lt;/span&gt; &lt;span class="n"&gt;AudioPlayingTest&lt;/span&gt;
-&lt;span class="err"&gt;{&lt;/span&gt;
-    &lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="n"&gt;AudioPlayChecker&lt;/span&gt;
-    &lt;span class="err"&gt;{&lt;/span&gt;
-        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Gets&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="k"&gt;default&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="k"&gt;system&lt;/span&gt;
-        &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="n"&gt;MMDevice&lt;/span&gt; &lt;span class="n"&gt;GetDefaultRenderDevice&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
-        &lt;span class="err"&gt;{&lt;/span&gt;
-            &lt;span class="k"&gt;using&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;enumerator&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="k"&gt;new&lt;/span&gt; &lt;span class="n"&gt;MMDeviceEnumerator&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
-            &lt;span class="err"&gt;{&lt;/span&gt;
-                &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;enumerator&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;GetDefaultAudioEndpoint&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;DataFlow&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Render&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;Role&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Console&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
-            &lt;span class="err"&gt;}&lt;/span&gt;
-        &lt;span class="err"&gt;}&lt;/span&gt;
+namespace AudioPlayingTest
+{
+    class AudioPlayChecker
+    {
+        // Gets the default device for the system
+        public static MMDevice GetDefaultRenderDevice()
+        {
+            using (var enumerator = new MMDeviceEnumerator())
+            {
+                return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
+            }
+        }
 
-        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Checks&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;audio&lt;/span&gt; &lt;span class="k"&gt;is&lt;/span&gt; &lt;span class="n"&gt;playing&lt;/span&gt; &lt;span class="k"&gt;on&lt;/span&gt; &lt;span class="n"&gt;a&lt;/span&gt; &lt;span class="n"&gt;certain&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt;
-        &lt;span class="k"&gt;public&lt;/span&gt; &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="n"&gt;bool&lt;/span&gt; &lt;span class="n"&gt;IsAudioPlaying&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;MMDevice&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-        &lt;span class="err"&gt;{&lt;/span&gt;
-            &lt;span class="k"&gt;using&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;var&lt;/span&gt; &lt;span class="n"&gt;meter&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;AudioMeterInformation&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;FromDevice&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;device&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
-            &lt;span class="err"&gt;{&lt;/span&gt;
-                &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;meter&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;PeakValue&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
-            &lt;span class="err"&gt;}&lt;/span&gt;
-        &lt;span class="err"&gt;}&lt;/span&gt;
+        // Checks if audio is playing on a certain device
+        public static bool IsAudioPlaying(MMDevice device)
+        {
+            using (var meter = AudioMeterInformation.FromDevice(device))
+            {
+                return meter.PeakValue &amp;gt; 0;
+            }
+        }
 
-        &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="n"&gt;void&lt;/span&gt; &lt;span class="n"&gt;Main&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;string&lt;/span&gt;&lt;span class="p"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
-        &lt;span class="err"&gt;{&lt;/span&gt;
-            &lt;span class="n"&gt;Console&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;WriteLine&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;IsAudioPlaying&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;GetDefaultRenderDevice&lt;/span&gt;&lt;span class="p"&gt;()));&lt;/span&gt;
-            &lt;span class="n"&gt;Console&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ReadLine&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt; &lt;span class="o"&gt;//&lt;/span&gt;&lt;span class="n"&gt;Just&lt;/span&gt; &lt;span class="n"&gt;so&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;console&lt;/span&gt; &lt;span class="n"&gt;window&lt;/span&gt; &lt;span class="n"&gt;doesn&lt;/span&gt;&lt;span class="err"&gt;&amp;#39;&lt;/span&gt;&lt;span class="n"&gt;t&lt;/span&gt; &lt;span class="k"&gt;close&lt;/span&gt;
-        &lt;span class="err"&gt;}&lt;/span&gt;
-    &lt;span class="err"&gt;}&lt;/span&gt;
-&lt;span class="err"&gt;}&lt;/span&gt;
+        static void Main(string[] args)
+        {
+            Console.WriteLine(IsAudioPlaying(GetDefaultRenderDevice()));
+            Console.ReadLine(); //Just so the console window doesn&amp;#39;t close
+        }
+    }
+}
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;p&gt;The code is hopefully self explanatory but basically gets the default system audio device, then uses the peak value from a audio meter to determine whether audio is playing.&lt;/p&gt;</content><category term="08"></category></entry></feed>
+&lt;p&gt;The code is hopefully self explanatory but basically gets the default system audio device, then uses the peak value from a audio meter to determine whether audio is playing.&lt;/p&gt;</summary></entry></feed>

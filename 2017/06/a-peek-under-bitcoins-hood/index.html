@@ -29,7 +29,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.samlewis.me">
   <meta property="og:image" content="/theme/images/avatar.jpg">
-  <meta property="og:description" content="Sam Lewis is a Brisbane based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
+  <meta property="og:description" content="Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
 
   <!-- Twitter Cards
   ================================================== -->
@@ -106,12 +106,12 @@
 </blockquote>
 <p>Bitcoin uses elliptic curve public-key cryptography for its addresses. At an ultra high level, elliptic curve cryptography is used to generate a public key from a private key, in the same way RSA would but with a lower footprint. If you're interested in learning a bit about the mathematics behind how this works, <a href="https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/">Cloudflare's primer</a> is a fantastic resource.</p>
 <p>Starting with a 256 bit private key, the process of generating a Bitcoin address is shown below:</p>
-<p><img alt="bitcoin address generation" src="/images/bitcoin_address_generation.png"></p>
+<p><img alt="bitcoin address generation" src="/images/bitcoin_address_generation.png" /></p>
 <p>In Python, I use the <a href="">ecsda library</a> to do the heavy lifting for the elliptic curve cryptography. The following snippet gets a public key for the highly memorable (and highly insecure) private key <code>0xFEEDB0BDEADBEEF</code> (front padded with enough zeros to make it 64 hex chars long, or 256 bits). You'd want a more secure method of generating private keys than this if you wanted to store any real value in an address!</p>
 <blockquote>
 <p>As an amusing aside, I originally created an address using the private key 0xFACEBEEF and sent it 0.0005 BTC.. 1 month later and someone had <a href="https://blockchain.info/address/1KAWPAD8KovUo53pqHUY2bLNMTYa1obFX9">stolen my 0.0005 BTC</a>! I guess people must occasionally trawl through addresses with simple/common private keys. You really should use proper key derivation techniques!</p>
 </blockquote>
-<div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ecdsa</span> <span class="kn">import</span> <span class="n">SECP256k1</span><span class="p">,</span> <span class="n">SigningKey</span>
+<div class="highlight"><pre><span class="kn">from</span> <span class="nn">ecdsa</span> <span class="kn">import</span> <span class="n">SECP256k1</span><span class="p">,</span> <span class="n">SigningKey</span>
 
 <span class="k">def</span> <span class="nf">get_private_key</span><span class="p">(</span><span class="n">hex_string</span><span class="p">):</span>
     <span class="k">return</span> <span class="nb">bytes</span><span class="o">.</span><span class="n">fromhex</span><span class="p">(</span><span class="n">hex_string</span><span class="o">.</span><span class="n">zfill</span><span class="p">(</span><span class="mi">64</span><span class="p">))</span> <span class="c1"># pad the hex string to the required 64 characters</span>
@@ -127,18 +127,18 @@
 
 
 <p>Running this code gets the private key (in hex) of  </p>
-<div class="highlight"><pre><span></span><span class="err">0000000000000000000000000000000000000000000000000feedb0bdeadbeef</span>
+<div class="highlight"><pre>0000000000000000000000000000000000000000000000000feedb0bdeadbeef
 </pre></div>
 
 
 <p>And the public key (in hex) of </p>
-<div class="highlight"><pre><span></span><span class="err">04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28</span>
+<div class="highlight"><pre>04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28
 </pre></div>
 
 
 <p>The <code>0x04</code> that prepends the public key signifies that this is an <em>uncompressed</em> public key, meaning that the <em>x</em> and <em>y</em> coordinates from the ECDSA are simply concatenated. Because of the way ECSDA works, if you know the <em>x</em> value, the <em>y</em> value can only take two values, one even and one odd. Using this information, it is possible to express a public key using <em>x</em> and the polarity of <em>y</em>. This reduces the public key size from 65 bits to 33 bits and the key (and subsequent computed address) are referred to as <em>compressed</em>. For compressed public keys, the prepended value will be <code>0x02</code> or <code>0x03</code> depending on the polarity of <em>y</em>. <em>Uncompressed</em> public keys are most commonly used in Bitcoin, so that's what I'll use here too.</p>
 <p>From here, to generate the Bitcoin address from the public key, the public key is sha256 hashed and then ripemd160 hashed. This double hashing provides an extra layer of security and a ripemd160 hash provides a 160 bit hash of sha256's 256 bit hash, shortening the length of the address. An interesting result of this is that it is possible for two different public keys to hash to the same address! However, with 2^160 different addresses, this isn't likely to happen any time soon.</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">hashlib</span>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">hashlib</span>
 
 <span class="k">def</span> <span class="nf">get_public_address</span><span class="p">(</span><span class="n">public_key</span><span class="p">):</span>
     <span class="n">address</span> <span class="o">=</span> <span class="n">hashlib</span><span class="o">.</span><span class="n">sha256</span><span class="p">(</span><span class="n">public_key</span><span class="p">)</span><span class="o">.</span><span class="n">digest</span><span class="p">()</span>
@@ -159,7 +159,7 @@
 <p>Public keys are hidden for good reason. Although it is normally infeasible to compute a private key from the corresponding public key, if the method of generating private keys has been compromised then having access to the public key makes it a lot easier to deduce the private key. In 2013, this <a href="https://bitcoin.org/en/alert/2013-08-11-android">infamously occurred for Android Bitcoin wallets</a>. Android had a critical weakness generating random numbers, which opened a vector for attackers to find private keys from public keys. This is also why address reuse in Bitcoin is discouraged - to sign a transaction, you need to reveal your public key. If you don't reuse an address after sending a transaction from the address, you don't need worry about the public key of that address being exposed. </p>
 </blockquote>
 <p>That standard way of expressing a Bitcoin address is to use the <a href="https://en.bitcoin.it/wiki/base58Check_encoding">Base58Check</a> encoding of it. This encoding is only a representation of an address (and so can be decoded/reversed). Base58Check generates addresses of the form <em>1661HxZpSy5jhcJ2k6av2dxuspa8aafDac</em>. The Base58Check encoding provides a shorter address to express and also has an inbuilt checksum, that allows detection of mistyped address. In just about every Bitcoin client, the Base58Check encoding of your address is the address that you'll see. A Base58Check also includes a version number, which I'm setting to 0 in the code below - this represents that the address is a pubkey hash.</p>
-<div class="highlight"><pre><span></span><span class="c1"># 58 character alphabet used</span>
+<div class="highlight"><pre><span class="c1"># 58 character alphabet used</span>
 <span class="n">BASE58_ALPHABET</span> <span class="o">=</span> <span class="s1">&#39;123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz&#39;</span>
 
 <span class="k">def</span> <span class="nf">base58_encode</span><span class="p">(</span><span class="n">version</span><span class="p">,</span> <span class="n">public_address</span><span class="p">):</span>
@@ -173,10 +173,10 @@
 
     <span class="n">result</span> <span class="o">=</span> <span class="nb">int</span><span class="o">.</span><span class="n">from_bytes</span><span class="p">(</span><span class="n">payload</span><span class="p">,</span> <span class="n">byteorder</span><span class="o">=</span><span class="s2">&quot;big&quot;</span><span class="p">)</span>
 
-    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">result</span><span class="p">)</span>
 
     <span class="c1"># count the leading 0s</span>
-    <span class="n">padding</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="sa">b</span><span class="s1">&#39;</span><span class="se">\0</span><span class="s1">&#39;</span><span class="p">))</span>
+    <span class="n">padding</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="o">.</span><span class="n">lstrip</span><span class="p">(</span><span class="n">b</span><span class="s1">&#39;</span><span class="se">\0</span><span class="s1">&#39;</span><span class="p">))</span>
     <span class="n">encoded</span> <span class="o">=</span> <span class="p">[]</span>
 
     <span class="k">while</span> <span class="n">result</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
@@ -199,7 +199,7 @@
 <p>It turns out DNS is well suited to this purpose of bootstrapping clients as the DNS protocol, which runs over UDP and is lightweight, is hard to DDoS. IRC was used as a previous bootstrapping method but was discontinued due to its weakness to DDoS attacks.  </p>
 <p>The seeds are hardcoded into <a href="https://github.com/bitcoin/bitcoin/blob/aab1e55860dea1e40fc02bc0e535c1d1474a5ae3/src/chainparams.cpp#L123">Bitcoin core's source code</a> but are subject to change by the core developers. </p>
 <p>The Python code below connects to a DNS seed and arbitrarily chooses the first peer to connect to. Using the <code>socket</code> library, the code basically performs a <code>nslookup</code> and returns the ipv4 address of the first result on running a query against the seed node <code>seed.bitcoin.sipa.be</code>.</p>
-<div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">socket</span>
+<div class="highlight"><pre><span class="kn">import</span> <span class="nn">socket</span>
 
 <span class="c1"># use a dns request to a seed bitcoin DNS server to find a node</span>
 <span class="n">nodes</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">getaddrinfo</span><span class="p">(</span><span class="s2">&quot;seed.bitcoin.sipa.be&quot;</span><span class="p">,</span> <span class="bp">None</span><span class="p">)</span>
@@ -213,7 +213,7 @@
 <h3>Saying hi to my new peer friend</h3>
 <p>Bitcoin connections between peers are through TCP. Upon connecting to a peer, the beginning handshake message of the Bitcoin protocol is a <em>Version</em> message. Until peers swap Version messages, no other messages will be accepted. </p>
 <p>Bitcoin protocol messages are well documented in the <a href="https://bitcoin.org/en/developer-reference">Bitcoin developer reference</a>. Using the developer reference as guide, the <a href="https://bitcoin.org/en/developer-reference#version">version</a> message can be constructed in Python as the snippet below shows. Most of the data is fairly uninteresting, administrative data which is used to establish the peer connection. If you're interested in more details than the attached comments provide, have a read of the developer reference.</p>
-<div class="highlight"><pre><span></span><span class="n">version</span> <span class="o">=</span> <span class="mi">70014</span>
+<div class="highlight"><pre><span class="n">version</span> <span class="o">=</span> <span class="mi">70014</span>
 <span class="n">services</span> <span class="o">=</span> <span class="mi">1</span> <span class="c1"># not a full node, cant provide any data</span>
 <span class="n">timestamp</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">())</span>
 <span class="n">addr_recvservices</span> <span class="o">=</span> <span class="mi">1</span>
@@ -230,7 +230,7 @@
 
 
 <p>Using Python's <a href="https://docs.python.org/3/library/struct.html">struct library</a> the version payload data is packed into the right format, paying special attention to endianness and byte widths of the data. Packing the data into the right format is important, or else the receiving peer won't be able to understand the raw bytes that it receives. </p>
-<div class="highlight"><pre><span></span><span class="n">payload</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;&lt;I&quot;</span><span class="p">,</span> <span class="n">version</span><span class="p">)</span>
+<div class="highlight"><pre><span class="n">payload</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;&lt;I&quot;</span><span class="p">,</span> <span class="n">version</span><span class="p">)</span>
 <span class="n">payload</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;&lt;Q&quot;</span><span class="p">,</span> <span class="n">services</span><span class="p">)</span>
 <span class="n">payload</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;&lt;Q&quot;</span><span class="p">,</span> <span class="n">timestamp</span><span class="p">)</span>
 <span class="n">payload</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;&lt;Q&quot;</span><span class="p">,</span> <span class="n">addr_recvservices</span><span class="p">)</span>
@@ -246,7 +246,7 @@
 
 
 <p>Again, the way in which this data should be packed is available in the developer reference. Finally, each payload transmitted on the Bitcoin network needs to be prepended with a header, that contains the length of the payload, a checksum and the type of message the payload is. The header also contains the magic constant <code>0xF9BEB4D9</code> which is set for all mainnet Bitcoin messages. The following function gets a Bitcoin message with header attached.</p>
-<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_bitcoin_message</span><span class="p">(</span><span class="n">message_type</span><span class="p">,</span> <span class="n">payload</span><span class="p">):</span>
+<div class="highlight"><pre><span class="k">def</span> <span class="nf">get_bitcoin_message</span><span class="p">(</span><span class="n">message_type</span><span class="p">,</span> <span class="n">payload</span><span class="p">):</span>
     <span class="n">header</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;&gt;L&quot;</span><span class="p">,</span> <span class="mh">0xF9BEB4D9</span><span class="p">)</span>
     <span class="n">header</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;12s&quot;</span><span class="p">,</span> <span class="nb">bytes</span><span class="p">(</span><span class="n">message_type</span><span class="p">,</span> <span class="s1">&#39;utf-8&#39;</span><span class="p">))</span>
     <span class="n">header</span> <span class="o">+=</span> <span class="n">struct</span><span class="o">.</span><span class="n">pack</span><span class="p">(</span><span class="s2">&quot;&lt;L&quot;</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">payload</span><span class="p">))</span>
@@ -257,16 +257,16 @@
 
 
 <p>With the data packed into the right format, and the header attached, it can be sent off to our peer! </p>
-<div class="highlight"><pre><span></span><span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+<div class="highlight"><pre><span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
 <span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="n">node</span><span class="p">,</span> <span class="mi">8333</span><span class="p">))</span>
 <span class="n">s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">get_bitcoin_message</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="n">payload</span><span class="p">))</span>
-<span class="nb">print</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">1024</span><span class="p">))</span>
+<span class="k">print</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">recv</span><span class="p">(</span><span class="mi">1024</span><span class="p">))</span>
 </pre></div>
 
 
 <p>The Bitcoin protocol mandates that on receiving a version message, a peer should respond with a <em>Verack</em> acknowledgement message. Because I'm building a tiny "for fun" client, and because peers won't treat me differently if I don't, I'll disregard their version message and not send them the acknowledgement. Sending the Version message as I connect is enough to allow me to later send more meaningful messages. </p>
 <p>Running the above snippet prints out the following. It certainly looks promising - "Satoshi" and "Verack" are good words to see in the dump out! If my version message had been malformed, the peer would not have responded at all.</p>
-<div class="highlight"><pre><span></span><span class="sa">b</span><span class="s1">&#39;</span><span class="se">\xf9\xbe\xb4\xd9</span><span class="s1">version</span><span class="se">\x00\x00\x00\x00\x00</span><span class="s1">f</span><span class="se">\x00\x00\x00\xf8\xdd\x9a</span><span class="s1">L</span><span class="se">\x7f\x11\x01\x00\r\x00\x00\x00\x00\x00\x00\x00\xdd</span><span class="s1">R1Y</span><span class="se">\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xcb\xce\x1d\xfc\xe9</span><span class="s1">j</span><span class="se">\r\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\xb8</span><span class="s1">&gt;*</span><span class="se">\x88</span><span class="s1">@I</span><span class="se">\x8e\x10</span><span class="s1">/Satoshi:0.14.0/t)</span><span class="se">\x07\x00\x01\xf9\xbe\xb4\xd9</span><span class="s1">verack</span><span class="se">\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00</span><span class="s1">]</span><span class="se">\xf6\xe0\xe2</span><span class="s1">&#39;</span>
+<div class="highlight"><pre><span class="n">b</span><span class="s1">&#39;</span><span class="se">\xf9\xbe\xb4\xd9</span><span class="s1">version</span><span class="se">\x00\x00\x00\x00\x00</span><span class="s1">f</span><span class="se">\x00\x00\x00\xf8\xdd\x9a</span><span class="s1">L</span><span class="se">\x7f\x11\x01\x00\r\x00\x00\x00\x00\x00\x00\x00\xdd</span><span class="s1">R1Y</span><span class="se">\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xcb\xce\x1d\xfc\xe9</span><span class="s1">j</span><span class="se">\r\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\xb8</span><span class="s1">&gt;*</span><span class="se">\x88</span><span class="s1">@I</span><span class="se">\x8e\x10</span><span class="s1">/Satoshi:0.14.0/t)</span><span class="se">\x07\x00\x01\xf9\xbe\xb4\xd9</span><span class="s1">verack</span><span class="se">\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00</span><span class="s1">]</span><span class="se">\xf6\xe0\xe2</span><span class="s1">&#39;</span>
 </pre></div>
 
 
@@ -275,7 +275,7 @@
 <p>Critically, the most important idea to understand is that the balance of a Bitcoin address is comprised solely by the number of "Unspent Transaction Outputs" (UTXO) that the address can spend. When Bob sends a Bitcoin to Alice, he's really just creating a UTXO that Alice (and only Alice) can later use to create another UTXO and send that Bitcoin on. The balance of a Bitcoin address is therefore defined by the amount of Bitcoin it is able to transfer to another address, rather than the amount of Bitcoin it <em>has</em>. </p>
 <p>To emphasize, when someone says that they have X bitcoin, they're really saying that all of the UTXOs that they can spend sum to X bitcoin of value. The distinction is subtle but important, the balance of a Bitcoin address isn't recorded anywhere directly but rather can be found by summing the UTXOs that it can spend. When I came to this realisation it was definitely a "oh, that's how it works!" moment.</p>
 <p>A side effect of this is that transaction outputs can either be unspent (UTXO) or completely spent. It isn't possible to only spend half of an output that someone has spent to you and then spend the rest at a later time. If you do want to spend a fraction of an output that you've received, you instead can send the fraction that you want to send while sending the rest back to yourself. A simplified version of this is shown in the diagram below.</p>
-<p><img alt="bitcoin address generation" src="/images/BobAlice.png"></p>
+<p><img alt="bitcoin address generation" src="/images/BobAlice.png" /></p>
 <p>When a transaction output is created, it is created with a locking condition that will allow someone in the future to spend it, through what are called transaction scripts. Most commonly, this locking condition is: "to spend this output, you need to prove that you own the private key corresponding to a particular public address". This is called a "Pay-to-Public-Key-Hash" script. However, through Bitcoin <a href="https://en.bitcoin.it/wiki/Script">script</a> other types of conditions are possible. For example, an output could created that could be spent by anyone that could solve a certain hash or a transaction could be created that anyone could spend. </p>
 <p>Through Script, it's possible to create simple contract based transactions. Script is a basic stack based language with number of operations centred around checking equality of hashes and verifying signatures. Script is not Turing complete and does not have the ability to have any loops. The competing cryptocurrency Ethereum built on this to be able to have "smart contracts", which does have a Turing complete language. There's much debate about the utility, necessity and security of including a Turing complete language in cryptocurrencies but I'll leave that debate to others!</p>
 <p>In standard terminology, a Bitcoin transaction is made up of inputs and outputs. An input is a UTXO (that is now being spent) and an output is a new UTXO. There can be multiple outputs for a single input but an input needs to be completely spent in a transaction. Any part of an input leftover is claimed by miners as a mining fee. </p>
@@ -360,22 +360,22 @@
 <p>For the Pubkey script of our transaction, we use a <a href="https://en.bitcoin.it/wiki/Transaction#Pay-to-PubkeyHash">Pay to Pubkey hash</a> (or p2pk) script. The script ensures that only the person that holds the public key that hashes to the provided Bitcoin address is able to spend the created output and that a supplied signature has been generated by the person that holds the corresponding private key to the public key.</p>
 <p>To unlock a transaction that has been locked by a p2pk script, the user provides their public key and a signature of the hash of the raw transaction. The public key is hashed and compared to the address that the script was created with and the signature is verified for the supplied public key. If the hash of the public key and the address are equal, and the signature is verified, the output can be spent.</p>
 <p>In Bitcoin script operands, the p2pk script looks as follows.</p>
-<div class="highlight"><pre><span></span><span class="err">OP_DUP</span>
-<span class="err">OP_HASH160</span>
-<span class="err">&lt;Length of address in bytes&gt;</span>
-<span class="err">&lt;Bitcoin address&gt;</span>
-<span class="err">OP_EQUALVERIFY</span>
-<span class="err">OP_CHECKSIG</span>
+<div class="highlight"><pre>OP_DUP
+OP_HASH160
+&lt;Length of address in bytes&gt;
+&lt;Bitcoin address&gt;
+OP_EQUALVERIFY
+OP_CHECKSIG
 </pre></div>
 
 
 <p>Converting the operands to their values (these can be found on the <a href="https://en.bitcoin.it/wiki/Script">wiki</a>) and inputting the public address (before it has been Base58Check encoded) gives the following script in hex:</p>
-<div class="highlight"><pre><span></span><span class="err">0x76</span>
-<span class="err">0xA9</span>
-<span class="err">0x14</span>
-<span class="err">0xFF33195EC053D6E58D5FD3CC67747D3E1C71B280</span>
-<span class="err">0x88</span>
-<span class="err">0xAC</span>
+<div class="highlight"><pre>0x76
+0xA9
+0x14
+0xFF33195EC053D6E58D5FD3CC67747D3E1C71B280
+0x88
+0xAC
 </pre></div>
 
 
@@ -389,7 +389,7 @@
 <p>However, the raw transaction contains the signature script which should contain a signature of the raw transaction! This chicken and egg problem is solved by placing the <em>Pubkey</em> script of the UTXO we're using in the signature script slot prior to signing the raw transaction. As far as I could tell, there doesn't seem to be any good reason for using the Pubkey as the placeholder, it could really be any arbitrary data.</p>
 <p>Before the raw transaction is hashed, it also needs to have a <a href="https://en.bitcoin.it/wiki/OP_CHECKSIG">Hashtype value</a> appended. The most common hashtype value is <code>SIGHASH_ALL</code>, which signs the whole structure such that no inputs or outputs can be modified. The linked wiki page lists other hash types, which can allow combinations of inputs and outputs to be modified after the transaction has been signed. </p>
 <p>The below functions  put together a python dictionary of raw transaction values.</p>
-<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_p2pkh_script</span><span class="p">(</span><span class="n">pub_key</span><span class="p">):</span>
+<div class="highlight"><pre><span class="k">def</span> <span class="nf">get_p2pkh_script</span><span class="p">(</span><span class="n">pub_key</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    This is the standard &#39;pay to pubkey hash&#39; script</span>
 <span class="sd">    &quot;&quot;&quot;</span>
@@ -436,7 +436,7 @@
 
 
 <p>Calling the code with the following values creates the raw transaction that I'm interested in making.</p>
-<div class="highlight"><pre><span></span><span class="n">private_key</span> <span class="o">=</span> <span class="n">address_utils</span><span class="o">.</span><span class="n">get_private_key</span><span class="p">(</span><span class="s2">&quot;FEEDB0BDEADBEEF&quot;</span><span class="p">)</span>
+<div class="highlight"><pre><span class="n">private_key</span> <span class="o">=</span> <span class="n">address_utils</span><span class="o">.</span><span class="n">get_private_key</span><span class="p">(</span><span class="s2">&quot;FEEDB0BDEADBEEF&quot;</span><span class="p">)</span>
 <span class="n">public_key</span> <span class="o">=</span> <span class="n">address_utils</span><span class="o">.</span><span class="n">get_public_key</span><span class="p">(</span><span class="n">private_key</span><span class="p">)</span>
 <span class="n">from_address</span> <span class="o">=</span> <span class="n">address_utils</span><span class="o">.</span><span class="n">get_public_address</span><span class="p">(</span><span class="n">public_key</span><span class="p">)</span>
 <span class="n">to_address</span> <span class="o">=</span> <span class="n">address_utils</span><span class="o">.</span><span class="n">get_public_address</span><span class="p">(</span><span class="n">address_utils</span><span class="o">.</span><span class="n">get_public_key</span><span class="p">(</span><span class="n">address_utils</span><span class="o">.</span><span class="n">get_private_key</span><span class="p">(</span><span class="s2">&quot;BADCAFEFABC0FFEE&quot;</span><span class="p">)))</span>
@@ -452,7 +452,7 @@
 <p>It might be confusing to see that I'm using a private key to generate the <em>to_address</em>. This is really only done for convenience and to show how the <code>to_address</code> is found. If you were making a transaction to someone else, you'd ask them for their <em>public address</em> and transfer to that, you wouldn't need to know their private key. </p>
 <p>In order to be able to sign, and eventually transmit the transaction to the network, the raw transaction needs to be packed appropriately. This is implemented in the <code>get_packed_transaction</code> function which I won't replicate here, as it's essentially just more <code>struct</code> packing code. If you're interested you can find it in the <a href="https://github.com/samvrlewis/simple-bitcoin/blob/master/bitcoin_transaction_utils.py">bitcoin_transaction_utils.py</a> Python file in my Github repo. </p>
 <p>This allows me to define a function that will produce the signature script. Once the signature script is generated, it should replace the placeholder signature script.</p>
-<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_transaction_signature</span><span class="p">(</span><span class="n">transaction</span><span class="p">,</span> <span class="n">private_key</span><span class="p">):</span>
+<div class="highlight"><pre><span class="k">def</span> <span class="nf">get_transaction_signature</span><span class="p">(</span><span class="n">transaction</span><span class="p">,</span> <span class="n">private_key</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Gets the sigscript of a raw transaction</span>
 <span class="sd">    private_key should be in bytes form</span>
@@ -523,7 +523,7 @@
 <p>This script will fail if the provided <em>public key</em> doesn't hash to the <em>public key hash</em> in the script or if the provided <em>signature</em> doesn't match the provided <em>public key</em>.  This ensures that only the person that holds the private key for the address in the pubkey script is able to spend the output.</p>
 <p>You can see that here is the first time I have needed to provide my public key anywhere. Up until this point, only my public address has been published. It's necessary to provide the public key here as it is allows verification of the signature that the transaction has been signed with. </p>
 <p>Using the <code>get_transaction_signature</code> function, we can now sign and pack our transaction ready for transmission! This involves replacing the placeholder signature script with the real signature script and removing the <code>hash_code_type</code> from the transaction as shown below.</p>
-<div class="highlight"><pre><span></span><span class="n">signature</span> <span class="o">=</span> <span class="n">get_transaction_signature</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">private_key</span> <span class="p">)</span>
+<div class="highlight"><pre><span class="n">signature</span> <span class="o">=</span> <span class="n">get_transaction_signature</span><span class="p">(</span><span class="n">raw</span><span class="p">,</span> <span class="n">private_key</span> <span class="p">)</span>
 
 <span class="n">raw</span><span class="p">[</span><span class="s2">&quot;sig_script_length&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">signature</span><span class="p">)</span>
 <span class="n">raw</span><span class="p">[</span><span class="s2">&quot;sig_script&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">signature</span>
@@ -535,7 +535,7 @@
 
 <h3>Publishing the transaction</h3>
 <p>With the transaction packed and signed, it's a matter of telling the network about it. Using a few functions previously defined in this article in <a href="https://github.com/samvrlewis/simple-bitcoin/blob/master/bitcoin_p2p_message_utils.py">bitcoin_p2p_message_utils.py</a>,  the below piece of code puts the Bitcoin message header on the transmission and transmits it to a peer. As mentioned earlier, it's first necessary to send a version message to the peer so that it accepts subsequent messages. </p>
-<div class="highlight"><pre><span></span><span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
+<div class="highlight"><pre><span class="n">s</span> <span class="o">=</span> <span class="n">socket</span><span class="o">.</span><span class="n">socket</span><span class="p">(</span><span class="n">socket</span><span class="o">.</span><span class="n">AF_INET</span><span class="p">,</span> <span class="n">socket</span><span class="o">.</span><span class="n">SOCK_STREAM</span><span class="p">)</span>
 <span class="n">s</span><span class="o">.</span><span class="n">connect</span><span class="p">((</span><span class="n">get_bitcoin_peer</span><span class="p">(),</span> <span class="mi">8333</span><span class="p">))</span>
 <span class="n">s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">get_bitcoin_message</span><span class="p">(</span><span class="s2">&quot;version&quot;</span><span class="p">,</span> <span class="n">get_version_payload</span><span class="p">())</span>
 <span class="n">s</span><span class="o">.</span><span class="n">send</span><span class="p">(</span><span class="n">get_bitcoin_message</span><span class="p">(</span><span class="s2">&quot;tx&quot;</span><span class="p">,</span> <span class="n">transaction</span><span class="p">)</span>
@@ -544,7 +544,7 @@
 
 <p>Sending the transaction was the most annoying part of getting this to work. If I submitted a transaction that was incorrectly structured or signed, the peer often just dropped the connection or, in a slightly better case, sent cryptic error messages back. One such (very annoying) error message was "S value is unnecessarily high" which was caused by signing the transaction hash using the ECSDA encoding method of <code>sigencode_der</code>. Despite the signature being valid, apparently Bitcoin miners <a href="https://blog.blockcypher.com/enforcing-low-s-values-to-eliminate-a-bitcoin-network-attack-3582fc0ae948">don't like ECSDA signatures formatted in such a way that allows spam in the network</a>. The solution was to use the <code>sigencode_der_canonize</code> function which takes care to format the signatures in the other format. A simple, but extraordinarily hard to debug, issue!</p>
 <p>In any case, I eventually got it to work and was very excited when I saw that my <a href="https://blockchain.info/tx/ac812978fb87232ed5700fc64e8733546d70eaa4d9aa80cf1d20a3f71bd8d133">transaction made its way into the blockchain</a>!! It was a great feeling of accomplishment knowing that my small, dinky, hand crafted transaction will now forever be a part of Bitcoin's ledger. </p>
-<p><img alt="transaction success" src="/images/final_transaction.png"></p>
+<p><img alt="transaction success" src="/images/final_transaction.png" /></p>
 <p>When I submitted the transaction, my transaction fee was actually quite low compared to the median (I used the <a href="https://bitcoinfees.21.co/">bitcoin fees</a> website to check) and as such it took around 5 hours for a miner to decide to include it in a block. I checked this by looking at the number of confirmations the transaction had - this is a measure of how many blocks deep the block with the transaction is in. At the time of writing this was at 190 confirmations.. meaning that after the block my transaction is in, there's another 190 blocks. This can be pretty safely considered confirmed, as it would take an impressive attack on the network to rewrite 190 blocks to remove my transaction.</p>
 <h2>Conclusion</h2>
 <p>I hope you've gained some appreciation of how Bitcoin works through reading this article, I know I certainly did during the months it took me to put all of this together! While most of the information presented here isn't too practicably applicable - you'd normally just use a client that does it all for you - I think having a greater understanding of how things work gives you a better appreciation of what's happening under the covers and gives makes you a more confident user of the technology.</p>
@@ -563,8 +563,38 @@
 </ul>
   </div>
     
-
-       <div class="back-to-home"><a href="/">← Back to Home</a></div>
+   <!--End mc_embed_signup-->
+   <hr class="large">
+        <!-- Begin Mailchimp Signup Form -->
+        <link href="//cdn-images.mailchimp.com/embedcode/horizontal-slim-10_7.css" rel="stylesheet" type="text/css">
+        <style type="text/css">
+          #mc_embed_signup {
+            background: #fff;
+            clear: left;
+            font: 14px Helvetica, Arial, sans-serif;
+            width: 100%;
+          }
+        
+          /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
+             We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+        </style>
+        <div id="mc_embed_signup">
+          <form action="https://samlewis.us1.list-manage.com/subscribe/post?u=42af8068ea0295eafe2477482&amp;id=35efa8dbeb"
+            method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank"
+            novalidate>
+            <div id="mc_embed_signup_scroll">
+              <label for="mce-EMAIL">Enjoyed this and want to hear about new posts?</label>
+              <input type="email" value="" name="EMAIL" class="email" id="mce-EMAIL" placeholder="email address" required>
+              <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+              <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text"
+                  name="b_42af8068ea0295eafe2477482_35efa8dbeb" tabindex="-1" value=""></div>
+              <div><input type="submit" value="Subscribe" name="subscribe" id="mc-embedded-subscribe"
+                  class="button" style="margin-top: 5px;background: orange;"></div>
+            </div>
+          </form>
+        </div>
+    
+    <!--End mc_embed_signup-->
     <hr class="large">
     
     <!-- DISQUS -->
@@ -590,16 +620,6 @@
 	</div><!-- container -->
 
 <!-- Google Analytics -->
-<script>
-  (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
-  (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
-  m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
-  })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
-
-  ga('create', 'UA-50600593-1', 'auto');
-  ga('send', 'pageview');
-
-</script>
 
   <script type="text/javascript">
     $("a").on('click', function(e) {
