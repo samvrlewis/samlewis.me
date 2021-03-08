@@ -1,8 +1,10 @@
 language: python
 python:
 - 2.7
+before_install:
+  - sudo apt-get -y install pelican
 install:
-- pip install -r requirements.txt
+  - ls
 notifications:
   email:
     on_success: never
