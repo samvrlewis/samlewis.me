@@ -9,7 +9,7 @@ THEME = './theme/notebook-simpler'
 SUMMARY_MAX_LENGTH = 50
 AVATAR = '/theme/images/avatar.jpg'
 TITLE = "Sam Lewis"
-DESCRIPTION = "Sam Lewis is a Brisbane based geek who develops cool bits of code. He likes data, embedded stuff and AFL."
+DESCRIPTION = "Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL."
 
 ARTICLE_URL = '{date:%Y}/{date:%m}/{slug}'
 ARTICLE_SAVE_AS = '{date:%Y}/{date:%m}/{slug}/index.html'
@@ -42,7 +42,7 @@ EXTRA_PATH_METADATA = {'extra/robots.txt': {'path': 'robots.txt'},}
 
 # Additional
 DISQUS_SITENAME = "sam-lewis"
-GOOGLE_ANALYTICS = "UA-50600593-1"
+#GOOGLE_ANALYTICS = "UA-50600593-1"
 DOMAIN = "samlewis.me"
 
 # Twitter Cards
