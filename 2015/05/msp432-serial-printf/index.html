@@ -75,9 +75,9 @@
 			<h1 id="logo"><a href="/">Sam Lewis</a></h1>
 	    <hr class="small" /> 
     	<div id="social">
-    		<a class="icon" href="http://www.twitter.com/awesamlewis" title="Twitter"><i class="fa fa-twitter fa-1"></i></a>
-    		<a class="icon" href="http://github.com/samvrlewis" title="GitHub"><i class="fa fa-github fa-1"></i></a>
-    		<a class="icon" href="http://au.linkedin.com/in/samvrlewis" title="LinkedIn"><i class="fa fa-linkedin fa-1"></i></a>
+    		<a class="icon" href="https://www.twitter.com/awesamlewis" title="Twitter"><i class="fa fa-twitter fa-1"></i></a>
+    		<a class="icon" href="https://github.com/samvrlewis" title="GitHub"><i class="fa fa-github fa-1"></i></a>
+    		<a class="icon" href="https://au.linkedin.com/in/samvrlewis" title="LinkedIn"><i class="fa fa-linkedin fa-1"></i></a>
             <a class="icon" href="mailto:sam.vr.lewis@gmail.com?subject=Hi" title="E-Mail"><i class="fa fa-envelope fa-1"></i></a>
     		<a class="icon" href="https://www.samlewis.me/feeds/all.atom.xml" title="Subscribe (Atom)"><i class="fa fa-rss fa-1"></i></a>
     	</div> <!-- social -->
@@ -99,7 +99,7 @@
 <p>So this is a quick bit of code to get a serial/UART connection up and going from the MSP432 to your computer over the USB connection. Perfect for any debugging that you might want to do, or communication with other serial devices (for example the exciting ESP8266 which I'll cover in a later blog post).</p>
 <p>The MSP432-printf library, which is largely from 43oh member OPossum (<a href="http://www.msp430launchpad.com/2012/06/using-printf.html">printf for the MSP430</a>), lets you print to any serial module using standard printf syntax. For example: <code>printf(EUSCI_A0_MODULE, "String one: %d", 1)</code>. The code for the library can be <a href="https://github.com/samvrlewis/MSP432-printf/blob/master/printf.c">found on my GitHub</a>. </p>
 <p>An example of using this printf library with the MSP432 is shown below. </p>
-<script src="http://gist-it.appspot.com/https://github.com/samvrlewis/MSP432-printf/blob/master/printf_example.c">
+<script src="https://gist-it.appspot.com/https://github.com/samvrlewis/MSP432-printf/blob/master/printf_example.c">
 </script>
 
 <p>The code configures <code>EUSCI_A0_MODULE</code> to be used and then prints to it. <code>EUSCI_A0_MODULE</code> is, by default the application UART that you can connect to over USB from your PC. One thing to note is to make sure that <code>EUSCI_A_UART_LSB_FIRST</code> is set in the UART config, rather than <code>EUSCI_A_UART_MSB_FIRST</code>. <a href="http://en.wikipedia.org/wiki/Serial_port">According to wikipedia</a>, MSB first serial communication is rarely used and it's much more common to use little endian or LSB first communications. If you use a program like PuTTY, it's likely that it'll interpret the serial stream as little endian.</p>

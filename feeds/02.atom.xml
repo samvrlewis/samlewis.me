@@ -5,7 +5,7 @@
 &lt;p&gt;The SQLite database has team statistics for each season and finals game for 1987-2014. In the earlier years not all stats are present as they were not all recorded. The database schema is shown below, which also shows the type of stats avaliable. &lt;/p&gt;
 &lt;p&gt;&lt;img alt="db schema" src="https://raw.githubusercontent.com/samvrlewis/afl-stats-database/master/schema.png" /&gt;&lt;/p&gt;
 &lt;p&gt;It's great for anyone nerdy who's wanting to do any sort of visualisation of stats, machine learning or just wanting to play around with the data easily. As an example of what can be quickly knocked up using Python in 10 minutes, here's the average amount of tackles in AFL games by year. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="tackle count" src="http://i.imgur.com/slv32nI.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="tackle count" src="https://i.imgur.com/slv32nI.png" /&gt;&lt;/p&gt;
 &lt;p&gt;Some things I think would be interesting to examine, using the data:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;How is the intensity of finals vs. normal season games captured in the statistics? Are there more tackles, is goal kicking less accurate, are there more or less free kicks etc etc?&lt;/li&gt;
