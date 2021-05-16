@@ -10,7 +10,7 @@ The MSP432-printf library, which is largely from 43oh member OPossum ([printf fo
 
 An example of using this printf library with the MSP432 is shown below. 
 
-<script src="http://gist-it.appspot.com/https://github.com/samvrlewis/MSP432-printf/blob/master/printf_example.c">
+<script src="https://gist-it.appspot.com/https://github.com/samvrlewis/MSP432-printf/blob/master/printf_example.c">
 </script>
 
 The code configures `EUSCI_A0_MODULE` to be used and then prints to it. `EUSCI_A0_MODULE` is, by default the application UART that you can connect to over USB from your PC. One thing to note is to make sure that `EUSCI_A_UART_LSB_FIRST` is set in the UART config, rather than `EUSCI_A_UART_MSB_FIRST`. [According to wikipedia](http://en.wikipedia.org/wiki/Serial_port), MSB first serial communication is rarely used and it's much more common to use little endian or LSB first communications. If you use a program like PuTTY, it's likely that it'll interpret the serial stream as little endian.

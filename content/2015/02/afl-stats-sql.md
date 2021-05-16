@@ -13,7 +13,7 @@ The SQLite database has team statistics for each season and finals game for 1987
 
 It's great for anyone nerdy who's wanting to do any sort of visualisation of stats, machine learning or just wanting to play around with the data easily. As an example of what can be quickly knocked up using Python in 10 minutes, here's the average amount of tackles in AFL games by year. 
 
-![tackle count](http://i.imgur.com/slv32nI.png)
+![tackle count](https://i.imgur.com/slv32nI.png)
 
 Some things I think would be interesting to examine, using the data:
 
