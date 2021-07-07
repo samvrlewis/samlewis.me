@@ -29,7 +29,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.samlewis.me">
   <meta property="og:image" content="/theme/images/avatar.jpg">
-  <meta property="og:description" content="Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
+  <meta property="og:description" content="Sam Lewis is a geek based in Melbourne. He enjoys hacking on a variety of stuff.">
 
   <!-- Twitter Cards
   ================================================== -->
@@ -99,22 +99,22 @@
 <p>In fact, xv6 was developed by MIT as a teaching operating system for their <a href="https://pdos.csail.mit.edu/6.828/2014/xv6.html">6.828 course</a>. The course page for 6.828 is a great resource that MIT are kind enough to have publicly avaliable. </p>
 <p>MIT also produce a fantastic <a href="https://pdos.csail.mit.edu/6.828/2014/xv6/book-rev8.pdf">xv6 reference book</a> that provides commentary on the structure of the xv6 operating system. Additionally, the xv6 source actually self documents - the xv6 <code>make</code> file contains a target (<code>make xv6.pdf</code>) that generates a <a href="https://pdos.csail.mit.edu/6.828/2014/xv6/xv6-rev8.pdf">pdf of the source code</a>, which amazingly comes in under 100 pages and 10k lines of source (including comments!). Not bad for an entire, functional, operating system. </p>
 <p>xv6 is typically run virtualized using qemu on a Linux host machine. To get started with xv6, clone the xv6 repo:</p>
-<div class="highlight"><pre>git clone git://github.com/mit-pdos/xv6-public.git xv6
+<div class="highlight"><pre><span></span>git clone git://github.com/mit-pdos/xv6-public.git xv6
 </pre></div>
 
 
 <p>Then to start it as a virtual machine under qemu:</p>
-<div class="highlight"><pre>cd xv6
+<div class="highlight"><pre><span></span>cd xv6
 make qemu
 </pre></div>
 
 
 <p>If make fails, make sure you have your compiler toolchain installed. There's some good info on the <a href="https://pdos.csail.mit.edu/6.828/2014/tools.html">6.282 tools page</a>. For me, on Fedora, I needed to install gcc with <code>dnf install gcc</code>.</p>
 <p>Once you have your compiler toolchain working, qemu will pop up and you'll be presented with the xv6 shell. </p>
-<p><img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png" /> </p>
+<p><img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png"> </p>
 <p>From here, you'll be able to run a few simple commands like <code>ls</code> and <code>cat</code> and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. </p>
 <p>The core <code>while</code> loop the shell executes is shown below. </p>
-<div class="highlight"><pre> // Read and run input commands.
+<div class="highlight"><pre><span></span> // Read and run input commands.
  while(getcmd(buf, sizeof(buf)) &gt;= 0){
     if(buf[0] == ’c’ &amp;&amp; buf[1] == ’d’ &amp;&amp; buf[2] == ’ ’){
         // Clumsy but will have to do for now.

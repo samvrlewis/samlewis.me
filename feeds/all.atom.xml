@@ -1,10 +1,243 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="https://www.samlewis.me/" rel="alternate"></link><link href="https://www.samlewis.me/feeds/all.atom.xml" rel="self"></link><id>https://www.samlewis.me/</id><updated>2020-04-28T00:00:00+10:00</updated><entry><title>Forcing ethernet traffic onto physical interfaces</title><link href="https://www.samlewis.me/2020/04/force-ethernet-loopback" rel="alternate"></link><updated>2020-04-28T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2020-04-28:2020/04/force-ethernet-loopback</id><summary type="html">&lt;p&gt;When you're working with a device that has two ethernet ports, it can be sometimes useful for hardware benchmarking or testing purposes to do a loopback test where one port connects directly to the other.&lt;/p&gt;
-&lt;p&gt;&lt;img alt="ethernet loopback" src="/images/ethernetloopback.png" /&gt;&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="https://www.samlewis.me/" rel="alternate"></link><link href="https://www.samlewis.me/feeds/all.atom.xml" rel="self"></link><id>https://www.samlewis.me/</id><updated>2021-07-07T00:00:00+10:00</updated><entry><title>Creating a mesh VPN tool for fun and learning</title><link href="https://www.samlewis.me/2021/07/creating-mesh-vpn-tool-for-fun" rel="alternate"></link><published>2021-07-07T00:00:00+10:00</published><updated>2021-07-07T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2021-07-07:/2021/07/creating-mesh-vpn-tool-for-fun</id><summary type="html">&lt;blockquote&gt;
+&lt;p&gt;tldr: I created a mesh VPN networking tool named &lt;strong&gt;meshboi&lt;/strong&gt; which you can checkout &lt;a href="https://github.com/samvrlewis/meshboi"&gt;on my github&lt;/a&gt;! This post walks through the 'magic' behind mesh VPN tools, using &lt;strong&gt;meshboi&lt;/strong&gt; as an example.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Mesh VPN tools, such as &lt;a href="https://github.com/slackhq/nebula"&gt;Nebula&lt;/a&gt;, &lt;a href="https://tailscale.com/"&gt;Tailscale&lt;/a&gt;, &lt;a href="https://www.zerotier.com/"&gt;Zerotier&lt;/a&gt; and &lt;a href="https://www.tinc-vpn.org/"&gt;Tinc&lt;/a&gt;, facilitate the creation of peer to peer (mesh …&lt;/p&gt;</summary><content type="html">&lt;blockquote&gt;
+&lt;p&gt;tldr: I created a mesh VPN networking tool named &lt;strong&gt;meshboi&lt;/strong&gt; which you can checkout &lt;a href="https://github.com/samvrlewis/meshboi"&gt;on my github&lt;/a&gt;! This post walks through the 'magic' behind mesh VPN tools, using &lt;strong&gt;meshboi&lt;/strong&gt; as an example.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;Mesh VPN tools, such as &lt;a href="https://github.com/slackhq/nebula"&gt;Nebula&lt;/a&gt;, &lt;a href="https://tailscale.com/"&gt;Tailscale&lt;/a&gt;, &lt;a href="https://www.zerotier.com/"&gt;Zerotier&lt;/a&gt; and &lt;a href="https://www.tinc-vpn.org/"&gt;Tinc&lt;/a&gt;, facilitate the creation of peer to peer (mesh) networks across the internet. These tools securely, performantly and transparently enable multiple distributed computers to communicate as though they were physically connected to the same network switch (layer 2 or 3, depending on the tool and configuration used). There’s lots of use cases for these tools, but some popular uses-cases are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Allowing services on instances across multiple clouds to communicate&lt;/li&gt;
+&lt;li&gt;Allowing secure remote access to home networks for roaming users&lt;/li&gt;
+&lt;li&gt;Bridging “home lab” networks with cloud networks&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;These tools enable this communication to occur transparently to applications that are sending and receiving packets over the mesh, while also working around common barriers in networking over the internet, such as firewalls and NAT. &lt;/p&gt;
+&lt;p&gt;The mesh model is in contrast to traditional “star” VPN solutions, such as OpenVPN or StrongSwan. In a star VPN, traffic between peers needs to pass through a central VPN server, which increases latency and reduces scalability (the central server can only handle so much traffic). The image below shows a simplified high level view of the VPN types. A mesh VPN facilitates direct connections between peers, whereas a star requires connections to go through a central server.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="/images/meshboi_meshvsstar.png"&gt;
+It's worth making a quick side note on the use of "VPN" here. In this case, VPN is meant to mean a network of peers over the internet that can communicate amongst each other. This is different to “consumer” VPN products (such as NordVPN or Private Internet Access) that are used for privacy and/or to avoid geographic website blocks. For these VPN products, the VPN server is effectively used as a gateway for clients to connect to the broader internet through. Peers on these networks generally do not and cannot connect to each other. For the rest of this post I'll exclusively focus on the first kind of VPN, which lets peers communicate.&lt;/p&gt;
+&lt;h2&gt;Introducing.. Meshboi! &lt;img alt="logo" src="https://user-images.githubusercontent.com/3880246/124463187-dd916d00-ddd5-11eb-8e0a-923629365637.png" style="display:inline;border:0px"&gt;&lt;/h2&gt;
+&lt;p&gt;There’s a bunch of interesting problems to solve in creating one of these tools, so I thought it’d be fun to create my own mesh VPN tool to learn more about how they work. While there’s a lot of complexity in creating a mesh VPN that is secure, performant and works across 100% of network configurations, creating something that isn’t as robust, for the purposes of fun and learning, is definitely doable.&lt;/p&gt;
+&lt;p&gt;The tool I created is named &lt;strong&gt;meshboi&lt;/strong&gt; and if you want to jump straight to the source code, you can find it &lt;a href="https://github.com/samvrlewis/meshboi"&gt;on my github&lt;/a&gt;. Meshboi is written in Go and was created purely for the purposes of fun and learning (so please use one of the other fantastic tools for running production things on!). &lt;/p&gt;
+&lt;p&gt;The below asciinema recording shows a simple demo of meshboi, showing how it enables communication between two physically separated computers, both behind NAT and firewalls, that are only connected via the internet.&lt;/p&gt;
+&lt;script id="asciicast-RbxcLLpLIzryIcX5S3qC9gQYd" src="https://asciinema.org/a/RbxcLLpLIzryIcX5S3qC9gQYd.js" async&gt;&lt;/script&gt;
+
+&lt;h2&gt;Why is this hard?&lt;/h2&gt;
+&lt;p&gt;There are a few core problems to solve when creating a tool like this.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Discoverability/Bootstrapping&lt;/strong&gt; - if two peers want to talk to each other, how do they know how to find each other in order to form a link?&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Transparency&lt;/strong&gt; - The tool should allow applications to send their traffic to peers on the mesh without needing the applications to be aware of any of the subtleties of being on a mesh. The tool should abstract away the concept of the mesh VPN, such that the applications do not need to be modified and can behave as normal network applications.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Network Address Translation (NAT)&lt;/strong&gt; - The majority of the internet is still IPv4 based, so there’s complexity in allowing communications between two computers that are both behind NAT. In some cases, one or even both can be behind multiple layers of NAT (CGNAT).&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Firewalls&lt;/strong&gt; - Between any two pairs of computers, there’s typically a lot of firewalls that typically (and probably rightfully!) act to stop unsolicited network traffic from entering networks. While some of these firewalls are configurable, and could be opened up, in some environments the firewalls are out of the control of the user (think corporate network or wifi hotspot in a cafe). Some ISPs might even block certain types of traffic.&lt;/p&gt;
+&lt;/li&gt;
+&lt;li&gt;
+&lt;p&gt;&lt;strong&gt;Security&lt;/strong&gt; - If a tool is exposing a local network to the internet,  it should make sure that traffic is secured so that it cannot be read or tampered with by third parties. The model that most of these mesh VPN tools use is that traffic coming in from the internet is not trusted, but once it is in it is trusted.&lt;/p&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I’ll go more into the details of each of these problems, and how meshboi (and mesh VPN tools in general) solve them.&lt;/p&gt;
+&lt;h3&gt;Discoverability&lt;/h3&gt;
+&lt;p&gt;When a new computer wants to join a mesh network, it needs a method of discovering other computers that are already part of the mesh. This discovery process allows the joining member of a mesh to find internet addresses of other members, so that it can initiate the communication channel.&lt;/p&gt;
+&lt;p&gt;In theory, this initial bootstrapping could be done manually, through some out of band communication, like email or instant-messaging but this is not so practical and is further complicated by dynamic IP addresses, NAT and firewalls (discussed later).&lt;/p&gt;
+&lt;p&gt;Instead, most mesh network tools solve this issue by having a centralized server that members of the mesh talk to in order to get the details of their peers. In Nebula this server is named a “Lighthouse”. Meshboi also uses this concept and calls it a “Rolodex''. The Rolodex should be hosted on a server with an IP address that does not change, so that it can always be accessed by peers wanting to join the network.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="/images/meshboi_rolodex.png"&gt;
+It’s important to note that unlike centralized VPNs, no real traffic passes through the Rolodex. However, some tools do allow the data to be proxied through this server as a last-ditch option when NAT or firewalls are particularly hard to overcome. In Meshboi’s case this is not possible and the Rolodex server is completely ignorant of any data moving around the network. &lt;/p&gt;
+&lt;p&gt;The meshboi Rolodex serves only as a method to bootstrap networks, with peers directly authenticating each other (using dTLS and PSK as explained further on) before any data is passed between them. Because of this, the Rolodex implementation supports multiple completely separate networks. The Rolodex server is basically a very unsophisticated in-memory key/value store with &lt;code&gt;{networkName: list&amp;lt;IP addresses&amp;gt;}&lt;/code&gt;. I'm currently running a Rolodex server on a personal VPS (&lt;code&gt;rolodex.samlewis.me&lt;/code&gt;) that anyone can use to bootstrap their own networks but it's also possible to run a separate instance yourself on a server that's directly accessible to the internet.&lt;/p&gt;
+&lt;h3&gt;Transparency&lt;/h3&gt;
+&lt;p&gt;For a mesh VPN tool to be truly useful it needs to be transparent to network applications that send and receive data over the mesh network. The tool’s usefulness would be very limited if the source code of each application needed to be modified in order to know how to communicate with peers over the mesh.&lt;/p&gt;
+&lt;p&gt;Mesh VPN tools solve the transparency issue using what is known as “tunneling” where the packet meant for one subnet is tunneled through a connection on another subnet (usually over the internet) and then injected into the subnet on the other side of the tunnel. On Linux systems, &lt;a href="https://en.wikipedia.org/wiki/TUN/TAP"&gt;TUN/TAP devices&lt;/a&gt; facilitate tunneling in this way by providing virtualized software-only network interfaces.&lt;/p&gt;
+&lt;p&gt;&lt;a href="https://backreference.org/2010/03/26/tuntap-interface-tutorial/"&gt;Backreference&lt;/a&gt; has a nice explanation of TUNTAP devices:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;"You can think of a tun/tap interface as a regular network interface that, when the kernel decides that the moment has come to send data "on the wire", instead sends data to some userspace program that is attached to the interface. In a similar fashion, the program can write to this [device], and the data .. will appear as input to the tun/tap interface.”&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;In this way, having a TUNTAP device with an assigned IP address on the mesh’s subnet allows applications wanting to communicate on that subnet to send data to the TUNTAP device. The data is then able to be read by the mesh VPN tool and forwarded over the internet to the corresponding peer.&lt;/p&gt;
+&lt;p&gt;In meshboi's case, the mesh network is a L3 network so TUN devices are used. Meshboi creates a TUN device at start up and assigns an IP address on the mesh's subnet (of the user's choosing) to it. &lt;/p&gt;
+&lt;p&gt;The diagram below shows, at a high level, how packets would flow between two mesh members running &lt;code&gt;netcat&lt;/code&gt; (but this would look the same no matter which network applications were used - you can imagine NGINX running on one side and Firefox on the other, for example).&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="/images/meshboi_tunflow.png"&gt;
+The details of what exactly the data being sent across the internet are further covered in the Security section below, but for now it's OK to imagine that it's a UDP packet that contains the original IPv4 packet. UDP is typically used for this tunneling use case as it does not suffer from the &lt;a href="http://sites.inka.de/bigred/devel/tcp-tcp.html"&gt;drawbacks of running TCP over TCP&lt;/a&gt;. &lt;/p&gt;
+&lt;p&gt;The following code snippet shows a (slightly modified for readability) snippet from the &lt;a href="https://github.com/samvrlewis/meshboi/blob/c062891688fce272e99ee4139add4716e8166d0a/tun_router.go"&gt;&lt;code&gt;tun_router.go&lt;/code&gt;&lt;/a&gt; showing how this works for outbound packets.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="c1"&gt;// Read from the TUN device, this reads out a packet destined for another peer on the mesh&lt;/span&gt;
+    &lt;span class="nx"&gt;n&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;tr&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;tun&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Read&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;packet&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="nx"&gt;header&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;ipv4&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;ParseHeader&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;packet&lt;/span&gt;&lt;span class="p"&gt;[:&lt;/span&gt;&lt;span class="nx"&gt;n&lt;/span&gt;&lt;span class="p"&gt;])&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// Find the VPN/Mesh IP that this packet is destined for&lt;/span&gt;
+    &lt;span class="nx"&gt;vpnIP&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;ok&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;netaddr&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;FromStdIP&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;header&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Dst&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// See if we know of a peer with that Mesh IP address&lt;/span&gt;
+    &lt;span class="nx"&gt;peerConn&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;ok&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;tr&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;store&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;GetByInsideIp&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;vpnIP&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="p"&gt;!&lt;/span&gt;&lt;span class="nx"&gt;ok&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+       &lt;span class="c1"&gt;// Drop the data if we aren&amp;#39;t aware of any peers with that address&lt;/span&gt;
+       &lt;span class="nx"&gt;log&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Warn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;Dropping data destined for &amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;vpnIP&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+       &lt;span class="k"&gt;continue&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+
+    &lt;span class="nx"&gt;msg&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nb"&gt;make&lt;/span&gt;&lt;span class="p"&gt;([]&lt;/span&gt;&lt;span class="kt"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;n&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="nb"&gt;copy&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;msg&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;packet&lt;/span&gt;&lt;span class="p"&gt;[:&lt;/span&gt;&lt;span class="nx"&gt;n&lt;/span&gt;&lt;span class="p"&gt;])&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// Queue the data to be sent to the corresponding peer&lt;/span&gt;
+    &lt;span class="c1"&gt;// this will send the packet to their internet address&lt;/span&gt;
+    &lt;span class="c1"&gt;// through the dTLS UDP tunnel&lt;/span&gt;
+    &lt;span class="nx"&gt;peerConn&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;QueueData&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;msg&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;The corresponding code for handling packets that have been sent by other peer members to us is handled in &lt;a href="https://github.com/samvrlewis/meshboi/blob/c062891688fce272e99ee4139add4716e8166d0a/peer_conn.go#L45"&gt;&lt;code&gt;peer_conn.go&lt;/code&gt;&lt;/a&gt;:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="nx"&gt;b&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nb"&gt;make&lt;/span&gt;&lt;span class="p"&gt;([]&lt;/span&gt;&lt;span class="kt"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;bufSize&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="c1"&gt;// Read a packet that another peer has sent us over the interneet&lt;/span&gt;
+    &lt;span class="nx"&gt;n&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;p&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;conn&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Read&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;b&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// Write the packet to the TUN device so applications awaiting data from the mesh receive it&lt;/span&gt;
+    &lt;span class="nx"&gt;written&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;p&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;tun&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;b&lt;/span&gt;&lt;span class="p"&gt;[:&lt;/span&gt;&lt;span class="nx"&gt;n&lt;/span&gt;&lt;span class="p"&gt;])&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h3&gt;NAT &amp;amp; Firewalls&lt;/h3&gt;
+&lt;p&gt;The majority of computers on the internet are behind both NAT and firewalls (sometimes multiple levels of both). Being behind NAT and firewalls adds difficulty in allowing external parties to talk into your network across the internet. For an average user this is typically good, as (unless you are hosting an internet accessible server on your LAN) you typically do &lt;strong&gt;not&lt;/strong&gt; want random parties on the internet being able to initiate communications to computers/services running within your network.&lt;/p&gt;
+&lt;p&gt;However, this is a problem in establishing a mesh network. Members on the mesh need to be able to send arbitrary packets between each other. One way of solving this would be for each member to add port forwarding rules to their routers and open ports in their firewall(s). This is typically the appropriate solution to make a locally hosted server accessible on the internet and for a user with the technical know-how and access privileges this is doable (if kind of annoying). However this gets trickier and becomes a less ideal solution when you consider that users might be on a corporate network, using public wifi (for example at a cafe) or even behind &lt;a href="https://en.wikipedia.org/wiki/Carrier-grade_NAT"&gt;Carrier Grade NAT&lt;/a&gt;.&lt;/p&gt;
+&lt;p&gt;Luckily there is another way! This method takes advantage of us knowing the peers that we want to talk to ahead of time (because the Rolodex has told us about them!).&lt;/p&gt;
+&lt;p&gt;Firstly, to explain the issues that NAT introduces in this context: NAT works by transparently translating source ports and IP addresses from a computer on a LAN to source ports and IP addresses from the internet facing side of its router. Typically, because this is done transparently, there is no need for anything except for the router to know what this mapping is. However, because we want to open a port and advertise what that port is to other peers it becomes necessary to know what the port is.&lt;/p&gt;
+&lt;p&gt;To solve this, peers on the mesh network reuse the same the source port that they used to communicate with the Rolodex in order to talk to their peers. This allows the Rolodex to store the IP address and port of each member that it sees from its perspective and send that to data to new peers. Assuming that the Rolodex is somewhere on the internet, this means that it has the “internet view” of each mesh member and can be the authority in sharing how to connect to each member.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="" src="/images/meshboi_port_reuseal.png"&gt;&lt;/p&gt;
+&lt;p&gt;The Rolodex server also serves as a way to ensure that the NAT mapping remains up to date. NAT devices will garbage collect mappings after an inactivity period (as otherwise eventually all the usable ports will be used up), so the Rolodex is used to send and receive heartbeat messages from peers to ensure that these remain valid for as long as the peer is running.&lt;/p&gt;
+&lt;p&gt;Great! But what about firewalls? As a very short intro, firewalls usually deny all incoming traffic unless it has been explicitly permitted. However, because of the way IP traffic works , for most users, firewalls need to be stateful. This basically means that the firewall allows incoming packets so long as it has seen corresponding outgoing packets. This is so that, for example, when you send a request to load &lt;a href="http://www.google.com"&gt;www.google.com&lt;/a&gt; the firewall will allow the response from the Google web server. Without a stateful firewall, the firewall would need exceptions added for every website and IP address that a user expects to communicate with.&lt;/p&gt;
+&lt;p&gt;Meshboi (and most mesh networking tools) take advantage of this by having pairs of peers send each other packets in order to form a connection. As both sides have then "initiated" communications (in the view of their respective firewalls), the firewalls will then allow incoming packets from the corresponding peer.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;&lt;img alt="" src="/images/meshboi_firewalls.png"&gt;&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;For meshboi, as will be elaborated on in the next section, each pair of peers have one peer designated as the 'server' and one as the 'client'. The client will connect to the server immediately whereas the server only waits for the client to connect. For this reason, its only important for the server to send out a message to the client, to then enable the client to talk inward to it. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;pc&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;PeerConnector&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;openFirewallToPeer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;addr&lt;/span&gt; &lt;span class="nx"&gt;net&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Addr&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="kt"&gt;error&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="nx"&gt;conn&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;pc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;listenerDialer&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Dial&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;addr&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;defer&lt;/span&gt; &lt;span class="nx"&gt;conn&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Close&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// .. snipped error handling ..&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// It doesn&amp;#39;t really matter what is sent here - the important part is&lt;/span&gt;
+    &lt;span class="c1"&gt;// something is sent. We&amp;#39;re effectively telling any and all (stateful)&lt;/span&gt;
+    &lt;span class="c1"&gt;// firewalls on our path to the peer to allow any future traffic that has&lt;/span&gt;
+    &lt;span class="c1"&gt;// originated from that peer&lt;/span&gt;
+    &lt;span class="nx"&gt;_&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;err&lt;/span&gt; &lt;span class="p"&gt;=&lt;/span&gt; &lt;span class="nx"&gt;conn&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Write&lt;/span&gt;&lt;span class="p"&gt;([]&lt;/span&gt;&lt;span class="nb"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s"&gt;&amp;quot;hello&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+
+    &lt;span class="c1"&gt;// .. snipped error handling ..&lt;/span&gt;
+
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="kc"&gt;nil&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;I’d be remiss not to mention &lt;a href="https://tailscale.com/blog/how-nat-traversal-works/"&gt;this excellent Tailscale blog post&lt;/a&gt; that goes into a lot more depth on the firewall/NAT problem and considers more than the basic NAT scenario that I considered here. It also has some very excellent diagrams! Worth the read if my explanation here isn't making sense or if you’re interested in the subject.&lt;/p&gt;
+&lt;h3&gt;Security&lt;/h3&gt;
+&lt;p&gt;As Mesh VPN tools tunnel traffic over the internet, they need some sort of security that affords protection against things like:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Data being readable by third parties&lt;/li&gt;
+&lt;li&gt;Ensuring that incoming packets are only accepted from trusted peers, not from malicious internet people&lt;/li&gt;
+&lt;li&gt;Data has integrity (people can’t mess with our messages without our knowledge)&lt;/li&gt;
+&lt;li&gt;Replay attacks&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Tailscale uses Wireguard links for this security and Nebula uses &lt;a href="https://noiseprotocol.org/"&gt;the Noise Protocol Framework&lt;/a&gt; which is what Wireguard is built upon.&lt;/p&gt;
+&lt;p&gt;Not knowing much about this type of security (and admittedly, barely knowing much more now!), I initially naively considered encrypting each internet-bound packet transmitted by meshboi by using something like &lt;a href="https://en.wikipedia.org/wiki/Bcrypt"&gt;bcrypt&lt;/a&gt; and a pre-shared key. However, while this would stop the data from being readable by third parties it wouldn't ensure protection against the other points above - attackers could still mess with the integrity of packets or could replay past packets.&lt;/p&gt;
+&lt;p&gt;That said, if we were certain that all the traffic over the mesh would already be in protocols that affords that sort of protection (such as HTTPS or SSH) then this sort of double protection would arguably be unnecessary. However, as meshboi should allow any sort of traffic to flow over its mesh it is better if it can guarantee some sort of security.&lt;/p&gt;
+&lt;p&gt;Because, as previously mentioned, traffic over the tunnel should be UDP, this somewhat limits the choice of protocols for implementing this security. To cut a long story short, for meshboi's case, I ended up using the not-super-popular UDP version of TLS: dTLS. To implement this I used the dTLS implementation in the &lt;a href="https://github.com/pion/dtls"&gt;Pion stack&lt;/a&gt; (which, as a complete aside, has to be just about the friendliest community I've ever encountered on the internet!).&lt;/p&gt;
+&lt;p&gt;Each link between peers in meshboi is implemented as a dTLS link. When peers learn of each other (via messages from the Rolodex) they will attempt to form this link using the pre-shared key they have been configured with. As dTLS requires the concept of a 'server' and 'client' for each connection, this is implemented somewhat arbitrarily in meshboi by using the peer with the 'largest' IP address to be the server:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;pc&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;PeerConnector&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="nx"&gt;AmServer&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;other&lt;/span&gt; &lt;span class="nx"&gt;netaddr&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;IPPort&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="kt"&gt;bool&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="nx"&gt;ipCompare&lt;/span&gt; &lt;span class="o"&gt;:=&lt;/span&gt; &lt;span class="nx"&gt;pc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;myOutsideAddr&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;IP&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Compare&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;other&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;IP&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="k"&gt;switch&lt;/span&gt; &lt;span class="nx"&gt;ipCompare&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;case&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+       &lt;span class="k"&gt;return&lt;/span&gt;  &lt;span class="kc"&gt;false&lt;/span&gt;
+    &lt;span class="k"&gt;case&lt;/span&gt;  &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+       &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nx"&gt;pc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;myOutsideAddr&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Port&lt;/span&gt; &lt;span class="p"&gt;&amp;gt;&lt;/span&gt; &lt;span class="nx"&gt;other&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Port&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+           &lt;span class="k"&gt;return&lt;/span&gt;  &lt;span class="kc"&gt;true&lt;/span&gt;
+       &lt;span class="p"&gt;}&lt;/span&gt; &lt;span class="k"&gt;else&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nx"&gt;pc&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;myOutsideAddr&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Port&lt;/span&gt; &lt;span class="p"&gt;&amp;lt;&lt;/span&gt; &lt;span class="nx"&gt;other&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Port&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+           &lt;span class="k"&gt;return&lt;/span&gt;  &lt;span class="kc"&gt;false&lt;/span&gt;
+       &lt;span class="p"&gt;}&lt;/span&gt;
+    &lt;span class="k"&gt;case&lt;/span&gt;  &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="k"&gt;return&lt;/span&gt;  &lt;span class="kc"&gt;true&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;As well as using dTLS to ensure that every peer that attempts to join the mesh is trusted, meshboi also makes use of the PSK 'hint' feature to transmit some out of band information between peers. As far as I understand, the ability to send hints is to facilitate dTLS connections where there's a human in the loop that might need a hint to remember the PSK. In Meshboi, this is somewhat abused to send the internal VPN address of the peer:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kd"&gt;func&lt;/span&gt; &lt;span class="nx"&gt;getDtlsConfig&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;vpnIp&lt;/span&gt; &lt;span class="nx"&gt;netaddr&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;IP&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nx"&gt;psk&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;&lt;span class="kt"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="nx"&gt;dtls&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Config&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="nx"&gt;dtls&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;Config&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="nx"&gt;PSK&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="kd"&gt;func&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;hint&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;&lt;span class="kt"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;([]&lt;/span&gt;&lt;span class="kt"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;error&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nx"&gt;psk&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kc"&gt;nil&lt;/span&gt;
+        &lt;span class="p"&gt;},&lt;/span&gt;
+        &lt;span class="c1"&gt;// We set the PSK identity hint as the IP address of this member in the&lt;/span&gt;
+        &lt;span class="c1"&gt;// VPN as an quick and hacky way of signalling (out of band) who this&lt;/span&gt;
+        &lt;span class="c1"&gt;// member is to other members we connect to. A more robust way of&lt;/span&gt;
+        &lt;span class="c1"&gt;// achieving this would be to define an OOB messaging scheme to do this&lt;/span&gt;
+        &lt;span class="c1"&gt;// with instead.&lt;/span&gt;
+        &lt;span class="nx"&gt;PSKIdentityHint&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;      &lt;span class="p"&gt;[]&lt;/span&gt;&lt;span class="nb"&gt;byte&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nx"&gt;vpnIp&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;String&lt;/span&gt;&lt;span class="p"&gt;()),&lt;/span&gt;
+        &lt;span class="nx"&gt;CipherSuites&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;         &lt;span class="p"&gt;[]&lt;/span&gt;&lt;span class="nx"&gt;dtls&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;CipherSuiteID&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nx"&gt;dtls&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;TLS_PSK_WITH_AES_128_CCM_8&lt;/span&gt;&lt;span class="p"&gt;},&lt;/span&gt;
+        &lt;span class="nx"&gt;ExtendedMasterSecret&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nx"&gt;dtls&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;&lt;span class="nx"&gt;RequireExtendedMasterSecret&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;In this way, the messages sent across the dTLS link can be tunneled IPv4 packets that can be injected directly into the mesh network. A future improvement might be to change this so that the IPv4 messages are wrapped inside other messages with metadata, so that more out of band messages can be defined and sent between peers.&lt;/p&gt;
+&lt;h2&gt;Performance&lt;/h2&gt;
+&lt;p&gt;To test the performance of meshboi, I used &lt;code&gt;iperf3&lt;/code&gt; to check the achievable speed between a GCP e2-micro (2 vCPUs, 1 GB memory) Debian Google Cloud Platform instance and a Vultr $5/month instance (1 vCPU, 1 GB memory).&lt;/p&gt;
+&lt;p&gt;For comparison, I also tested Nebula, Tailscale and then opened up instances' firewalls to run the test without any tunneling/mesh VPN software at all. It's likely that the configuration could be improved for better performance with the other tools, but it's nice at least as a point of reference. &lt;/p&gt;
+&lt;p&gt;As these tools do networking and packet encryption/decryption in userspace, my benchmarking technique was to measure both the achievable throughput across a link and the CPU usage hit taken. To do this, I ran &lt;code&gt;mpstat 1&lt;/code&gt; to find the average non-idle CPU time while running &lt;code&gt;iperf3&lt;/code&gt; across the link. I ran the iperf3 server on the GCP instance and the client on the Vultr instance, and measured CPU only on the Vultr instance. My benchmarking technique is not very comprehensive and likely could be improved (open to hearing suggestions!) but I think gives somewhat of an indication of the difference between these tools.&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Test&lt;/th&gt;
+&lt;th&gt;Non idle CPU time (%)&lt;/th&gt;
+&lt;th&gt;Average Bandwidth (Mbps)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;No tunneling&lt;/td&gt;
+&lt;td&gt;2.74%&lt;/td&gt;
+&lt;td&gt;253 MBit/s&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;meshboi&lt;/td&gt;
+&lt;td&gt;75.47%&lt;/td&gt;
+&lt;td&gt;98.4 Mbit/s&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Nebula&lt;/td&gt;
+&lt;td&gt;57.44%&lt;/td&gt;
+&lt;td&gt;222 Mbits/sec&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;Tailscale&lt;/td&gt;
+&lt;td&gt;72.02%&lt;/td&gt;
+&lt;td&gt;183 Mbit/s&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;As expected, meshboi is probably not the best choice compared to established tools! I'm sure there's lots of easy wins to be had here though, I suspect the choice of dTLS cipher could go a long way to speeding things up. Meshboi also copies data around somewhat unnecessarily which is also most likely slowing things down.&lt;/p&gt;
+&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;Hopefully this article gives a bit of an insight into how the magic of mesh VPN tools work. If you're interested in learning more then by all means feel free to dive into the meshboi &lt;a href="https://github,com/samvrlewis/meshboi"&gt;source code&lt;/a&gt;, play around with meshboi or even submit a patch or two - there's likely boundless things to improve!&lt;/p&gt;
+&lt;p&gt;Otherwise, if you're after a production ready mesh VPN solution there's a lot of solutions out there that work much better than meshboi. In particular, solutions like Tailscale and Nebula can do things like:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Multi platform support (OSX, Windows)&lt;/li&gt;
+&lt;li&gt;Better authentication (cert based or SSO based)&lt;/li&gt;
+&lt;li&gt;Have better performance&lt;/li&gt;
+&lt;li&gt;General robustness&lt;/li&gt;
+&lt;li&gt;Have audited security&lt;/li&gt;
+&lt;/ul&gt;</content></entry><entry><title>Forcing ethernet traffic onto physical interfaces</title><link href="https://www.samlewis.me/2020/04/force-ethernet-loopback" rel="alternate"></link><published>2020-04-28T00:00:00+10:00</published><updated>2020-04-28T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2020-04-28:/2020/04/force-ethernet-loopback</id><summary type="html">&lt;p&gt;When you're working with a device that has two ethernet ports, it can be sometimes useful for hardware benchmarking or testing purposes to do a loopback test where one port connects directly to the other.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="ethernet loopback" src="/images/ethernetloopback.png"&gt;&lt;/p&gt;
+&lt;p&gt;By default, and somewhat annoyingly, Linux is smart about routing traffic between ethernet adapters on …&lt;/p&gt;</summary><content type="html">&lt;p&gt;When you're working with a device that has two ethernet ports, it can be sometimes useful for hardware benchmarking or testing purposes to do a loopback test where one port connects directly to the other.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="ethernet loopback" src="/images/ethernetloopback.png"&gt;&lt;/p&gt;
 &lt;p&gt;By default, and somewhat annoyingly, Linux is smart about routing traffic between ethernet adapters on the same system, leading to results from iperf like this:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="o"&gt;[&lt;/span&gt; ID&lt;span class="o"&gt;]&lt;/span&gt; Interval           Transfer     Bitrate         Retr
-&lt;span class="o"&gt;[&lt;/span&gt;  5&lt;span class="o"&gt;]&lt;/span&gt;   0.00-10.00  sec  3.70 GBytes  3.18 Gbits/sec    &lt;span class="m"&gt;0&lt;/span&gt;             sender
-&lt;span class="o"&gt;[&lt;/span&gt;  5&lt;span class="o"&gt;]&lt;/span&gt;   0.00-10.04  sec  3.70 GBytes  3.16 Gbits/sec                  receiver
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt; ID&lt;span class="o"&gt;]&lt;/span&gt; Interval           Transfer     Bitrate         Retr
+&lt;span class="o"&gt;[&lt;/span&gt;  &lt;span class="m"&gt;5&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;   &lt;span class="m"&gt;0&lt;/span&gt;.00-10.00  sec  &lt;span class="m"&gt;3&lt;/span&gt;.70 GBytes  &lt;span class="m"&gt;3&lt;/span&gt;.18 Gbits/sec    &lt;span class="m"&gt;0&lt;/span&gt;             sender
+&lt;span class="o"&gt;[&lt;/span&gt;  &lt;span class="m"&gt;5&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;   &lt;span class="m"&gt;0&lt;/span&gt;.00-10.04  sec  &lt;span class="m"&gt;3&lt;/span&gt;.70 GBytes  &lt;span class="m"&gt;3&lt;/span&gt;.16 Gbits/sec                  receiver
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -14,7 +247,7 @@
 &lt;ol&gt;
 &lt;li&gt;Create a namespace for each adapter&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;ip netns add ns_eth0
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns add ns_eth0
 ip netns add ns_eth1
 &lt;/pre&gt;&lt;/div&gt;
 
@@ -22,7 +255,7 @@ ip netns add ns_eth1
 &lt;ol&gt;
 &lt;li&gt;Move the adapters into the namespaces&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth0 netns ns_eth0
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth0 netns ns_eth0
 ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth1 netns ns_eth1
 &lt;/pre&gt;&lt;/div&gt;
 
@@ -30,15 +263,15 @@ ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth1 netns ns_eth1
 &lt;ol&gt;
 &lt;li&gt;Assign ip addresses to each adapter&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ip addr add dev eth0 192.168.1.1/24
-ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ip addr add dev eth1 192.168.1.2/24
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ip addr add dev eth0 &lt;span class="m"&gt;192&lt;/span&gt;.168.1.1/24
+ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ip addr add dev eth1 &lt;span class="m"&gt;192&lt;/span&gt;.168.1.2/24
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;ol&gt;
 &lt;li&gt;Bring the adapters up&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth0 up
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth0 up
 ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ip link &lt;span class="nb"&gt;set&lt;/span&gt; eth1 up
 &lt;/pre&gt;&lt;/div&gt;
 
@@ -46,17 +279,17 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ip link &lt;span class
 &lt;ol&gt;
 &lt;li&gt;Check that each adapter can ping the other&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ping 192.168.1.2
-ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ping 192.168.1.1
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 ping &lt;span class="m"&gt;192&lt;/span&gt;.168.1.2
+ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 ping &lt;span class="m"&gt;192&lt;/span&gt;.168.1.1
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;ol&gt;
 &lt;li&gt;Run your tests, happy in the knowledge that the traffic is really going out on the physical interface!&lt;/li&gt;
 &lt;/ol&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 iperf3 -s
-ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
-&lt;/pre&gt;&lt;/div&gt;</summary></entry><entry><title>A peek under Bitcoin's hood</title><link href="https://www.samlewis.me/2017/06/a-peek-under-bitcoins-hood" rel="alternate"></link><updated>2017-06-05T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2017-06-05:2017/06/a-peek-under-bitcoins-hood</id><summary type="html">&lt;p&gt;Bitcoin is really cool. Sure, there's arguments to be made about whether it's a useful technology, whether we're currently in a cryptocurrency bubble or if the governance problems that it's currently facing will ever be resolved.. But on a purely technical level, the mystical Satoshi Nakamoto created an impressive technology. &lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth0 iperf3 -s
+ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span class="m"&gt;192&lt;/span&gt;.168.1.1
+&lt;/pre&gt;&lt;/div&gt;</content></entry><entry><title>A peek under Bitcoin's hood</title><link href="https://www.samlewis.me/2017/06/a-peek-under-bitcoins-hood" rel="alternate"></link><published>2017-06-05T00:00:00+10:00</published><updated>2017-06-05T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2017-06-05:/2017/06/a-peek-under-bitcoins-hood</id><summary type="html">&lt;p&gt;Bitcoin is really cool. Sure, there's arguments to be made about whether it's a useful technology, whether we're currently in a cryptocurrency bubble or if the governance problems that it's currently facing will ever be resolved.. But on a purely technical level, the mystical Satoshi Nakamoto created an impressive technology …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Bitcoin is really cool. Sure, there's arguments to be made about whether it's a useful technology, whether we're currently in a cryptocurrency bubble or if the governance problems that it's currently facing will ever be resolved.. But on a purely technical level, the mystical Satoshi Nakamoto created an impressive technology. &lt;/p&gt;
 &lt;p&gt;Unfortunately, while there's a lot of resources out there that give high level explanations of how Bitcoin works (one such resource I'd highly recommend is Anders Brownworth's fantastic &lt;a href="https://anders.com/blockchain/"&gt;blockchain visual 101&lt;/a&gt; video), there isn't a whole heap of information at a lower level and, in my opinion, there's only so much you can properly grok if you're looking at the 10000 ft view. &lt;/p&gt;
 &lt;p&gt;As someone relatively new to the space, I found myself hungry to understand the mechanics of how Bitcoin works. Luckily, because Bitcoin is decentralised and peer to peer by its nature, anyone is able to develop a client that conforms to the protocol. In order to get a greater appreciation of how Bitcoin works, I decided to write my own small toy Bitcoin client that was able to publish a transaction to the Bitcoin blockchain. &lt;/p&gt;
 &lt;p&gt;This post walks through the process of creating a minimally viable Bitcoin client that can create a transaction and submit it to the Bitcoin peer to peer network so that it is included in the Blockchain. If you'd rather just read the raw code, feel free to check out my &lt;a href="https://github.com/samvrlewis/simple-bitcoin"&gt;Github repo&lt;/a&gt;.&lt;/p&gt;
@@ -67,12 +300,12 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 &lt;/blockquote&gt;
 &lt;p&gt;Bitcoin uses elliptic curve public-key cryptography for its addresses. At an ultra high level, elliptic curve cryptography is used to generate a public key from a private key, in the same way RSA would but with a lower footprint. If you're interested in learning a bit about the mathematics behind how this works, &lt;a href="https://blog.cloudflare.com/a-relatively-easy-to-understand-primer-on-elliptic-curve-cryptography/"&gt;Cloudflare's primer&lt;/a&gt; is a fantastic resource.&lt;/p&gt;
 &lt;p&gt;Starting with a 256 bit private key, the process of generating a Bitcoin address is shown below:&lt;/p&gt;
-&lt;p&gt;&lt;img alt="bitcoin address generation" src="/images/bitcoin_address_generation.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="bitcoin address generation" src="/images/bitcoin_address_generation.png"&gt;&lt;/p&gt;
 &lt;p&gt;In Python, I use the &lt;a href=""&gt;ecsda library&lt;/a&gt; to do the heavy lifting for the elliptic curve cryptography. The following snippet gets a public key for the highly memorable (and highly insecure) private key &lt;code&gt;0xFEEDB0BDEADBEEF&lt;/code&gt; (front padded with enough zeros to make it 64 hex chars long, or 256 bits). You'd want a more secure method of generating private keys than this if you wanted to store any real value in an address!&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;As an amusing aside, I originally created an address using the private key 0xFACEBEEF and sent it 0.0005 BTC.. 1 month later and someone had &lt;a href="https://blockchain.info/address/1KAWPAD8KovUo53pqHUY2bLNMTYa1obFX9"&gt;stolen my 0.0005 BTC&lt;/a&gt;! I guess people must occasionally trawl through addresses with simple/common private keys. You really should use proper key derivation techniques!&lt;/p&gt;
 &lt;/blockquote&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;ecdsa&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;SECP256k1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;SigningKey&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;from&lt;/span&gt; &lt;span class="nn"&gt;ecdsa&lt;/span&gt; &lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="n"&gt;SECP256k1&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;SigningKey&lt;/span&gt;
 
 &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_private_key&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;hex_string&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
     &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="nb"&gt;bytes&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;fromhex&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;hex_string&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;zfill&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;64&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt; &lt;span class="c1"&gt;# pad the hex string to the required 64 characters&lt;/span&gt;
@@ -88,18 +321,18 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 
 
 &lt;p&gt;Running this code gets the private key (in hex) of  &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;0000000000000000000000000000000000000000000000000feedb0bdeadbeef
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;0000000000000000000000000000000000000000000000000feedb0bdeadbeef
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;And the public key (in hex) of &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;The &lt;code&gt;0x04&lt;/code&gt; that prepends the public key signifies that this is an &lt;em&gt;uncompressed&lt;/em&gt; public key, meaning that the &lt;em&gt;x&lt;/em&gt; and &lt;em&gt;y&lt;/em&gt; coordinates from the ECDSA are simply concatenated. Because of the way ECSDA works, if you know the &lt;em&gt;x&lt;/em&gt; value, the &lt;em&gt;y&lt;/em&gt; value can only take two values, one even and one odd. Using this information, it is possible to express a public key using &lt;em&gt;x&lt;/em&gt; and the polarity of &lt;em&gt;y&lt;/em&gt;. This reduces the public key size from 65 bits to 33 bits and the key (and subsequent computed address) are referred to as &lt;em&gt;compressed&lt;/em&gt;. For compressed public keys, the prepended value will be &lt;code&gt;0x02&lt;/code&gt; or &lt;code&gt;0x03&lt;/code&gt; depending on the polarity of &lt;em&gt;y&lt;/em&gt;. &lt;em&gt;Uncompressed&lt;/em&gt; public keys are most commonly used in Bitcoin, so that's what I'll use here too.&lt;/p&gt;
 &lt;p&gt;From here, to generate the Bitcoin address from the public key, the public key is sha256 hashed and then ripemd160 hashed. This double hashing provides an extra layer of security and a ripemd160 hash provides a 160 bit hash of sha256's 256 bit hash, shortening the length of the address. An interesting result of this is that it is possible for two different public keys to hash to the same address! However, with 2^160 different addresses, this isn't likely to happen any time soon.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;hashlib&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;hashlib&lt;/span&gt;
 
 &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_public_address&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;public_key&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
     &lt;span class="n"&gt;address&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;hashlib&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sha256&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;public_key&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;digest&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
@@ -120,7 +353,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 &lt;p&gt;Public keys are hidden for good reason. Although it is normally infeasible to compute a private key from the corresponding public key, if the method of generating private keys has been compromised then having access to the public key makes it a lot easier to deduce the private key. In 2013, this &lt;a href="https://bitcoin.org/en/alert/2013-08-11-android"&gt;infamously occurred for Android Bitcoin wallets&lt;/a&gt;. Android had a critical weakness generating random numbers, which opened a vector for attackers to find private keys from public keys. This is also why address reuse in Bitcoin is discouraged - to sign a transaction, you need to reveal your public key. If you don't reuse an address after sending a transaction from the address, you don't need worry about the public key of that address being exposed. &lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;That standard way of expressing a Bitcoin address is to use the &lt;a href="https://en.bitcoin.it/wiki/base58Check_encoding"&gt;Base58Check&lt;/a&gt; encoding of it. This encoding is only a representation of an address (and so can be decoded/reversed). Base58Check generates addresses of the form &lt;em&gt;1661HxZpSy5jhcJ2k6av2dxuspa8aafDac&lt;/em&gt;. The Base58Check encoding provides a shorter address to express and also has an inbuilt checksum, that allows detection of mistyped address. In just about every Bitcoin client, the Base58Check encoding of your address is the address that you'll see. A Base58Check also includes a version number, which I'm setting to 0 in the code below - this represents that the address is a pubkey hash.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="c1"&gt;# 58 character alphabet used&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;# 58 character alphabet used&lt;/span&gt;
 &lt;span class="n"&gt;BASE58_ALPHABET&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz&amp;#39;&lt;/span&gt;
 
 &lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;base58_encode&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;version&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;public_address&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
@@ -137,7 +370,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
     &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;result&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
     &lt;span class="c1"&gt;# count the leading 0s&lt;/span&gt;
-    &lt;span class="n"&gt;padding&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lstrip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\0&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+    &lt;span class="n"&gt;padding&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lstrip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;b&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\0&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
     &lt;span class="n"&gt;encoded&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[]&lt;/span&gt;
 
     &lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="n"&gt;result&lt;/span&gt; &lt;span class="o"&gt;!=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
@@ -160,7 +393,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 &lt;p&gt;It turns out DNS is well suited to this purpose of bootstrapping clients as the DNS protocol, which runs over UDP and is lightweight, is hard to DDoS. IRC was used as a previous bootstrapping method but was discontinued due to its weakness to DDoS attacks.  &lt;/p&gt;
 &lt;p&gt;The seeds are hardcoded into &lt;a href="https://github.com/bitcoin/bitcoin/blob/aab1e55860dea1e40fc02bc0e535c1d1474a5ae3/src/chainparams.cpp#L123"&gt;Bitcoin core's source code&lt;/a&gt; but are subject to change by the core developers. &lt;/p&gt;
 &lt;p&gt;The Python code below connects to a DNS seed and arbitrarily chooses the first peer to connect to. Using the &lt;code&gt;socket&lt;/code&gt; library, the code basically performs a &lt;code&gt;nslookup&lt;/code&gt; and returns the ipv4 address of the first result on running a query against the seed node &lt;code&gt;seed.bitcoin.sipa.be&lt;/code&gt;.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;socket&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kn"&gt;import&lt;/span&gt; &lt;span class="nn"&gt;socket&lt;/span&gt;
 
 &lt;span class="c1"&gt;# use a dns request to a seed bitcoin DNS server to find a node&lt;/span&gt;
 &lt;span class="n"&gt;nodes&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;getaddrinfo&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;seed.bitcoin.sipa.be&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="bp"&gt;None&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
@@ -174,7 +407,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 &lt;h3&gt;Saying hi to my new peer friend&lt;/h3&gt;
 &lt;p&gt;Bitcoin connections between peers are through TCP. Upon connecting to a peer, the beginning handshake message of the Bitcoin protocol is a &lt;em&gt;Version&lt;/em&gt; message. Until peers swap Version messages, no other messages will be accepted. &lt;/p&gt;
 &lt;p&gt;Bitcoin protocol messages are well documented in the &lt;a href="https://bitcoin.org/en/developer-reference"&gt;Bitcoin developer reference&lt;/a&gt;. Using the developer reference as guide, the &lt;a href="https://bitcoin.org/en/developer-reference#version"&gt;version&lt;/a&gt; message can be constructed in Python as the snippet below shows. Most of the data is fairly uninteresting, administrative data which is used to establish the peer connection. If you're interested in more details than the attached comments provide, have a read of the developer reference.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;version&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;70014&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;version&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;70014&lt;/span&gt;
 &lt;span class="n"&gt;services&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt; &lt;span class="c1"&gt;# not a full node, cant provide any data&lt;/span&gt;
 &lt;span class="n"&gt;timestamp&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
 &lt;span class="n"&gt;addr_recvservices&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;
@@ -191,7 +424,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 
 
 &lt;p&gt;Using Python's &lt;a href="https://docs.python.org/3/library/struct.html"&gt;struct library&lt;/a&gt; the version payload data is packed into the right format, paying special attention to endianness and byte widths of the data. Packing the data into the right format is important, or else the receiving peer won't be able to understand the raw bytes that it receives. &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;payload&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&amp;lt;I&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;version&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&amp;lt;I&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;version&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;payload&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&amp;lt;Q&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;services&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;payload&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&amp;lt;Q&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;timestamp&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;payload&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&amp;lt;Q&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;addr_recvservices&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
@@ -207,7 +440,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 
 
 &lt;p&gt;Again, the way in which this data should be packed is available in the developer reference. Finally, each payload transmitted on the Bitcoin network needs to be prepended with a header, that contains the length of the payload, a checksum and the type of message the payload is. The header also contains the magic constant &lt;code&gt;0xF9BEB4D9&lt;/code&gt; which is set for all mainnet Bitcoin messages. The following function gets a Bitcoin message with header attached.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_bitcoin_message&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;message_type&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_bitcoin_message&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;message_type&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
     &lt;span class="n"&gt;header&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&amp;gt;L&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mh"&gt;0xF9BEB4D9&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
     &lt;span class="n"&gt;header&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;12s&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;bytes&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;message_type&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;utf-8&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
     &lt;span class="n"&gt;header&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;struct&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;pack&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&amp;lt;L&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
@@ -218,7 +451,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 
 
 &lt;p&gt;With the data packed into the right format, and the header attached, it can be sent off to our peer! &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;connect&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;node&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;8333&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;send&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_message&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;version&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
@@ -227,7 +460,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 
 &lt;p&gt;The Bitcoin protocol mandates that on receiving a version message, a peer should respond with a &lt;em&gt;Verack&lt;/em&gt; acknowledgement message. Because I'm building a tiny "for fun" client, and because peers won't treat me differently if I don't, I'll disregard their version message and not send them the acknowledgement. Sending the Version message as I connect is enough to allow me to later send more meaningful messages. &lt;/p&gt;
 &lt;p&gt;Running the above snippet prints out the following. It certainly looks promising - "Satoshi" and "Verack" are good words to see in the dump out! If my version message had been malformed, the peer would not have responded at all.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;b&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\xf9\xbe\xb4\xd9&lt;/span&gt;&lt;span class="s1"&gt;version&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;f&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\xf8\xdd\x9a&lt;/span&gt;&lt;span class="s1"&gt;L&lt;/span&gt;&lt;span class="se"&gt;\x7f\x11\x01\x00\r\x00\x00\x00\x00\x00\x00\x00\xdd&lt;/span&gt;&lt;span class="s1"&gt;R1Y&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xcb\xce\x1d\xfc\xe9&lt;/span&gt;&lt;span class="s1"&gt;j&lt;/span&gt;&lt;span class="se"&gt;\r\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\xb8&lt;/span&gt;&lt;span class="s1"&gt;&amp;gt;*&lt;/span&gt;&lt;span class="se"&gt;\x88&lt;/span&gt;&lt;span class="s1"&gt;@I&lt;/span&gt;&lt;span class="se"&gt;\x8e\x10&lt;/span&gt;&lt;span class="s1"&gt;/Satoshi:0.14.0/t)&lt;/span&gt;&lt;span class="se"&gt;\x07\x00\x01\xf9\xbe\xb4\xd9&lt;/span&gt;&lt;span class="s1"&gt;verack&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;]&lt;/span&gt;&lt;span class="se"&gt;\xf6\xe0\xe2&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="sa"&gt;b&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\xf9\xbe\xb4\xd9&lt;/span&gt;&lt;span class="s1"&gt;version&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;f&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\xf8\xdd\x9a&lt;/span&gt;&lt;span class="s1"&gt;L&lt;/span&gt;&lt;span class="se"&gt;\x7f\x11\x01\x00\r\x00\x00\x00\x00\x00\x00\x00\xdd&lt;/span&gt;&lt;span class="s1"&gt;R1Y&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xcb\xce\x1d\xfc\xe9&lt;/span&gt;&lt;span class="s1"&gt;j&lt;/span&gt;&lt;span class="se"&gt;\r\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\xb8&lt;/span&gt;&lt;span class="s1"&gt;&amp;gt;*&lt;/span&gt;&lt;span class="se"&gt;\x88&lt;/span&gt;&lt;span class="s1"&gt;@I&lt;/span&gt;&lt;span class="se"&gt;\x8e\x10&lt;/span&gt;&lt;span class="s1"&gt;/Satoshi:0.14.0/t)&lt;/span&gt;&lt;span class="se"&gt;\x07\x00\x01\xf9\xbe\xb4\xd9&lt;/span&gt;&lt;span class="s1"&gt;verack&lt;/span&gt;&lt;span class="se"&gt;\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00&lt;/span&gt;&lt;span class="s1"&gt;]&lt;/span&gt;&lt;span class="se"&gt;\xf6\xe0\xe2&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -236,7 +469,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 &lt;p&gt;Critically, the most important idea to understand is that the balance of a Bitcoin address is comprised solely by the number of "Unspent Transaction Outputs" (UTXO) that the address can spend. When Bob sends a Bitcoin to Alice, he's really just creating a UTXO that Alice (and only Alice) can later use to create another UTXO and send that Bitcoin on. The balance of a Bitcoin address is therefore defined by the amount of Bitcoin it is able to transfer to another address, rather than the amount of Bitcoin it &lt;em&gt;has&lt;/em&gt;. &lt;/p&gt;
 &lt;p&gt;To emphasize, when someone says that they have X bitcoin, they're really saying that all of the UTXOs that they can spend sum to X bitcoin of value. The distinction is subtle but important, the balance of a Bitcoin address isn't recorded anywhere directly but rather can be found by summing the UTXOs that it can spend. When I came to this realisation it was definitely a "oh, that's how it works!" moment.&lt;/p&gt;
 &lt;p&gt;A side effect of this is that transaction outputs can either be unspent (UTXO) or completely spent. It isn't possible to only spend half of an output that someone has spent to you and then spend the rest at a later time. If you do want to spend a fraction of an output that you've received, you instead can send the fraction that you want to send while sending the rest back to yourself. A simplified version of this is shown in the diagram below.&lt;/p&gt;
-&lt;p&gt;&lt;img alt="bitcoin address generation" src="/images/BobAlice.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="bitcoin address generation" src="/images/BobAlice.png"&gt;&lt;/p&gt;
 &lt;p&gt;When a transaction output is created, it is created with a locking condition that will allow someone in the future to spend it, through what are called transaction scripts. Most commonly, this locking condition is: "to spend this output, you need to prove that you own the private key corresponding to a particular public address". This is called a "Pay-to-Public-Key-Hash" script. However, through Bitcoin &lt;a href="https://en.bitcoin.it/wiki/Script"&gt;script&lt;/a&gt; other types of conditions are possible. For example, an output could created that could be spent by anyone that could solve a certain hash or a transaction could be created that anyone could spend. &lt;/p&gt;
 &lt;p&gt;Through Script, it's possible to create simple contract based transactions. Script is a basic stack based language with number of operations centred around checking equality of hashes and verifying signatures. Script is not Turing complete and does not have the ability to have any loops. The competing cryptocurrency Ethereum built on this to be able to have "smart contracts", which does have a Turing complete language. There's much debate about the utility, necessity and security of including a Turing complete language in cryptocurrencies but I'll leave that debate to others!&lt;/p&gt;
 &lt;p&gt;In standard terminology, a Bitcoin transaction is made up of inputs and outputs. An input is a UTXO (that is now being spent) and an output is a new UTXO. There can be multiple outputs for a single input but an input needs to be completely spent in a transaction. Any part of an input leftover is claimed by miners as a mining fee. &lt;/p&gt;
@@ -321,7 +554,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c 192.168.1.1
 &lt;p&gt;For the Pubkey script of our transaction, we use a &lt;a href="https://en.bitcoin.it/wiki/Transaction#Pay-to-PubkeyHash"&gt;Pay to Pubkey hash&lt;/a&gt; (or p2pk) script. The script ensures that only the person that holds the public key that hashes to the provided Bitcoin address is able to spend the created output and that a supplied signature has been generated by the person that holds the corresponding private key to the public key.&lt;/p&gt;
 &lt;p&gt;To unlock a transaction that has been locked by a p2pk script, the user provides their public key and a signature of the hash of the raw transaction. The public key is hashed and compared to the address that the script was created with and the signature is verified for the supplied public key. If the hash of the public key and the address are equal, and the signature is verified, the output can be spent.&lt;/p&gt;
 &lt;p&gt;In Bitcoin script operands, the p2pk script looks as follows.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;OP_DUP
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;OP_DUP
 OP_HASH160
 &amp;lt;Length of address in bytes&amp;gt;
 &amp;lt;Bitcoin address&amp;gt;
@@ -331,7 +564,7 @@ OP_CHECKSIG
 
 
 &lt;p&gt;Converting the operands to their values (these can be found on the &lt;a href="https://en.bitcoin.it/wiki/Script"&gt;wiki&lt;/a&gt;) and inputting the public address (before it has been Base58Check encoded) gives the following script in hex:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;0x76
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;0x76
 0xA9
 0x14
 0xFF33195EC053D6E58D5FD3CC67747D3E1C71B280
@@ -350,7 +583,7 @@ OP_CHECKSIG
 &lt;p&gt;However, the raw transaction contains the signature script which should contain a signature of the raw transaction! This chicken and egg problem is solved by placing the &lt;em&gt;Pubkey&lt;/em&gt; script of the UTXO we're using in the signature script slot prior to signing the raw transaction. As far as I could tell, there doesn't seem to be any good reason for using the Pubkey as the placeholder, it could really be any arbitrary data.&lt;/p&gt;
 &lt;p&gt;Before the raw transaction is hashed, it also needs to have a &lt;a href="https://en.bitcoin.it/wiki/OP_CHECKSIG"&gt;Hashtype value&lt;/a&gt; appended. The most common hashtype value is &lt;code&gt;SIGHASH_ALL&lt;/code&gt;, which signs the whole structure such that no inputs or outputs can be modified. The linked wiki page lists other hash types, which can allow combinations of inputs and outputs to be modified after the transaction has been signed. &lt;/p&gt;
 &lt;p&gt;The below functions  put together a python dictionary of raw transaction values.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_p2pkh_script&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pub_key&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_p2pkh_script&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;pub_key&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
     &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
 &lt;span class="sd"&gt;    This is the standard &amp;#39;pay to pubkey hash&amp;#39; script&lt;/span&gt;
 &lt;span class="sd"&gt;    &amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
@@ -397,7 +630,7 @@ OP_CHECKSIG
 
 
 &lt;p&gt;Calling the code with the following values creates the raw transaction that I'm interested in making.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;private_key&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;address_utils&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get_private_key&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;FEEDB0BDEADBEEF&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;private_key&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;address_utils&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get_private_key&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;FEEDB0BDEADBEEF&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;public_key&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;address_utils&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get_public_key&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;private_key&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;from_address&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;address_utils&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get_public_address&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;public_key&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;to_address&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;address_utils&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get_public_address&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;address_utils&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get_public_key&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;address_utils&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get_private_key&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;BADCAFEFABC0FFEE&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)))&lt;/span&gt;
@@ -413,7 +646,7 @@ OP_CHECKSIG
 &lt;p&gt;It might be confusing to see that I'm using a private key to generate the &lt;em&gt;to_address&lt;/em&gt;. This is really only done for convenience and to show how the &lt;code&gt;to_address&lt;/code&gt; is found. If you were making a transaction to someone else, you'd ask them for their &lt;em&gt;public address&lt;/em&gt; and transfer to that, you wouldn't need to know their private key. &lt;/p&gt;
 &lt;p&gt;In order to be able to sign, and eventually transmit the transaction to the network, the raw transaction needs to be packed appropriately. This is implemented in the &lt;code&gt;get_packed_transaction&lt;/code&gt; function which I won't replicate here, as it's essentially just more &lt;code&gt;struct&lt;/code&gt; packing code. If you're interested you can find it in the &lt;a href="https://github.com/samvrlewis/simple-bitcoin/blob/master/bitcoin_transaction_utils.py"&gt;bitcoin_transaction_utils.py&lt;/a&gt; Python file in my Github repo. &lt;/p&gt;
 &lt;p&gt;This allows me to define a function that will produce the signature script. Once the signature script is generated, it should replace the placeholder signature script.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_transaction_signature&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;transaction&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;private_key&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_transaction_signature&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;transaction&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;private_key&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
     &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
 &lt;span class="sd"&gt;    Gets the sigscript of a raw transaction&lt;/span&gt;
 &lt;span class="sd"&gt;    private_key should be in bytes form&lt;/span&gt;
@@ -484,7 +717,7 @@ OP_CHECKSIG
 &lt;p&gt;This script will fail if the provided &lt;em&gt;public key&lt;/em&gt; doesn't hash to the &lt;em&gt;public key hash&lt;/em&gt; in the script or if the provided &lt;em&gt;signature&lt;/em&gt; doesn't match the provided &lt;em&gt;public key&lt;/em&gt;.  This ensures that only the person that holds the private key for the address in the pubkey script is able to spend the output.&lt;/p&gt;
 &lt;p&gt;You can see that here is the first time I have needed to provide my public key anywhere. Up until this point, only my public address has been published. It's necessary to provide the public key here as it is allows verification of the signature that the transaction has been signed with. &lt;/p&gt;
 &lt;p&gt;Using the &lt;code&gt;get_transaction_signature&lt;/code&gt; function, we can now sign and pack our transaction ready for transmission! This involves replacing the placeholder signature script with the real signature script and removing the &lt;code&gt;hash_code_type&lt;/code&gt; from the transaction as shown below.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;signature&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;get_transaction_signature&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;raw&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;private_key&lt;/span&gt; &lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;signature&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;get_transaction_signature&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;raw&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;private_key&lt;/span&gt; &lt;span class="p"&gt;)&lt;/span&gt;
 
 &lt;span class="n"&gt;raw&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;sig_script_length&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;signature&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;raw&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;sig_script&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;signature&lt;/span&gt;
@@ -496,7 +729,7 @@ OP_CHECKSIG
 
 &lt;h3&gt;Publishing the transaction&lt;/h3&gt;
 &lt;p&gt;With the transaction packed and signed, it's a matter of telling the network about it. Using a few functions previously defined in this article in &lt;a href="https://github.com/samvrlewis/simple-bitcoin/blob/master/bitcoin_p2p_message_utils.py"&gt;bitcoin_p2p_message_utils.py&lt;/a&gt;,  the below piece of code puts the Bitcoin message header on the transmission and transmits it to a peer. As mentioned earlier, it's first necessary to send a version message to the peer so that it accepts subsequent messages. &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;connect&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_peer&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; &lt;span class="mi"&gt;8333&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;send&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_message&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;version&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;get_version_payload&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;send&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_message&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;tx&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;transaction&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
@@ -505,7 +738,7 @@ OP_CHECKSIG
 
 &lt;p&gt;Sending the transaction was the most annoying part of getting this to work. If I submitted a transaction that was incorrectly structured or signed, the peer often just dropped the connection or, in a slightly better case, sent cryptic error messages back. One such (very annoying) error message was "S value is unnecessarily high" which was caused by signing the transaction hash using the ECSDA encoding method of &lt;code&gt;sigencode_der&lt;/code&gt;. Despite the signature being valid, apparently Bitcoin miners &lt;a href="https://blog.blockcypher.com/enforcing-low-s-values-to-eliminate-a-bitcoin-network-attack-3582fc0ae948"&gt;don't like ECSDA signatures formatted in such a way that allows spam in the network&lt;/a&gt;. The solution was to use the &lt;code&gt;sigencode_der_canonize&lt;/code&gt; function which takes care to format the signatures in the other format. A simple, but extraordinarily hard to debug, issue!&lt;/p&gt;
 &lt;p&gt;In any case, I eventually got it to work and was very excited when I saw that my &lt;a href="https://blockchain.info/tx/ac812978fb87232ed5700fc64e8733546d70eaa4d9aa80cf1d20a3f71bd8d133"&gt;transaction made its way into the blockchain&lt;/a&gt;!! It was a great feeling of accomplishment knowing that my small, dinky, hand crafted transaction will now forever be a part of Bitcoin's ledger. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="transaction success" src="/images/final_transaction.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="transaction success" src="/images/final_transaction.png"&gt;&lt;/p&gt;
 &lt;p&gt;When I submitted the transaction, my transaction fee was actually quite low compared to the median (I used the &lt;a href="https://bitcoinfees.21.co/"&gt;bitcoin fees&lt;/a&gt; website to check) and as such it took around 5 hours for a miner to decide to include it in a block. I checked this by looking at the number of confirmations the transaction had - this is a measure of how many blocks deep the block with the transaction is in. At the time of writing this was at 190 confirmations.. meaning that after the block my transaction is in, there's another 190 blocks. This can be pretty safely considered confirmed, as it would take an impressive attack on the network to rewrite 190 blocks to remove my transaction.&lt;/p&gt;
 &lt;h2&gt;Conclusion&lt;/h2&gt;
 &lt;p&gt;I hope you've gained some appreciation of how Bitcoin works through reading this article, I know I certainly did during the months it took me to put all of this together! While most of the information presented here isn't too practicably applicable - you'd normally just use a client that does it all for you - I think having a greater understanding of how things work gives you a better appreciation of what's happening under the covers and gives makes you a more confident user of the technology.&lt;/p&gt;
@@ -521,7 +754,7 @@ OP_CHECKSIG
 &lt;li&gt;Unless you're a masochist for pain, I'd also recommend not doing everything from scratch unless you're interested in doing so for learning purposes. The &lt;a href="https://github.com/richardkiss/pycoin"&gt;pycoin&lt;/a&gt; library is a Python Bitcoin library that will save you a few headaches. &lt;/li&gt;
 &lt;li&gt;To also save yourself pain, it's probably advisable to use the &lt;a href="https://en.bitcoin.it/wiki/Testnet"&gt;Bitcoin testnet&lt;/a&gt; to play around with, rather than using the mainnet like I did. That said, it's more fun when the risk of your code being wrong is losing real money!&lt;/li&gt;
 &lt;li&gt;Lastly, it is probably worth repeating that the accompanying code for this article can be found in my &lt;a href="https://github.com/samvrlewis/simple-bitcoin"&gt;Github repo&lt;/a&gt;.&lt;/li&gt;
-&lt;/ul&gt;</summary></entry><entry><title>Unit testing embedded code with cmocka</title><link href="https://www.samlewis.me/2016/09/embedded-unit-testing-with-cmocka" rel="alternate"></link><updated>2016-09-26T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2016-09-26:2016/09/embedded-unit-testing-with-cmocka</id><summary type="html">&lt;p&gt;&lt;a href="https://en.wikipedia.org/wiki/Unit_testing"&gt;Unit testing&lt;/a&gt; is a great software testing practice that gets a lot of love in web and application development but unfortunately isn't practiced as often in embedded/firmware development. This is a shame as the impacts of having a bug in firmware can be considerably more catastrophic than having a bug in a webapp. I've written this article in the hope of demonstrating some of the benefits that come when writing unit tests for embedded software and have also given a small toy example of how it's possible to unit test firmware using the &lt;code&gt;cmocka&lt;/code&gt; framework. &lt;/p&gt;
+&lt;/ul&gt;</content></entry><entry><title>Unit testing embedded code with cmocka</title><link href="https://www.samlewis.me/2016/09/embedded-unit-testing-with-cmocka" rel="alternate"></link><published>2016-09-26T00:00:00+10:00</published><updated>2016-09-26T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2016-09-26:/2016/09/embedded-unit-testing-with-cmocka</id><summary type="html">&lt;p&gt;&lt;a href="https://en.wikipedia.org/wiki/Unit_testing"&gt;Unit testing&lt;/a&gt; is a great software testing practice that gets a lot of love in web and application development but unfortunately isn't practiced as often in embedded/firmware development. This is a shame as the impacts of having a bug in firmware can be considerably more catastrophic than having a …&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;a href="https://en.wikipedia.org/wiki/Unit_testing"&gt;Unit testing&lt;/a&gt; is a great software testing practice that gets a lot of love in web and application development but unfortunately isn't practiced as often in embedded/firmware development. This is a shame as the impacts of having a bug in firmware can be considerably more catastrophic than having a bug in a webapp. I've written this article in the hope of demonstrating some of the benefits that come when writing unit tests for embedded software and have also given a small toy example of how it's possible to unit test firmware using the &lt;code&gt;cmocka&lt;/code&gt; framework. &lt;/p&gt;
 &lt;h3&gt;Why unit test embedded software?&lt;/h3&gt;
 &lt;p&gt;System level embedded software testing is notoriously difficult, mainly because embedded software runs on bare metal hardware. While you can never completely get away from testing embedded software on real hardware, testing the logic in the embedded software through unit testing is very valuable and gets you a lot of the way there. If you still need convincing, some of the things I really like about having unit tests for my embedded code:&lt;/p&gt;
 &lt;ul&gt;
@@ -538,7 +771,7 @@ OP_CHECKSIG
 &lt;h3&gt;An example of unit testing C in an embedded context&lt;/h3&gt;
 &lt;p&gt;To give a concrete example of how you could make use of &lt;code&gt;cmocka&lt;/code&gt; in an embedded context, I'll show the process of unit testing code for a temperature sensor. I've chosen the TI &lt;a href="http://www.ti.com/lit/ds/symlink/tmp101.pdf"&gt;TMP101&lt;/a&gt; as the temperature sensor, which is a temperature sensor that works over I2C. The complete listing of code &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/"&gt;is checked in on my github&lt;/a&gt;, the below text gives a rundown of how it all comes together. &lt;/p&gt;
 &lt;p&gt;The first step as normal, is to write some code for the tmp101 sensor that can fetch a temperature. You can find the full code listing &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/src/tmp101.c"&gt;on my github&lt;/a&gt;. It's also reproduced below. &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;tmp101.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;tmp101.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
 
 &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="kt"&gt;float&lt;/span&gt; &lt;span class="n"&gt;TMP_BIT_RESOLUTION&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.0625&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
@@ -569,9 +802,9 @@ OP_CHECKSIG
 
 &lt;p&gt;This function isn't the most complicated function but there's enough bit manipulation to make me nervous and unsure if it'll do exactly what I want all the time. Sure, we could run it on my hardware platform and see how it responds but that'd only prove that it works as whatever temperature it is now. Instead, lets write some unit tests for this code. &lt;/p&gt;
 &lt;p&gt;Conveniently, for this particular temperature sensor, TI are kind enough to provide a table of example temperatures with their corresponding 12 bit digital outputs. These prove a nice place to start in testing our &lt;code&gt;get_temperature&lt;/code&gt; function. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="table of sensor outputs" src="sensor_outputs.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="table of sensor outputs" src="sensor_outputs.png"&gt;&lt;/p&gt;
 &lt;p&gt;In essence, we want to control the data that &lt;code&gt;i2c_read_blocking&lt;/code&gt; returns to our &lt;code&gt;tmp101_get_temperature&lt;/code&gt; function so that we can check against our function works as it should. A simple (but somewhat ugly) way to this might be to have the function look something like:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;i2c_read_blocking&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;offset&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;pData&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;data_size&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt; &lt;span class="nf"&gt;i2c_read_blocking&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;offset&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;pData&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;data_size&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="p"&gt;{&lt;/span&gt;
     &lt;span class="cp"&gt;#ifdef TESTING&lt;/span&gt;
     &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;DUMMY_VALUE&lt;/span&gt;
@@ -583,7 +816,7 @@ OP_CHECKSIG
 
 
 &lt;p&gt;But mixing test code with production code is ugly and an antipattern that should be avoided if possible. A much better way that allows us to both completely separate our testing and source code is to use the &lt;code&gt;cmocka&lt;/code&gt; framework to help us (dynamically!) control what our &lt;code&gt;i2c_read_blocking&lt;/code&gt; function does. The first step of using &lt;code&gt;cmocka&lt;/code&gt; is to define mocks for the functions you want to mock out. The two mocked functions are shown below.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;void __wrap_i2c_transmit_blocking(uint8_t address, uint8_t offset, uint8_t* data, uint8_t data_size)
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;void __wrap_i2c_transmit_blocking(uint8_t address, uint8_t offset, uint8_t* data, uint8_t data_size)
 {
     // allows the calling test to check if the supplied parameters are as expected
     check_expected(address);
@@ -603,7 +836,7 @@ void __wrap_i2c_read_blocking(uint8_t address, uint8_t offset, uint8_t* pData, u
 
 &lt;p&gt;&lt;code&gt;cmocka&lt;/code&gt; cleverly uses the linker to swap out the real function calls for the mocked ones. To allow for this, mocked out functions are prefixed with &lt;code&gt;__wrap_&lt;/code&gt;. The linker is then provided with the arguments &lt;code&gt;--wrap=i2c_read_blocking -Wl,--wrap=i2c_transmit_blocking&lt;/code&gt; which allows these functions to be mocked out. For a complete example of compiling/linking with cmocka, see the &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/Makefile"&gt;makefile&lt;/a&gt; in my example project.&lt;/p&gt;
 &lt;p&gt;With the mocks in place we can now write some tests! A complete look at the tests in my example project can be found &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/test_tmp101.c"&gt;on my github&lt;/a&gt; but, as an example, here's a single test:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;static void test_negative_temperature(void **state)
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;static void test_negative_temperature(void **state)
 {
     will_return(__wrap_i2c_read_blocking, 0b11100111);
     will_return(__wrap_i2c_read_blocking, 0b00000000);
@@ -615,33 +848,33 @@ void __wrap_i2c_read_blocking(uint8_t address, uint8_t offset, uint8_t* pData, u
 
 &lt;p&gt;The two calls to &lt;code&gt;will_return&lt;/code&gt; set what the &lt;code&gt;i2c_read_blocking&lt;/code&gt; function writes into the &lt;code&gt;pData&lt;/code&gt; array. As per the datasheet, the 12 bit sample is returned over two bytes so these values correspond (from the above TI table) to -25 degrees celsius, which we check against. Much easier than having to stick the temperature sensor in the freezer!&lt;/p&gt;
 &lt;p&gt;Running all of the tests through a Makefile gives this cool print out:&lt;/p&gt;
-&lt;p&gt;&lt;img alt="cmocka output" src="cmocka_output.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="cmocka output" src="cmocka_output.png"&gt;&lt;/p&gt;
 &lt;p&gt;Although this is just a simple example, it hopefully demonstrates the utility that having unit tests can provide. Having a suite of unit tests for a project gives developers a lot of confidence - I find unit tests especially useful in developing  application layer protocols on top of lower level protocols.&lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;If you're interested in poking around a little at the source for this example, see how it's all linked together an run as a test or even run it yourself, all code for this is avaliable &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/"&gt;on my github&lt;/a&gt; with instructions of how to run.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;hr /&gt;
 
-&lt;p&gt;I hope you found this article interesting, if you have any question please don't hesitate to let me know! &lt;/p&gt;</summary></entry><entry><title>Getting started with the xv6 operating system</title><link href="https://www.samlewis.me/2016/04/getting-started-xv6" rel="alternate"></link><updated>2016-04-18T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2016-04-18:2016/04/getting-started-xv6</id><summary type="html">&lt;p&gt;xv6 is a nifty operating system that is essentially a reimplementation of &lt;a href="https://en.wikipedia.org/wiki/Version_6_Unix"&gt;Sixth Edition Unix&lt;/a&gt; that, unlike most of the huge montholithic Linux or BSD distributions that you'd run on your workstation or server, is simple enough to be used as a learning tool. Though xv6 lacks in functionality that you'd expect from a modern operating system, much of the core unix concepts and structure remain the same. xv6 is also very lightweight, only taking a few seconds to compile and allows remote debugging. This all makes it great for understanding how modern operating systems hang together. &lt;/p&gt;
+&lt;p&gt;I hope you found this article interesting, if you have any question please don't hesitate to let me know! &lt;/p&gt;</content></entry><entry><title>Getting started with the xv6 operating system</title><link href="https://www.samlewis.me/2016/04/getting-started-xv6" rel="alternate"></link><published>2016-04-18T00:00:00+10:00</published><updated>2016-04-18T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2016-04-18:/2016/04/getting-started-xv6</id><summary type="html">&lt;p&gt;xv6 is a nifty operating system that is essentially a reimplementation of &lt;a href="https://en.wikipedia.org/wiki/Version_6_Unix"&gt;Sixth Edition Unix&lt;/a&gt; that, unlike most of the huge montholithic Linux or BSD distributions that you'd run on your workstation or server, is simple enough to be used as a learning tool. Though xv6 lacks in functionality that …&lt;/p&gt;</summary><content type="html">&lt;p&gt;xv6 is a nifty operating system that is essentially a reimplementation of &lt;a href="https://en.wikipedia.org/wiki/Version_6_Unix"&gt;Sixth Edition Unix&lt;/a&gt; that, unlike most of the huge montholithic Linux or BSD distributions that you'd run on your workstation or server, is simple enough to be used as a learning tool. Though xv6 lacks in functionality that you'd expect from a modern operating system, much of the core unix concepts and structure remain the same. xv6 is also very lightweight, only taking a few seconds to compile and allows remote debugging. This all makes it great for understanding how modern operating systems hang together. &lt;/p&gt;
 &lt;p&gt;In fact, xv6 was developed by MIT as a teaching operating system for their &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6.html"&gt;6.828 course&lt;/a&gt;. The course page for 6.828 is a great resource that MIT are kind enough to have publicly avaliable. &lt;/p&gt;
 &lt;p&gt;MIT also produce a fantastic &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6/book-rev8.pdf"&gt;xv6 reference book&lt;/a&gt; that provides commentary on the structure of the xv6 operating system. Additionally, the xv6 source actually self documents - the xv6 &lt;code&gt;make&lt;/code&gt; file contains a target (&lt;code&gt;make xv6.pdf&lt;/code&gt;) that generates a &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6/xv6-rev8.pdf"&gt;pdf of the source code&lt;/a&gt;, which amazingly comes in under 100 pages and 10k lines of source (including comments!). Not bad for an entire, functional, operating system. &lt;/p&gt;
 &lt;p&gt;xv6 is typically run virtualized using qemu on a Linux host machine. To get started with xv6, clone the xv6 repo:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;git clone git://github.com/mit-pdos/xv6-public.git xv6
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;git clone git://github.com/mit-pdos/xv6-public.git xv6
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;Then to start it as a virtual machine under qemu:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;cd xv6
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;cd xv6
 make qemu
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;If make fails, make sure you have your compiler toolchain installed. There's some good info on the &lt;a href="https://pdos.csail.mit.edu/6.828/2014/tools.html"&gt;6.282 tools page&lt;/a&gt;. For me, on Fedora, I needed to install gcc with &lt;code&gt;dnf install gcc&lt;/code&gt;.&lt;/p&gt;
 &lt;p&gt;Once you have your compiler toolchain working, qemu will pop up and you'll be presented with the xv6 shell. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png" /&gt; &lt;/p&gt;
+&lt;p&gt;&lt;img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png"&gt; &lt;/p&gt;
 &lt;p&gt;From here, you'll be able to run a few simple commands like &lt;code&gt;ls&lt;/code&gt; and &lt;code&gt;cat&lt;/code&gt; and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. &lt;/p&gt;
 &lt;p&gt;The core &lt;code&gt;while&lt;/code&gt; loop the shell executes is shown below. &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt; // Read and run input commands.
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt; // Read and run input commands.
  while(getcmd(buf, sizeof(buf)) &amp;gt;= 0){
     if(buf[0] == ’c’ &amp;amp;&amp;amp; buf[1] == ’d’ &amp;amp;&amp;amp; buf[2] == ’ ’){
         // Clumsy but will have to do for now.
@@ -661,9 +894,9 @@ make qemu
 
 
 &lt;p&gt;This loop gets a command from a user, checks if it's the &lt;code&gt;cd&lt;/code&gt; command and attempts to change directory if it is, otherwise it forks, and runs the entered command in the child process. I personally love how simple and enjoyable the code is to read - check out the rest of the listing for &lt;code&gt;sh.c&lt;/code&gt; in the xv6 source code pdf - it's only 400 lines of code and a delight to read.&lt;/p&gt;
-&lt;p&gt;This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll step through and explore the xv6 bootstrap sequence!&lt;/p&gt;</summary></entry><entry><title>Startup Catalyst 2015: I'm off to Silicon Valley!</title><link href="https://www.samlewis.me/2015/09/startup-catalyst-2015" rel="alternate"></link><updated>2015-09-24T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-09-24:2015/09/startup-catalyst-2015</id><summary type="html">&lt;p&gt;In just two short sleeps, I'll be jetting off to Silicon Valley as part of the &lt;a href="" title="http:/www.startupcatalyst.com.au/"&gt;Startup Catalyst&lt;/a&gt; program. The program was instigated by Australian entrepreneur/mentor/investor Steve Baxter (who is now a 'shark' on the Australian version of Shark Tank) and aims to expose a group of under 25s (affectionately referred to as 'youths') with technical backgrounds to the startup culture in Silicon Valley.&lt;/p&gt;
+&lt;p&gt;This was only a brief peek and excitement builder for xv6 - there's so many other facets that are worth having a deeper dive into. Join next time when I'll step through and explore the xv6 bootstrap sequence!&lt;/p&gt;</content></entry><entry><title>Startup Catalyst 2015: I'm off to Silicon Valley!</title><link href="https://www.samlewis.me/2015/09/startup-catalyst-2015" rel="alternate"></link><published>2015-09-24T00:00:00+10:00</published><updated>2015-09-24T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-09-24:/2015/09/startup-catalyst-2015</id><summary type="html">&lt;p&gt;In just two short sleeps, I'll be jetting off to Silicon Valley as part of the &lt;a href="" title="http:/www.startupcatalyst.com.au/"&gt;Startup Catalyst&lt;/a&gt; program. The program was instigated by Australian entrepreneur/mentor/investor Steve Baxter (who is now a 'shark' on the Australian version of Shark Tank) and aims to expose a group of under …&lt;/p&gt;</summary><content type="html">&lt;p&gt;In just two short sleeps, I'll be jetting off to Silicon Valley as part of the &lt;a href="" title="http:/www.startupcatalyst.com.au/"&gt;Startup Catalyst&lt;/a&gt; program. The program was instigated by Australian entrepreneur/mentor/investor Steve Baxter (who is now a 'shark' on the Australian version of Shark Tank) and aims to expose a group of under 25s (affectionately referred to as 'youths') with technical backgrounds to the startup culture in Silicon Valley.&lt;/p&gt;
 &lt;p&gt;I'll be headed over with 19 other awesome youths from a variety of different backgrounds - spanning robotics to UI - and over the 10 days that we're in San Francisco we'll visit a whole bunch of tech companies (Google, Facebook and Twitter to name just a few!), have the chance to chat to startup founders and technical whizzes, attend tech meetups and even participate in a startup weekend. Sound like a lot for 10 days? It is! The schedule is completely packed with awesome events and as we were told by Steve and Colin (the project director and technology lead, respectively), they don’t want to kill us - just nearly kill us. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="Catalyst Group" src="/images/cataylstgroup.png" /&gt;
+&lt;p&gt;&lt;img alt="Catalyst Group" src="/images/cataylstgroup.png"&gt;
 &lt;div style="text-align:center"&gt;
 &lt;em&gt;The 2015 Catalyst group&lt;/em&gt;
 &lt;/div&gt;&lt;/p&gt;
@@ -692,26 +925,27 @@ make qemu
   href="https://twitter.com/awesamlewis"
   data-size="large"
 data-show-count=”false”&gt;
-Follow @awesamlewis&lt;/a&gt;&lt;/p&gt;</summary></entry><entry><title>Using the MSP432 serial (eUSCI) modules</title><link href="https://www.samlewis.me/2015/05/using-msp432-eUSCI" rel="alternate"></link><updated>2015-05-23T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-23:2015/05/using-msp432-eUSCI</id><summary type="html">&lt;p&gt;As a follow up to &lt;a href="../msp432-serial-printf/"&gt;my post on MSP432 printf functionality&lt;/a&gt;, this is a write-up of my notes on using the serial modules on the MSP432. &lt;/p&gt;
+Follow @awesamlewis&lt;/a&gt;&lt;/p&gt;</content></entry><entry><title>Using the MSP432 serial (eUSCI) modules</title><link href="https://www.samlewis.me/2015/05/using-msp432-eUSCI" rel="alternate"></link><published>2015-05-23T00:00:00+10:00</published><updated>2015-05-23T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-23:/2015/05/using-msp432-eUSCI</id><summary type="html">&lt;p&gt;As a follow up to &lt;a href="../msp432-serial-printf/"&gt;my post on MSP432 printf functionality&lt;/a&gt;, this is a write-up of my notes on using the serial modules on the MSP432. &lt;/p&gt;
+&lt;p&gt;The MSP432 has two different types of serial modules; eUSCI_A modules and eUSCI_B modules. The eUSCI_A modules support both the UART and SPI protocols …&lt;/p&gt;</summary><content type="html">&lt;p&gt;As a follow up to &lt;a href="../msp432-serial-printf/"&gt;my post on MSP432 printf functionality&lt;/a&gt;, this is a write-up of my notes on using the serial modules on the MSP432. &lt;/p&gt;
 &lt;p&gt;The MSP432 has two different types of serial modules; eUSCI_A modules and eUSCI_B modules. The eUSCI_A modules support both the UART and SPI protocols while the eUSCI_B modules support the SPI and I2C protocols. Using the &lt;a href="http://www.ti.com/lit/ds/slas826a/slas826a.pdf"&gt;MSP432 datasheet&lt;/a&gt; you can find which MSP432 pins correspond to the modules. The following picture, which is an excerpt from page 10 of the data sheet shows the pin mapping for the first eUSCI_A and eUSCI_B modules.&lt;/p&gt;
-&lt;p&gt;&lt;img alt="MSP432 serial modules" src="/images/serial_modules.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="MSP432 serial modules" src="/images/serial_modules.png"&gt;&lt;/p&gt;
 &lt;p&gt;As each of the two modules support multiple protocols, you might not need to use all of the pins when you're using one of the modules. For example, if you wanted to use eUSCI_A0 for UART, you wouldn't need a 'slave transmit enable' pin or a 'clock signal input/output'. So you'd only be using P1.2 and P1.3. In fact, these are exactly the two pins you're using when you're communicating with your PC over UART as described in &lt;a href="../msp432-serial-printf/"&gt;my previous post&lt;/a&gt;! &lt;/p&gt;
 &lt;p&gt;So now you know which pins to use, but how do you actually configure and use them? A word of warning first though: on the MSP432 launchpad, not all the eUSCI modules have pins exposed on the launchpad, so first check that the module you want has the relevant pins exposed on the launchpad. I've been playing around with a ESP8266 chip which talks over UART and have been using the eUSCI_A2 module which is on pins P3.2 and P3.3.&lt;/p&gt;
 &lt;p&gt;To configure the serial modules you have two choices; either read the &lt;a href="http://www.ti.com/lit/ug/slau356a/slau356a.pdf"&gt;family guide&lt;/a&gt; and toggle bits in all of the configuration registers manually or let TI do the heavy heavy lifting and use their &lt;a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP432_Driver_Library/latest/exports/driverlib/doc/MSP432P4xx/MSP432_DriverLib_Users_Guide-MSP432P4xx-2_20_00_08.pdf"&gt;driverlib&lt;/a&gt;. The driverlib is good but can be frustrating to use as the documentation provided is fairly minimal and you need to have an idea of what you're looking for first. &lt;/p&gt;
 &lt;p&gt;As an example of using the driverlib to configure a serial module, I'll step through the process of configuring the eUSCI_A2 module for UART with a baud rate of 9600 so that it can talk to my ESP8266 chip. The process should be similar for any serial chip that you want to interface with your MSP432 though!&lt;/p&gt;
 &lt;p&gt;First thing first, we want to put the pins in UART mode. The pins we're specifically interested in are P3.2 and P3.3, they correspond to the RX and TX pins respectively. To do this, we need to look at the datasheet again and find where the pin functions are defined. The following picture is an excerpt from page 104 of the datasheet.&lt;/p&gt;
-&lt;p&gt;&lt;img alt="MSP432 serial modules" src="/images/eUSCI_A2_control.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="MSP432 serial modules" src="/images/eUSCI_A2_control.png"&gt;&lt;/p&gt;
 &lt;p&gt;An 'X' in the P3DIR column indicates a "don't care". So for both pins, it doesn't matter if we set them to an output or an input when configuring them for UART. For the P3SEL1 and P3SEL0 columns, we need to consult the family guide. The next picture is an excerpt from page 483 of the family guide. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="MSP432 serial modules" src="/images/GPIO_selection.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="MSP432 serial modules" src="/images/GPIO_selection.png"&gt;&lt;/p&gt;
 &lt;p&gt;So to use the UART functionality of these pins, we're using the 'primary IO module function'. Now we have all the information we need to set the pins up in UART mode! Because it doesn't matter whether the pins are in output or input mode, we're able to use the &lt;code&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/code&gt; function or the &lt;code&gt;GPIO_setAsPeripheralModuleFunctionOutputPin&lt;/code&gt; function. For no reason whatsoever, I'll use the output variant. The result is the following line of code:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/* Set pins 2 and 3 of port 3 to the primary module function (UART) */&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/* Set pins 2 and 3 of port 3 to the primary module function (UART) */&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 GPIO_setAsPeripheralModuleFunctionInputPin&lt;span class="o"&gt;(&lt;/span&gt;GPIO_PORT_P3&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;GPIO_PIN2&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;|&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;GPIO_PIN3&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;GPIO_PRIMARY_MODULE_FUNCTION&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="err"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;The next thing to do is to define a eUSCI config. This is basically from the TI provided examples. The only tricky bit is generating the BRDIV, UCxBRF and UCxBRS numbers which in this case are 78, 2 &amp;amp; 0. Luckily, once again TI have &lt;a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html"&gt;provided a tool&lt;/a&gt; to do this. This tool finds the optimal way of prescaling and modulating the clock source you're using to achieve your desired baud rate. More information about this process is on page 721 of the family guide. &lt;/p&gt;
 &lt;p&gt;Using the tool with a clock of 12MHz and baud rate of 9600 Hz, gives a clockPrescalar of 78, a firstModReg of 2, a secondModReg of 0 and oversampling turned on. Converting this into a config, we get the following:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;const eUSCI_UART_Config uartConfig =
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;const eUSCI_UART_Config uartConfig =
 {
     EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
     78,                                      // BRDIV = 78
@@ -727,24 +961,24 @@ GPIO_setAsPeripheralModuleFunctionInputPin&lt;span class="o"&gt;(&lt;/span&gt;GP
 
 
 &lt;p&gt;The parity, MSB/LSB first and the amount of stop bits will all be determined by the device or chip that you want to communicate with. Now, to use that config to initialise the module using driverlib:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;UART_initModule(EUSCI_A2_MODULE, &amp;amp;uartConfig);
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;UART_initModule(EUSCI_A2_MODULE, &amp;amp;uartConfig);
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;This sets all the relevant registers to achieve the configuration earlier specified. If you're really interesting in understanding what exactly this is doing, it's worth reading the family guide. Now that the module is intialised, it can finally be enabled on!&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;UART_enableModule(EUSCI_A2_MODULE);
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;UART_enableModule(EUSCI_A2_MODULE);
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;From here, you can send a byte of data to the module with the following driverlib function call:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cm"&gt;/* sends the &amp;#39;g&amp;#39; character to the A2 module&amp;#39; */&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/* sends the &amp;#39;g&amp;#39; character to the A2 module&amp;#39; */&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#39;g&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="err"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;If you want to simplify the process of sending individual characters (or instead want to send strings/numbers etc), check out &lt;a href="../msp432-serial-printf/"&gt;my post about a printf function for the MSP432&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;The whole code would then end up looking like this.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;driverlib.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;driverlib.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
 
 &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="n"&gt;eUSCI_UART_Config&lt;/span&gt; &lt;span class="n"&gt;uartConfig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;
 &lt;span class="p"&gt;{&lt;/span&gt;
@@ -791,7 +1025,8 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 
 
 &lt;p&gt;Hopefully that's helpful in understanding a little bit about configuring the serial modules on the MSP432. If you have a question or just want to yell at me for getting something completely wrong, don't hesitate to reach out. &lt;/p&gt;
-&lt;p&gt;If there's interest in learning more about the MSP432's serial, in particular setting up and using interrupts, let me know. :)&lt;/p&gt;</summary></entry><entry><title>MSP432 serial printf</title><link href="https://www.samlewis.me/2015/05/msp432-serial-printf" rel="alternate"></link><updated>2015-05-17T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-17:2015/05/msp432-serial-printf</id><summary type="html">&lt;p&gt;While the &lt;a href="http://www.ti.com/lsds/ti/microcontrollers_16-bit_32-bit/msp/low_power_performance/msp432p4x/getting_started.page?paramCriteria=no"&gt;MSP432&lt;/a&gt;, does seem to be an kickin' rad microcontroller, I've noticed a distinct lack of resources online to do the most basic microcontrolley stuff.&lt;/p&gt;
+&lt;p&gt;If there's interest in learning more about the MSP432's serial, in particular setting up and using interrupts, let me know. :)&lt;/p&gt;</content></entry><entry><title>MSP432 serial printf</title><link href="https://www.samlewis.me/2015/05/msp432-serial-printf" rel="alternate"></link><published>2015-05-17T00:00:00+10:00</published><updated>2015-05-17T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-05-17:/2015/05/msp432-serial-printf</id><summary type="html">&lt;p&gt;While the &lt;a href="http://www.ti.com/lsds/ti/microcontrollers_16-bit_32-bit/msp/low_power_performance/msp432p4x/getting_started.page?paramCriteria=no"&gt;MSP432&lt;/a&gt;, does seem to be an kickin' rad microcontroller, I've noticed a distinct lack of resources online to do the most basic microcontrolley stuff.&lt;/p&gt;
+&lt;p&gt;So this is a quick bit of code to get a serial/UART connection up and going from the MSP432 to your computer over …&lt;/p&gt;</summary><content type="html">&lt;p&gt;While the &lt;a href="http://www.ti.com/lsds/ti/microcontrollers_16-bit_32-bit/msp/low_power_performance/msp432p4x/getting_started.page?paramCriteria=no"&gt;MSP432&lt;/a&gt;, does seem to be an kickin' rad microcontroller, I've noticed a distinct lack of resources online to do the most basic microcontrolley stuff.&lt;/p&gt;
 &lt;p&gt;So this is a quick bit of code to get a serial/UART connection up and going from the MSP432 to your computer over the USB connection. Perfect for any debugging that you might want to do, or communication with other serial devices (for example the exciting ESP8266 which I'll cover in a later blog post).&lt;/p&gt;
 &lt;p&gt;The MSP432-printf library, which is largely from 43oh member OPossum (&lt;a href="http://www.msp430launchpad.com/2012/06/using-printf.html"&gt;printf for the MSP430&lt;/a&gt;), lets you print to any serial module using standard printf syntax. For example: &lt;code&gt;printf(EUSCI_A0_MODULE, "String one: %d", 1)&lt;/code&gt;. The code for the library can be &lt;a href="https://github.com/samvrlewis/MSP432-printf/blob/master/printf.c"&gt;found on my GitHub&lt;/a&gt;. &lt;/p&gt;
 &lt;p&gt;An example of using this printf library with the MSP432 is shown below. &lt;/p&gt;
@@ -799,13 +1034,16 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 &lt;/script&gt;
 
 &lt;p&gt;The code configures &lt;code&gt;EUSCI_A0_MODULE&lt;/code&gt; to be used and then prints to it. &lt;code&gt;EUSCI_A0_MODULE&lt;/code&gt; is, by default the application UART that you can connect to over USB from your PC. One thing to note is to make sure that &lt;code&gt;EUSCI_A_UART_LSB_FIRST&lt;/code&gt; is set in the UART config, rather than &lt;code&gt;EUSCI_A_UART_MSB_FIRST&lt;/code&gt;. &lt;a href="http://en.wikipedia.org/wiki/Serial_port"&gt;According to wikipedia&lt;/a&gt;, MSB first serial communication is rarely used and it's much more common to use little endian or LSB first communications. If you use a program like PuTTY, it's likely that it'll interpret the serial stream as little endian.&lt;/p&gt;
-&lt;p&gt;To connect to the MSP432, I use &lt;a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/"&gt;PuTTY&lt;/a&gt;. On my PC, the MSP432 is on COM1. It's possible to configure and use serial modules other than &lt;code&gt;EUSCI_A0_MODULE&lt;/code&gt; but this may involve some &lt;a href="http://www.ti.com/lit/ds/slas826a/slas826a.pdf"&gt;datasheet&lt;/a&gt; investigation!&lt;/p&gt;</summary></entry><entry><title>AFL statistics SQL database</title><link href="https://www.samlewis.me/2015/02/afl-stats-sql" rel="alternate"></link><updated>2015-02-21T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-02-21:2015/02/afl-stats-sql</id><summary type="html">&lt;p&gt;The AFL stats database (and some relevant code) is &lt;a href="https://github.com/samvrlewis/afl-stats-database"&gt;on github&lt;/a&gt;!
+&lt;p&gt;To connect to the MSP432, I use &lt;a href="http://www.chiark.greenend.org.uk/~sgtatham/putty/"&gt;PuTTY&lt;/a&gt;. On my PC, the MSP432 is on COM1. It's possible to configure and use serial modules other than &lt;code&gt;EUSCI_A0_MODULE&lt;/code&gt; but this may involve some &lt;a href="http://www.ti.com/lit/ds/slas826a/slas826a.pdf"&gt;datasheet&lt;/a&gt; investigation!&lt;/p&gt;</content></entry><entry><title>AFL statistics SQL database</title><link href="https://www.samlewis.me/2015/02/afl-stats-sql" rel="alternate"></link><published>2015-02-21T00:00:00+10:00</published><updated>2015-02-21T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2015-02-21:/2015/02/afl-stats-sql</id><summary type="html">&lt;p&gt;The AFL stats database (and some relevant code) is &lt;a href="https://github.com/samvrlewis/afl-stats-database"&gt;on github&lt;/a&gt;!
+&lt;iframe src="https://ghbtns.com/github-btn.html?user=samvrlewis&amp;repo=afl-stats-database&amp;type=star&amp;count=true" frameborder="0" scrolling="0" width="170px" height="20px"&gt;&lt;/iframe&gt;&lt;/p&gt;
+&lt;p&gt;Download the SQL(ite) stats database here: &lt;a href="https://github.com/samvrlewis/afl-stats-database/raw/master/afl-stats.sqlite"&gt;afl-stats.sqlite&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;The SQLite database has team statistics for each season and finals game for 1987-2014. In the earlier years not all stats are present as they were not all recorded. The …&lt;/p&gt;</summary><content type="html">&lt;p&gt;The AFL stats database (and some relevant code) is &lt;a href="https://github.com/samvrlewis/afl-stats-database"&gt;on github&lt;/a&gt;!
 &lt;iframe src="https://ghbtns.com/github-btn.html?user=samvrlewis&amp;repo=afl-stats-database&amp;type=star&amp;count=true" frameborder="0" scrolling="0" width="170px" height="20px"&gt;&lt;/iframe&gt;&lt;/p&gt;
 &lt;p&gt;Download the SQL(ite) stats database here: &lt;a href="https://github.com/samvrlewis/afl-stats-database/raw/master/afl-stats.sqlite"&gt;afl-stats.sqlite&lt;/a&gt;&lt;/p&gt;
 &lt;p&gt;The SQLite database has team statistics for each season and finals game for 1987-2014. In the earlier years not all stats are present as they were not all recorded. The database schema is shown below, which also shows the type of stats avaliable. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="db schema" src="https://raw.githubusercontent.com/samvrlewis/afl-stats-database/master/schema.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="db schema" src="https://raw.githubusercontent.com/samvrlewis/afl-stats-database/master/schema.png"&gt;&lt;/p&gt;
 &lt;p&gt;It's great for anyone nerdy who's wanting to do any sort of visualisation of stats, machine learning or just wanting to play around with the data easily. As an example of what can be quickly knocked up using Python in 10 minutes, here's the average amount of tackles in AFL games by year. &lt;/p&gt;
-&lt;p&gt;&lt;img alt="tackle count" src="https://i.imgur.com/slv32nI.png" /&gt;&lt;/p&gt;
+&lt;p&gt;&lt;img alt="tackle count" src="https://i.imgur.com/slv32nI.png"&gt;&lt;/p&gt;
 &lt;p&gt;Some things I think would be interesting to examine, using the data:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;How is the intensity of finals vs. normal season games captured in the statistics? Are there more tackles, is goal kicking less accurate, are there more or less free kicks etc etc?&lt;/li&gt;
@@ -814,7 +1052,32 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 &lt;li&gt;Are there any teams that consistently are outliers in certain areas despite their position on the ladder? For example, are there any teams that consistently have great goal kicking accuracy regardless of their position on the ladder?&lt;/li&gt;
 &lt;li&gt;Which teams do best at home? Away from home? Are there any teams that are consistently bad/good in certain stadiums/states?&lt;/li&gt;
 &lt;/ul&gt;
-&lt;p&gt;Would love to hear from you if you do anything interesting with it though. I'm sure there are lots of cool things that could be done.sda&lt;/p&gt;</summary></entry><entry><title>Automatically tracking my thesis progress</title><link href="https://www.samlewis.me/2014/10/automated-thesis-tracking" rel="alternate"></link><updated>2014-10-03T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-10-03:2014/10/automated-thesis-tracking</id><summary type="html">&lt;script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"&gt;&lt;/script&gt;
+&lt;p&gt;Would love to hear from you if you do anything interesting with it though. I'm sure there are lots of cool things that could be done.sda&lt;/p&gt;</content></entry><entry><title>Automatically tracking my thesis progress</title><link href="https://www.samlewis.me/2014/10/automated-thesis-tracking" rel="alternate"></link><published>2014-10-03T00:00:00+10:00</published><updated>2014-10-03T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-10-03:/2014/10/automated-thesis-tracking</id><summary type="html">&lt;script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"&gt;&lt;/script&gt;
+
+&lt;script src="https://www.google.com/jsapi"&gt;&lt;/script&gt;
+
+&lt;script&gt;
+
+  // onload callback
+  function drawChart() {
+
+    var public_key = 'zDaZOadL0XUKgVp5ojgV';
+
+    // JSONP request
+    var jsonData = $.ajax({
+      url: 'https://data.sparkfun.com/output/' + public_key + '.json',
+      data: {page: 1},
+      dataType: 'jsonp',
+    }).done(function (results) {
+
+      var data = new google.visualization.DataTable();
+
+      data.addColumn('datetime', 'Time');
+      data.addColumn('number', 'wordcount');
+
+      $.each(results, function (i, row) {
+        data.addRow([
+          (new …&lt;/script&gt;</summary><content type="html">&lt;script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.1/jquery.min.js"&gt;&lt;/script&gt;
 
 &lt;script src="https://www.google.com/jsapi"&gt;&lt;/script&gt;
 
@@ -872,9 +1135,10 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 &lt;p&gt;Conveniently, I'm using LaTeX to write the thesis report. This allowed me to use the cool &lt;a href="http://app.uio.no/ifi/texcount/"&gt;texcount&lt;/a&gt; script (included in most TeX distributions) to count the number of words in each of the .tex files in my thesis. The good thing about this script is it won't count the LaTeX markup towards my total word count. &lt;/p&gt;
 &lt;p&gt;Needing somewhere to store the word count, and because I've been looking for an excuse to use it, I used SparkFun's &lt;a href="https://data.sparkfun.com/"&gt;phant&lt;/a&gt; to create a quick and dirty data stream. The great thing about phant is once you've created the data stream, all that's needed to submit data to it is a single HTTP GET request which is doable in a single line of python. If you're that way inclined, you can see my data stream &lt;a href="https://data.sparkfun.com/streams/zDaZOadL0XUKgVp5ojgV"&gt;here&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Because I'm using git as version control, all that was then needed to tie everything together was a &lt;a href="https://gist.github.com/samvrlewis/8a1522084bc99eda7651"&gt;quick python script&lt;/a&gt; for the pre-commit git hook to count the words in each of my different sections, add them together and submit the total to my data stream on phant. This runs whenever I commit to git -- so whenever I've actually written something useful. Easy! &lt;/p&gt;
-&lt;p&gt;It was then simple to hook into the data stream with google charts. A chart with my progress is shown above, will be interesting to see how the line behaves (I'm expecting an exponential rise closer to the due date!). &lt;/p&gt;</summary></entry><entry><title>Using C# to check if audio is playing in Windows</title><link href="https://www.samlewis.me/2014/08/is-audio-playing-windows" rel="alternate"></link><updated>2014-08-05T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-08-05:2014/08/is-audio-playing-windows</id><summary type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
+&lt;p&gt;It was then simple to hook into the data stream with google charts. A chart with my progress is shown above, will be interesting to see how the line behaves (I'm expecting an exponential rise closer to the due date!). &lt;/p&gt;</content></entry><entry><title>Using C# to check if audio is playing in Windows</title><link href="https://www.samlewis.me/2014/08/is-audio-playing-windows" rel="alternate"></link><published>2014-08-05T00:00:00+10:00</published><updated>2014-08-05T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-08-05:/2014/08/is-audio-playing-windows</id><summary type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
+&lt;p&gt;The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
 &lt;p&gt;The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;using CSCore.CoreAudioAPI;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;using CSCore.CoreAudioAPI;
 using System;
 
 namespace AudioPlayingTest
@@ -909,4 +1173,4 @@ namespace AudioPlayingTest
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;p&gt;The code is hopefully self explanatory but basically gets the default system audio device, then uses the peak value from a audio meter to determine whether audio is playing.&lt;/p&gt;</summary></entry></feed>
+&lt;p&gt;The code is hopefully self explanatory but basically gets the default system audio device, then uses the peak value from a audio meter to determine whether audio is playing.&lt;/p&gt;</content></entry></feed>

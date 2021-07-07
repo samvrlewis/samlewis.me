@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+<head>
+
+<!-- Extra Header for IPython Notebooks
+================================================== -->
+
+	<!-- Basic Page Needs
+  ================================================== -->
+	<meta charset="utf-8">
+	<title>Creating a mesh VPN tool for fun and learning | Sam Lewis</title>
+
+	<meta name="google-site-verification" content="0wRDUL1uay7MXb9mC8tycRBay0xX5RCY4n8inQCY498" />
+
+	<meta name="description" content="">
+	<meta name="author" content="Sam Lewis">
+        <link rel="canonical" href="https://www.samlewis.me"/>
+
+  <!-- Feeds
+  ================================================== --> 
+  <link rel="alternate" type="application/atom+xml" href="https://www.samlewis.me/feeds/all.atom.xml" title="Sam Lewis Full Atom Feed">
+
+	<!-- Facebook Open Graph
+  ================================================== -->
+  <meta property="og:title" content="Sam Lewis">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.samlewis.me">
+  <meta property="og:image" content="/theme/images/avatar.jpg">
+  <meta property="og:description" content="Sam Lewis is a geek based in Melbourne. He enjoys hacking on a variety of stuff.">
+
+  <!-- Twitter Cards
+  ================================================== -->
+
+	<!-- Mobile Specific Metas
+  ================================================== -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<!-- CSS
+  ================================================== -->
+	<link rel="stylesheet" href="/theme/css/base.css">
+	<link rel="stylesheet" href="/theme/css/skeleton.css">
+	<link rel="stylesheet" href="/theme/css/layout.css">
+	<link rel="stylesheet" href="/theme/css/simply.css">
+	<link rel="stylesheet" href="/theme/css/pygment.css">
+	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+	<!--[if lt IE 9]>
+		<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+
+	<!-- JavaScript
+	=================================================== -->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        
+
+
+	<!-- Favicons
+	================================================== -->
+	<link rel="shortcut icon" href="/theme/images/favicon.ico">
+	<link rel="apple-touch-icon" href="/theme/images/apple-touch-icon.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="/theme/images/apple-touch-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="/theme/images/apple-touch-icon-114x114.png">
+
+</head>
+<body>
+
+	<!-- Primary Page Layout
+	================================================== -->
+	<div class="container">
+		<section id="sidebar" class="two columns">
+			<a href="/"><img id="avatar" src="/theme/images/avatar.jpg"></img></a>
+			<h1 id="logo"><a href="/">Sam Lewis</a></h1>
+	    <hr class="small" /> 
+    	<div id="social">
+    		<a class="icon" href="https://www.twitter.com/awesamlewis" title="Twitter"><i class="fa fa-twitter fa-1"></i></a>
+    		<a class="icon" href="https://github.com/samvrlewis" title="GitHub"><i class="fa fa-github fa-1"></i></a>
+    		<a class="icon" href="https://au.linkedin.com/in/samvrlewis" title="LinkedIn"><i class="fa fa-linkedin fa-1"></i></a>
+            <a class="icon" href="mailto:sam.vr.lewis@gmail.com?subject=Hi" title="E-Mail"><i class="fa fa-envelope fa-1"></i></a>
+    		<a class="icon" href="https://www.samlewis.me/feeds/all.atom.xml" title="Subscribe (Atom)"><i class="fa fa-rss fa-1"></i></a>
+    	</div> <!-- social -->
+      <!-- <hr class="small" />
+      <div class="nav">
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/work">Work</a></li>
+        </ul>
+      </div> -->
+		</section> <!-- sidebar -->
+
+		<section id="content" class="twelve columns offset-by-one">
+
+  <h1 class="article-title"><a href="/2021/07/creating-mesh-vpn-tool-for-fun" title="Permalink to Creating a mesh VPN tool for fun and learning">Creating a mesh VPN tool for fun and learning</a></h1>
+  <h6 class="article-date">07 Jul 2021</h6>
+  <div class="article-content">
+    <blockquote>
+<p>tldr: I created a mesh VPN networking tool named <strong>meshboi</strong> which you can checkout <a href="https://github.com/samvrlewis/meshboi">on my github</a>! This post walks through the 'magic' behind mesh VPN tools, using <strong>meshboi</strong> as an example.</p>
+</blockquote>
+<p>Mesh VPN tools, such as <a href="https://github.com/slackhq/nebula">Nebula</a>, <a href="https://tailscale.com/">Tailscale</a>, <a href="https://www.zerotier.com/">Zerotier</a> and <a href="https://www.tinc-vpn.org/">Tinc</a>, facilitate the creation of peer to peer (mesh) networks across the internet. These tools securely, performantly and transparently enable multiple distributed computers to communicate as though they were physically connected to the same network switch (layer 2 or 3, depending on the tool and configuration used). There’s lots of use cases for these tools, but some popular uses-cases are:</p>
+<ul>
+<li>Allowing services on instances across multiple clouds to communicate</li>
+<li>Allowing secure remote access to home networks for roaming users</li>
+<li>Bridging “home lab” networks with cloud networks</li>
+</ul>
+<p>These tools enable this communication to occur transparently to applications that are sending and receiving packets over the mesh, while also working around common barriers in networking over the internet, such as firewalls and NAT. </p>
+<p>The mesh model is in contrast to traditional “star” VPN solutions, such as OpenVPN or StrongSwan. In a star VPN, traffic between peers needs to pass through a central VPN server, which increases latency and reduces scalability (the central server can only handle so much traffic). The image below shows a simplified high level view of the VPN types. A mesh VPN facilitates direct connections between peers, whereas a star requires connections to go through a central server.</p>
+<p><img alt="" src="/images/meshboi_meshvsstar.png">
+It's worth making a quick side note on the use of "VPN" here. In this case, VPN is meant to mean a network of peers over the internet that can communicate amongst each other. This is different to “consumer” VPN products (such as NordVPN or Private Internet Access) that are used for privacy and/or to avoid geographic website blocks. For these VPN products, the VPN server is effectively used as a gateway for clients to connect to the broader internet through. Peers on these networks generally do not and cannot connect to each other. For the rest of this post I'll exclusively focus on the first kind of VPN, which lets peers communicate.</p>
+<h2>Introducing.. Meshboi! <img alt="logo" src="https://user-images.githubusercontent.com/3880246/124463187-dd916d00-ddd5-11eb-8e0a-923629365637.png" style="display:inline;border:0px"></h2>
+<p>There’s a bunch of interesting problems to solve in creating one of these tools, so I thought it’d be fun to create my own mesh VPN tool to learn more about how they work. While there’s a lot of complexity in creating a mesh VPN that is secure, performant and works across 100% of network configurations, creating something that isn’t as robust, for the purposes of fun and learning, is definitely doable.</p>
+<p>The tool I created is named <strong>meshboi</strong> and if you want to jump straight to the source code, you can find it <a href="https://github.com/samvrlewis/meshboi">on my github</a>. Meshboi is written in Go and was created purely for the purposes of fun and learning (so please use one of the other fantastic tools for running production things on!). </p>
+<p>The below asciinema recording shows a simple demo of meshboi, showing how it enables communication between two physically separated computers, both behind NAT and firewalls, that are only connected via the internet.</p>
+<script id="asciicast-RbxcLLpLIzryIcX5S3qC9gQYd" src="https://asciinema.org/a/RbxcLLpLIzryIcX5S3qC9gQYd.js" async></script>
+
+<h2>Why is this hard?</h2>
+<p>There are a few core problems to solve when creating a tool like this.</p>
+<ul>
+<li>
+<p><strong>Discoverability/Bootstrapping</strong> - if two peers want to talk to each other, how do they know how to find each other in order to form a link?</p>
+</li>
+<li>
+<p><strong>Transparency</strong> - The tool should allow applications to send their traffic to peers on the mesh without needing the applications to be aware of any of the subtleties of being on a mesh. The tool should abstract away the concept of the mesh VPN, such that the applications do not need to be modified and can behave as normal network applications.</p>
+</li>
+<li>
+<p><strong>Network Address Translation (NAT)</strong> - The majority of the internet is still IPv4 based, so there’s complexity in allowing communications between two computers that are both behind NAT. In some cases, one or even both can be behind multiple layers of NAT (CGNAT).</p>
+</li>
+<li>
+<p><strong>Firewalls</strong> - Between any two pairs of computers, there’s typically a lot of firewalls that typically (and probably rightfully!) act to stop unsolicited network traffic from entering networks. While some of these firewalls are configurable, and could be opened up, in some environments the firewalls are out of the control of the user (think corporate network or wifi hotspot in a cafe). Some ISPs might even block certain types of traffic.</p>
+</li>
+<li>
+<p><strong>Security</strong> - If a tool is exposing a local network to the internet,  it should make sure that traffic is secured so that it cannot be read or tampered with by third parties. The model that most of these mesh VPN tools use is that traffic coming in from the internet is not trusted, but once it is in it is trusted.</p>
+</li>
+</ul>
+<p>I’ll go more into the details of each of these problems, and how meshboi (and mesh VPN tools in general) solve them.</p>
+<h3>Discoverability</h3>
+<p>When a new computer wants to join a mesh network, it needs a method of discovering other computers that are already part of the mesh. This discovery process allows the joining member of a mesh to find internet addresses of other members, so that it can initiate the communication channel.</p>
+<p>In theory, this initial bootstrapping could be done manually, through some out of band communication, like email or instant-messaging but this is not so practical and is further complicated by dynamic IP addresses, NAT and firewalls (discussed later).</p>
+<p>Instead, most mesh network tools solve this issue by having a centralized server that members of the mesh talk to in order to get the details of their peers. In Nebula this server is named a “Lighthouse”. Meshboi also uses this concept and calls it a “Rolodex''. The Rolodex should be hosted on a server with an IP address that does not change, so that it can always be accessed by peers wanting to join the network.</p>
+<p><img alt="" src="/images/meshboi_rolodex.png">
+It’s important to note that unlike centralized VPNs, no real traffic passes through the Rolodex. However, some tools do allow the data to be proxied through this server as a last-ditch option when NAT or firewalls are particularly hard to overcome. In Meshboi’s case this is not possible and the Rolodex server is completely ignorant of any data moving around the network. </p>
+<p>The meshboi Rolodex serves only as a method to bootstrap networks, with peers directly authenticating each other (using dTLS and PSK as explained further on) before any data is passed between them. Because of this, the Rolodex implementation supports multiple completely separate networks. The Rolodex server is basically a very unsophisticated in-memory key/value store with <code>{networkName: list&lt;IP addresses&gt;}</code>. I'm currently running a Rolodex server on a personal VPS (<code>rolodex.samlewis.me</code>) that anyone can use to bootstrap their own networks but it's also possible to run a separate instance yourself on a server that's directly accessible to the internet.</p>
+<h3>Transparency</h3>
+<p>For a mesh VPN tool to be truly useful it needs to be transparent to network applications that send and receive data over the mesh network. The tool’s usefulness would be very limited if the source code of each application needed to be modified in order to know how to communicate with peers over the mesh.</p>
+<p>Mesh VPN tools solve the transparency issue using what is known as “tunneling” where the packet meant for one subnet is tunneled through a connection on another subnet (usually over the internet) and then injected into the subnet on the other side of the tunnel. On Linux systems, <a href="https://en.wikipedia.org/wiki/TUN/TAP">TUN/TAP devices</a> facilitate tunneling in this way by providing virtualized software-only network interfaces.</p>
+<p><a href="https://backreference.org/2010/03/26/tuntap-interface-tutorial/">Backreference</a> has a nice explanation of TUNTAP devices:</p>
+<blockquote>
+<p>"You can think of a tun/tap interface as a regular network interface that, when the kernel decides that the moment has come to send data "on the wire", instead sends data to some userspace program that is attached to the interface. In a similar fashion, the program can write to this [device], and the data .. will appear as input to the tun/tap interface.”</p>
+</blockquote>
+<p>In this way, having a TUNTAP device with an assigned IP address on the mesh’s subnet allows applications wanting to communicate on that subnet to send data to the TUNTAP device. The data is then able to be read by the mesh VPN tool and forwarded over the internet to the corresponding peer.</p>
+<p>In meshboi's case, the mesh network is a L3 network so TUN devices are used. Meshboi creates a TUN device at start up and assigns an IP address on the mesh's subnet (of the user's choosing) to it. </p>
+<p>The diagram below shows, at a high level, how packets would flow between two mesh members running <code>netcat</code> (but this would look the same no matter which network applications were used - you can imagine NGINX running on one side and Firefox on the other, for example).</p>
+<p><img alt="" src="/images/meshboi_tunflow.png">
+The details of what exactly the data being sent across the internet are further covered in the Security section below, but for now it's OK to imagine that it's a UDP packet that contains the original IPv4 packet. UDP is typically used for this tunneling use case as it does not suffer from the <a href="http://sites.inka.de/bigred/devel/tcp-tcp.html">drawbacks of running TCP over TCP</a>. </p>
+<p>The following code snippet shows a (slightly modified for readability) snippet from the <a href="https://github.com/samvrlewis/meshboi/blob/c062891688fce272e99ee4139add4716e8166d0a/tun_router.go"><code>tun_router.go</code></a> showing how this works for outbound packets.</p>
+<div class="highlight"><pre><span></span><span class="k">for</span> <span class="p">{</span>
+    <span class="c1">// Read from the TUN device, this reads out a packet destined for another peer on the mesh</span>
+    <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">tr</span><span class="p">.</span><span class="nx">tun</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">packet</span><span class="p">)</span>
+    <span class="nx">header</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">ipv4</span><span class="p">.</span><span class="nx">ParseHeader</span><span class="p">(</span><span class="nx">packet</span><span class="p">[:</span><span class="nx">n</span><span class="p">])</span>
+
+    <span class="c1">// Find the VPN/Mesh IP that this packet is destined for</span>
+    <span class="nx">vpnIP</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">netaddr</span><span class="p">.</span><span class="nx">FromStdIP</span><span class="p">(</span><span class="nx">header</span><span class="p">.</span><span class="nx">Dst</span><span class="p">)</span>
+
+    <span class="c1">// See if we know of a peer with that Mesh IP address</span>
+    <span class="nx">peerConn</span><span class="p">,</span> <span class="nx">ok</span> <span class="o">:=</span> <span class="nx">tr</span><span class="p">.</span><span class="nx">store</span><span class="p">.</span><span class="nx">GetByInsideIp</span><span class="p">(</span><span class="nx">vpnIP</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="p">!</span><span class="nx">ok</span> <span class="p">{</span>
+       <span class="c1">// Drop the data if we aren&#39;t aware of any peers with that address</span>
+       <span class="nx">log</span><span class="p">.</span><span class="nx">Warn</span><span class="p">(</span><span class="s">&quot;Dropping data destined for &quot;</span><span class="p">,</span> <span class="nx">vpnIP</span><span class="p">)</span>
+       <span class="k">continue</span>
+    <span class="p">}</span>
+
+    <span class="nx">msg</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">n</span><span class="p">)</span>
+    <span class="nb">copy</span><span class="p">(</span><span class="nx">msg</span><span class="p">,</span> <span class="nx">packet</span><span class="p">[:</span><span class="nx">n</span><span class="p">])</span>
+
+    <span class="c1">// Queue the data to be sent to the corresponding peer</span>
+    <span class="c1">// this will send the packet to their internet address</span>
+    <span class="c1">// through the dTLS UDP tunnel</span>
+    <span class="nx">peerConn</span><span class="p">.</span><span class="nx">QueueData</span><span class="p">(</span><span class="nx">msg</span><span class="p">)</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>The corresponding code for handling packets that have been sent by other peer members to us is handled in <a href="https://github.com/samvrlewis/meshboi/blob/c062891688fce272e99ee4139add4716e8166d0a/peer_conn.go#L45"><code>peer_conn.go</code></a>:</p>
+<div class="highlight"><pre><span></span><span class="nx">b</span> <span class="o">:=</span> <span class="nb">make</span><span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="nx">bufSize</span><span class="p">)</span>
+<span class="k">for</span> <span class="p">{</span>
+    <span class="c1">// Read a packet that another peer has sent us over the interneet</span>
+    <span class="nx">n</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">conn</span><span class="p">.</span><span class="nx">Read</span><span class="p">(</span><span class="nx">b</span><span class="p">)</span>
+
+    <span class="c1">// Write the packet to the TUN device so applications awaiting data from the mesh receive it</span>
+    <span class="nx">written</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">p</span><span class="p">.</span><span class="nx">tun</span><span class="p">.</span><span class="nx">Write</span><span class="p">(</span><span class="nx">b</span><span class="p">[:</span><span class="nx">n</span><span class="p">])</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<h3>NAT &amp; Firewalls</h3>
+<p>The majority of computers on the internet are behind both NAT and firewalls (sometimes multiple levels of both). Being behind NAT and firewalls adds difficulty in allowing external parties to talk into your network across the internet. For an average user this is typically good, as (unless you are hosting an internet accessible server on your LAN) you typically do <strong>not</strong> want random parties on the internet being able to initiate communications to computers/services running within your network.</p>
+<p>However, this is a problem in establishing a mesh network. Members on the mesh need to be able to send arbitrary packets between each other. One way of solving this would be for each member to add port forwarding rules to their routers and open ports in their firewall(s). This is typically the appropriate solution to make a locally hosted server accessible on the internet and for a user with the technical know-how and access privileges this is doable (if kind of annoying). However this gets trickier and becomes a less ideal solution when you consider that users might be on a corporate network, using public wifi (for example at a cafe) or even behind <a href="https://en.wikipedia.org/wiki/Carrier-grade_NAT">Carrier Grade NAT</a>.</p>
+<p>Luckily there is another way! This method takes advantage of us knowing the peers that we want to talk to ahead of time (because the Rolodex has told us about them!).</p>
+<p>Firstly, to explain the issues that NAT introduces in this context: NAT works by transparently translating source ports and IP addresses from a computer on a LAN to source ports and IP addresses from the internet facing side of its router. Typically, because this is done transparently, there is no need for anything except for the router to know what this mapping is. However, because we want to open a port and advertise what that port is to other peers it becomes necessary to know what the port is.</p>
+<p>To solve this, peers on the mesh network reuse the same the source port that they used to communicate with the Rolodex in order to talk to their peers. This allows the Rolodex to store the IP address and port of each member that it sees from its perspective and send that to data to new peers. Assuming that the Rolodex is somewhere on the internet, this means that it has the “internet view” of each mesh member and can be the authority in sharing how to connect to each member.</p>
+<p><img alt="" src="/images/meshboi_port_reuseal.png"></p>
+<p>The Rolodex server also serves as a way to ensure that the NAT mapping remains up to date. NAT devices will garbage collect mappings after an inactivity period (as otherwise eventually all the usable ports will be used up), so the Rolodex is used to send and receive heartbeat messages from peers to ensure that these remain valid for as long as the peer is running.</p>
+<p>Great! But what about firewalls? As a very short intro, firewalls usually deny all incoming traffic unless it has been explicitly permitted. However, because of the way IP traffic works , for most users, firewalls need to be stateful. This basically means that the firewall allows incoming packets so long as it has seen corresponding outgoing packets. This is so that, for example, when you send a request to load <a href="http://www.google.com">www.google.com</a> the firewall will allow the response from the Google web server. Without a stateful firewall, the firewall would need exceptions added for every website and IP address that a user expects to communicate with.</p>
+<p>Meshboi (and most mesh networking tools) take advantage of this by having pairs of peers send each other packets in order to form a connection. As both sides have then "initiated" communications (in the view of their respective firewalls), the firewalls will then allow incoming packets from the corresponding peer.</p>
+<p><strong><img alt="" src="/images/meshboi_firewalls.png"></strong></p>
+<p>For meshboi, as will be elaborated on in the next section, each pair of peers have one peer designated as the 'server' and one as the 'client'. The client will connect to the server immediately whereas the server only waits for the client to connect. For this reason, its only important for the server to send out a message to the client, to then enable the client to talk inward to it. </p>
+<div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">pc</span> <span class="o">*</span><span class="nx">PeerConnector</span><span class="p">)</span> <span class="nx">openFirewallToPeer</span><span class="p">(</span><span class="nx">addr</span> <span class="nx">net</span><span class="p">.</span><span class="nx">Addr</span><span class="p">)</span> <span class="kt">error</span> <span class="p">{</span>
+    <span class="nx">conn</span><span class="p">,</span> <span class="nx">err</span> <span class="o">:=</span> <span class="nx">pc</span><span class="p">.</span><span class="nx">listenerDialer</span><span class="p">.</span><span class="nx">Dial</span><span class="p">(</span><span class="nx">addr</span><span class="p">)</span>
+    <span class="k">defer</span> <span class="nx">conn</span><span class="p">.</span><span class="nx">Close</span><span class="p">()</span>
+
+    <span class="c1">// .. snipped error handling ..</span>
+
+    <span class="c1">// It doesn&#39;t really matter what is sent here - the important part is</span>
+    <span class="c1">// something is sent. We&#39;re effectively telling any and all (stateful)</span>
+    <span class="c1">// firewalls on our path to the peer to allow any future traffic that has</span>
+    <span class="c1">// originated from that peer</span>
+    <span class="nx">_</span><span class="p">,</span> <span class="nx">err</span> <span class="p">=</span> <span class="nx">conn</span><span class="p">.</span><span class="nx">Write</span><span class="p">([]</span><span class="nb">byte</span><span class="p">(</span><span class="s">&quot;hello&quot;</span><span class="p">))</span>
+
+    <span class="c1">// .. snipped error handling ..</span>
+
+    <span class="k">return</span> <span class="kc">nil</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>I’d be remiss not to mention <a href="https://tailscale.com/blog/how-nat-traversal-works/">this excellent Tailscale blog post</a> that goes into a lot more depth on the firewall/NAT problem and considers more than the basic NAT scenario that I considered here. It also has some very excellent diagrams! Worth the read if my explanation here isn't making sense or if you’re interested in the subject.</p>
+<h3>Security</h3>
+<p>As Mesh VPN tools tunnel traffic over the internet, they need some sort of security that affords protection against things like:</p>
+<ul>
+<li>Data being readable by third parties</li>
+<li>Ensuring that incoming packets are only accepted from trusted peers, not from malicious internet people</li>
+<li>Data has integrity (people can’t mess with our messages without our knowledge)</li>
+<li>Replay attacks</li>
+</ul>
+<p>Tailscale uses Wireguard links for this security and Nebula uses <a href="https://noiseprotocol.org/">the Noise Protocol Framework</a> which is what Wireguard is built upon.</p>
+<p>Not knowing much about this type of security (and admittedly, barely knowing much more now!), I initially naively considered encrypting each internet-bound packet transmitted by meshboi by using something like <a href="https://en.wikipedia.org/wiki/Bcrypt">bcrypt</a> and a pre-shared key. However, while this would stop the data from being readable by third parties it wouldn't ensure protection against the other points above - attackers could still mess with the integrity of packets or could replay past packets.</p>
+<p>That said, if we were certain that all the traffic over the mesh would already be in protocols that affords that sort of protection (such as HTTPS or SSH) then this sort of double protection would arguably be unnecessary. However, as meshboi should allow any sort of traffic to flow over its mesh it is better if it can guarantee some sort of security.</p>
+<p>Because, as previously mentioned, traffic over the tunnel should be UDP, this somewhat limits the choice of protocols for implementing this security. To cut a long story short, for meshboi's case, I ended up using the not-super-popular UDP version of TLS: dTLS. To implement this I used the dTLS implementation in the <a href="https://github.com/pion/dtls">Pion stack</a> (which, as a complete aside, has to be just about the friendliest community I've ever encountered on the internet!).</p>
+<p>Each link between peers in meshboi is implemented as a dTLS link. When peers learn of each other (via messages from the Rolodex) they will attempt to form this link using the pre-shared key they have been configured with. As dTLS requires the concept of a 'server' and 'client' for each connection, this is implemented somewhat arbitrarily in meshboi by using the peer with the 'largest' IP address to be the server:</p>
+<div class="highlight"><pre><span></span><span class="kd">func</span> <span class="p">(</span><span class="nx">pc</span> <span class="o">*</span><span class="nx">PeerConnector</span><span class="p">)</span> <span class="nx">AmServer</span><span class="p">(</span><span class="nx">other</span> <span class="nx">netaddr</span><span class="p">.</span><span class="nx">IPPort</span><span class="p">)</span> <span class="kt">bool</span> <span class="p">{</span>
+    <span class="nx">ipCompare</span> <span class="o">:=</span> <span class="nx">pc</span><span class="p">.</span><span class="nx">myOutsideAddr</span><span class="p">.</span><span class="nx">IP</span><span class="p">.</span><span class="nx">Compare</span><span class="p">(</span><span class="nx">other</span><span class="p">.</span><span class="nx">IP</span><span class="p">)</span>
+
+    <span class="k">switch</span> <span class="nx">ipCompare</span> <span class="p">{</span>
+    <span class="k">case</span> <span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+       <span class="k">return</span>  <span class="kc">false</span>
+    <span class="k">case</span>  <span class="mi">0</span><span class="p">:</span>
+       <span class="k">if</span> <span class="nx">pc</span><span class="p">.</span><span class="nx">myOutsideAddr</span><span class="p">.</span><span class="nx">Port</span> <span class="p">&gt;</span> <span class="nx">other</span><span class="p">.</span><span class="nx">Port</span> <span class="p">{</span>
+           <span class="k">return</span>  <span class="kc">true</span>
+       <span class="p">}</span> <span class="k">else</span> <span class="k">if</span> <span class="nx">pc</span><span class="p">.</span><span class="nx">myOutsideAddr</span><span class="p">.</span><span class="nx">Port</span> <span class="p">&lt;</span> <span class="nx">other</span><span class="p">.</span><span class="nx">Port</span> <span class="p">{</span>
+           <span class="k">return</span>  <span class="kc">false</span>
+       <span class="p">}</span>
+    <span class="k">case</span>  <span class="mi">1</span><span class="p">:</span>
+        <span class="k">return</span>  <span class="kc">true</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>As well as using dTLS to ensure that every peer that attempts to join the mesh is trusted, meshboi also makes use of the PSK 'hint' feature to transmit some out of band information between peers. As far as I understand, the ability to send hints is to facilitate dTLS connections where there's a human in the loop that might need a hint to remember the PSK. In Meshboi, this is somewhat abused to send the internal VPN address of the peer:</p>
+<div class="highlight"><pre><span></span><span class="kd">func</span> <span class="nx">getDtlsConfig</span><span class="p">(</span><span class="nx">vpnIp</span> <span class="nx">netaddr</span><span class="p">.</span><span class="nx">IP</span><span class="p">,</span> <span class="nx">psk</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="o">*</span><span class="nx">dtls</span><span class="p">.</span><span class="nx">Config</span> <span class="p">{</span>
+    <span class="k">return</span> <span class="o">&amp;</span><span class="nx">dtls</span><span class="p">.</span><span class="nx">Config</span><span class="p">{</span>
+        <span class="nx">PSK</span><span class="p">:</span> <span class="kd">func</span><span class="p">(</span><span class="nx">hint</span> <span class="p">[]</span><span class="kt">byte</span><span class="p">)</span> <span class="p">([]</span><span class="kt">byte</span><span class="p">,</span> <span class="kt">error</span><span class="p">)</span> <span class="p">{</span>
+            <span class="k">return</span> <span class="nx">psk</span><span class="p">,</span> <span class="kc">nil</span>
+        <span class="p">},</span>
+        <span class="c1">// We set the PSK identity hint as the IP address of this member in the</span>
+        <span class="c1">// VPN as an quick and hacky way of signalling (out of band) who this</span>
+        <span class="c1">// member is to other members we connect to. A more robust way of</span>
+        <span class="c1">// achieving this would be to define an OOB messaging scheme to do this</span>
+        <span class="c1">// with instead.</span>
+        <span class="nx">PSKIdentityHint</span><span class="p">:</span>      <span class="p">[]</span><span class="nb">byte</span><span class="p">(</span><span class="nx">vpnIp</span><span class="p">.</span><span class="nx">String</span><span class="p">()),</span>
+        <span class="nx">CipherSuites</span><span class="p">:</span>         <span class="p">[]</span><span class="nx">dtls</span><span class="p">.</span><span class="nx">CipherSuiteID</span><span class="p">{</span><span class="nx">dtls</span><span class="p">.</span><span class="nx">TLS_PSK_WITH_AES_128_CCM_8</span><span class="p">},</span>
+        <span class="nx">ExtendedMasterSecret</span><span class="p">:</span> <span class="nx">dtls</span><span class="p">.</span><span class="nx">RequireExtendedMasterSecret</span><span class="p">,</span>
+    <span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>In this way, the messages sent across the dTLS link can be tunneled IPv4 packets that can be injected directly into the mesh network. A future improvement might be to change this so that the IPv4 messages are wrapped inside other messages with metadata, so that more out of band messages can be defined and sent between peers.</p>
+<h2>Performance</h2>
+<p>To test the performance of meshboi, I used <code>iperf3</code> to check the achievable speed between a GCP e2-micro (2 vCPUs, 1 GB memory) Debian Google Cloud Platform instance and a Vultr $5/month instance (1 vCPU, 1 GB memory).</p>
+<p>For comparison, I also tested Nebula, Tailscale and then opened up instances' firewalls to run the test without any tunneling/mesh VPN software at all. It's likely that the configuration could be improved for better performance with the other tools, but it's nice at least as a point of reference. </p>
+<p>As these tools do networking and packet encryption/decryption in userspace, my benchmarking technique was to measure both the achievable throughput across a link and the CPU usage hit taken. To do this, I ran <code>mpstat 1</code> to find the average non-idle CPU time while running <code>iperf3</code> across the link. I ran the iperf3 server on the GCP instance and the client on the Vultr instance, and measured CPU only on the Vultr instance. My benchmarking technique is not very comprehensive and likely could be improved (open to hearing suggestions!) but I think gives somewhat of an indication of the difference between these tools.</p>
+<table>
+<thead>
+<tr>
+<th>Test</th>
+<th>Non idle CPU time (%)</th>
+<th>Average Bandwidth (Mbps)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>No tunneling</td>
+<td>2.74%</td>
+<td>253 MBit/s</td>
+</tr>
+<tr>
+<td>meshboi</td>
+<td>75.47%</td>
+<td>98.4 Mbit/s</td>
+</tr>
+<tr>
+<td>Nebula</td>
+<td>57.44%</td>
+<td>222 Mbits/sec</td>
+</tr>
+<tr>
+<td>Tailscale</td>
+<td>72.02%</td>
+<td>183 Mbit/s</td>
+</tr>
+</tbody>
+</table>
+<p>As expected, meshboi is probably not the best choice compared to established tools! I'm sure there's lots of easy wins to be had here though, I suspect the choice of dTLS cipher could go a long way to speeding things up. Meshboi also copies data around somewhat unnecessarily which is also most likely slowing things down.</p>
+<h2>Conclusion</h2>
+<p>Hopefully this article gives a bit of an insight into how the magic of mesh VPN tools work. If you're interested in learning more then by all means feel free to dive into the meshboi <a href="https://github,com/samvrlewis/meshboi">source code</a>, play around with meshboi or even submit a patch or two - there's likely boundless things to improve!</p>
+<p>Otherwise, if you're after a production ready mesh VPN solution there's a lot of solutions out there that work much better than meshboi. In particular, solutions like Tailscale and Nebula can do things like:</p>
+<ul>
+<li>Multi platform support (OSX, Windows)</li>
+<li>Better authentication (cert based or SSO based)</li>
+<li>Have better performance</li>
+<li>General robustness</li>
+<li>Have audited security</li>
+</ul>
+  </div>
+    
+   <!--End mc_embed_signup-->
+   <hr class="large">
+        <!-- Begin Mailchimp Signup Form -->
+        <link href="//cdn-images.mailchimp.com/embedcode/horizontal-slim-10_7.css" rel="stylesheet" type="text/css">
+        <style type="text/css">
+          #mc_embed_signup {
+            background: #fff;
+            clear: left;
+            font: 14px Helvetica, Arial, sans-serif;
+            width: 100%;
+          }
+        
+          /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
+             We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+        </style>
+        <div id="mc_embed_signup">
+          <form action="https://samlewis.us1.list-manage.com/subscribe/post?u=42af8068ea0295eafe2477482&amp;id=35efa8dbeb"
+            method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank"
+            novalidate>
+            <div id="mc_embed_signup_scroll">
+              <label for="mce-EMAIL">Enjoyed this and want to hear about new posts?</label>
+              <input type="email" value="" name="EMAIL" class="email" id="mce-EMAIL" placeholder="email address" required>
+              <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+              <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text"
+                  name="b_42af8068ea0295eafe2477482_35efa8dbeb" tabindex="-1" value=""></div>
+              <div><input type="submit" value="Subscribe" name="subscribe" id="mc-embedded-subscribe"
+                  class="button" style="margin-top: 5px;background: orange;"></div>
+            </div>
+          </form>
+        </div>
+    
+    <!--End mc_embed_signup-->
+    <hr class="large">
+    
+    <!-- DISQUS -->
+      <div id="disqus_thread"></div>
+      <script type="text/javascript">
+          /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+          var disqus_shortname = 'sam-lewis'; // required: replace example with your forum shortname
+
+          /* * * DON'T EDIT BELOW THIS LINE * * */
+          (function() {
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+      <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+<!-- twitter.js -->
+<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+		</section>
+
+	</div><!-- container -->
+
+<!-- Google Analytics -->
+
+  <script type="text/javascript">
+    $("a").on('click', function(e) {
+      var url = $(this).attr("href");
+      if (e.currentTarget.host != window.location.host) {
+        _gaq.push(['_trackEvent', 'Outbound Links', e.currentTarget.host, url, 0]);
+        if (e.metaKey || e.ctrlKey) {
+          var newtab = true;
+        }
+        if (!newtab) {
+          e.preventDefault();
+          setTimeout('document.location = "' + url + '"', 100);
+        }
+      }
+    });
+  </script>
+
+	<script>var clicky_site_ids = clicky_site_ids || []; clicky_site_ids.push(100779389);</script>
+<script async src="//static.getclicky.com/js"></script>
+<noscript><p><img alt="Clicky" width="1" height="1" src="//in.getclicky.com/100779389ns.gif" /></p></noscript>
+<!-- End Document
+================================================== -->
+</body>
+</html>
