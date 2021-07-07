@@ -90,8 +90,12 @@ blockquote {
 */
 
 /*Links*/
-a, a:visited {
+h1 a, h1 a:visited {
 	text-decoration: none !important;
+	font-weight: initial;
+}
+
+a, a:visited {
 	font-weight: bold;
 }
 
