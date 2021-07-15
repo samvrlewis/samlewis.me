@@ -170,7 +170,7 @@ As Mesh VPN tools tunnel traffic over the internet, they need some sort of secur
 
 Tailscale uses Wireguard links for this security and Nebula uses [the Noise Protocol Framework](https://noiseprotocol.org/) which is what Wireguard is built upon.
 
-Not knowing much about this type of security (and admittedly, barely knowing much more now!), I initially naively considered encrypting each internet-bound packet transmitted by meshboi by using something like [bcrypt](https://en.wikipedia.org/wiki/Bcrypt) and a pre-shared key. However, while this would stop the data from being readable by third parties it wouldn't ensure protection against the other points above - attackers could still mess with the integrity of packets or could replay past packets.
+Not knowing much about this type of security (and admittedly, barely knowing much more now!), I initially naively considered encrypting each internet-bound packet transmitted by meshboi by using something like [AES](https://en.wikipedia.org/wiki/Advanced_Encryption_Standard) and a pre-shared key. However, while this would stop the data from being readable by third parties it wouldn't ensure protection against the other points above - attackers could still mess with the integrity of packets or could replay past packets.
 
 That said, if we were certain that all the traffic over the mesh would already be in protocols that affords that sort of protection (such as HTTPS or SSH) then this sort of double protection would arguably be unnecessary. However, as meshboi should allow any sort of traffic to flow over its mesh it is better if it can guarantee some sort of security.
 
