@@ -1,4 +1,4 @@
-Title: Investigating Why Reorgs Happen in Proof of Stake Ethereum 
+Title: Investigating why reorgs happen in proof of stake Ethereum
 Date: 2022-03-14
 Slug: beacon-chain-reorgs
   
