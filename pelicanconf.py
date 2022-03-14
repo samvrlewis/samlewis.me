@@ -47,3 +47,14 @@ DOMAIN = "samlewis.me"
 
 # Twitter Cards
 TWITTER_CARDS = False
+
+
+MARKDOWN = {
+    'extension_configs': {
+        'markdown.extensions.codehilite': {'css_class': 'highlight'},
+        'markdown.extensions.extra': {},
+        'markdown.extensions.meta': {},
+        'markdown.extensions.toc': {},
+    },
+    'output_format': 'html5',
+}
