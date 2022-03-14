@@ -432,10 +432,12 @@ The dashed line here represents when we received the block for this slot, wherea
 <li>Attestations for <strong>3340161</strong>: I think these are validators that are, at this point in time, following the "3340161 fork". I think this might be because they've received this block and haven't received <strong>3340162</strong> or perhaps because they <em>have</em> received attestations for <strong>3340161</strong>.</li>
 <li>Other attestations: Not really sure why these validators are voting for such old blocks as the head. Maybe they are experiencing network or processing issues and are really far behind?</li>
 </ul>
-<p>Some other thoughts:
-- I think that the <strong>3340161</strong> block being late is likely the reason that the attestations aren't split at all for that block - with that block being late, all validators effectively have an extra slot time to receive the proceeding block so can all agree it is the up to date head. There's also probably an element of luck involved, the next block has some fairly "wrong" votes in it.
-- With ~312k current validators, there should be about 312k/32 = ~9700 attestations per slot. I'm not totally sure why I get a bit less than this amount, but I suppose it could be because my node couldn't keep up with the amount of attestations or perhaps it could mean that some validators were missed in the aggregated data. 
-- It's a little curious that we see 7 validators following the "3340161 fork". I suspect (but really have no way of checking) that these validators received an attestations for this block before they made their attestations. Maybe this is because some small set of the network was able to receive this block without much delay.</p>
+<p>Some other thoughts:</p>
+<ul>
+<li>I think that the <strong>3340161</strong> block being late is likely the reason that the attestations aren't split at all for that block - with that block being late, all validators effectively have an extra slot time to receive the proceeding block so can all agree it is the up to date head. There's also probably an element of luck involved, the next block has some fairly "wrong" votes in it.</li>
+<li>With ~312k current validators, there should be about 312k/32 = ~9700 attestations per slot. I'm not totally sure why I get a bit less than this amount, but I suppose it could be because my node couldn't keep up with the amount of attestations or perhaps it could mean that some validators were missed in the aggregated data. </li>
+<li>It's a little curious that we see 7 validators following the "3340161 fork". I suspect (but really have no way of checking) that these validators received an attestations for this block before they made their attestations. Maybe this is because some small set of the network was able to receive this block without much delay.</li>
+</ul>
 <p>Overall it's pretty neat that the protocol is able to resolve and move past the the problematic late block, essentially by skipping over it!</p>
 <h3 id="slot-3340347">Slot 3340347</h3>
 <p>Lets then look at the next forked block, which was the block produced in slot 3340347. This fork looks slightly different to the last fork, in that the later block is the reorged block, not the earlier block:</p>
