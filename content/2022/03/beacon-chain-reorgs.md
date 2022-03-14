@@ -2,7 +2,7 @@ Title: Investigating Why Reorgs Happen in Proof of Stake Ethereum
 Date: 2022-03-14
 Slug: beacon-chain-reorgs
   
-As part of my foray into learning about Ethereum, I started looking into the relatively new Proof of Stake supported [Beacon Chain](https://ethereum.org/en/upgrades/beacon-chain/) is the main coordinating blockchain for Proof of Stake Ethereum (and is currently running with ~$25 billion USD staked!).
+As part of my foray into learning about Ethereum, I started looking into the relatively new Proof of Stake supported [Beacon Chain](https://ethereum.org/en/upgrades/beacon-chain/). The Beacon Chain is the main coordinating blockchain for Proof of Stake Ethereum and is currently running with the equivalent (in ETH) of ~$25 billion USD staked!
 
 In doing so, I was surprised to see that there were regular reorganisations (or "reorgs") [occurring on the Beacon Chain](https://beaconscan.com/slots-forked), so I decided to investigate to help learn more about the machinations of Ethereum and Proof of Stake. This article is a (slightly meandering) write up of my investigation into why reorgs happen somewhat regularly on the Beacon Chain. It also details some of my learnings along the way about ETH2 in general. If any of that is interest, stick around!
 
