@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<!--[if lt IE 7 ]><html class="ie ie6" lang="en"> <![endif]-->
+<!--[if IE 7 ]><html class="ie ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]><html class="ie ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"> <!--<![endif]-->
+<head>
+
+<!-- Extra Header for IPython Notebooks
+================================================== -->
+
+	<!-- Basic Page Needs
+  ================================================== -->
+	<meta charset="utf-8">
+	<title>Investigating Why Reorgs Happen in Proof of Stake Ethereum | Sam Lewis</title>
+
+	<meta name="google-site-verification" content="0wRDUL1uay7MXb9mC8tycRBay0xX5RCY4n8inQCY498" />
+
+	<meta name="description" content="">
+	<meta name="author" content="Sam Lewis">
+        <link rel="canonical" href="https://www.samlewis.me"/>
+
+  <!-- Feeds
+  ================================================== --> 
+  <link rel="alternate" type="application/atom+xml" href="https://www.samlewis.me/feeds/all.atom.xml" title="Sam Lewis Full Atom Feed">
+
+	<!-- Facebook Open Graph
+  ================================================== -->
+  <meta property="og:title" content="Sam Lewis">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://www.samlewis.me">
+  <meta property="og:image" content="/theme/images/avatar.jpg">
+  <meta property="og:description" content="Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
+
+  <!-- Twitter Cards
+  ================================================== -->
+
+	<!-- Mobile Specific Metas
+  ================================================== -->
+	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+
+	<!-- CSS
+  ================================================== -->
+	<link rel="stylesheet" href="/theme/css/base.css">
+	<link rel="stylesheet" href="/theme/css/skeleton.css">
+	<link rel="stylesheet" href="/theme/css/layout.css">
+	<link rel="stylesheet" href="/theme/css/simply.css">
+	<link rel="stylesheet" href="/theme/css/pygment.css">
+	<link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+
+	<!--[if lt IE 9]>
+		<script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
+	<![endif]-->
+
+	<!-- JavaScript
+	=================================================== -->
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        
+
+
+	<!-- Favicons
+	================================================== -->
+	<link rel="shortcut icon" href="/theme/images/favicon.ico">
+	<link rel="apple-touch-icon" href="/theme/images/apple-touch-icon.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="/theme/images/apple-touch-icon-72x72.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="/theme/images/apple-touch-icon-114x114.png">
+
+</head>
+<body>
+
+	<!-- Primary Page Layout
+	================================================== -->
+	<div class="container">
+		<section id="sidebar" class="two columns">
+			<a href="/"><img id="avatar" src="/theme/images/avatar.jpg"></img></a>
+			<h1 id="logo"><a href="/">Sam Lewis</a></h1>
+	    <hr class="small" /> 
+    	<div id="social">
+    		<a class="icon" href="https://www.twitter.com/awesamlewis" title="Twitter"><i class="fa fa-twitter fa-1"></i></a>
+    		<a class="icon" href="https://github.com/samvrlewis" title="GitHub"><i class="fa fa-github fa-1"></i></a>
+    		<a class="icon" href="https://au.linkedin.com/in/samvrlewis" title="LinkedIn"><i class="fa fa-linkedin fa-1"></i></a>
+            <a class="icon" href="mailto:sam.vr.lewis@gmail.com?subject=Hi" title="E-Mail"><i class="fa fa-envelope fa-1"></i></a>
+    		<a class="icon" href="https://www.samlewis.me/feeds/all.atom.xml" title="Subscribe (Atom)"><i class="fa fa-rss fa-1"></i></a>
+    	</div> <!-- social -->
+      <!-- <hr class="small" />
+      <div class="nav">
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/work">Work</a></li>
+        </ul>
+      </div> -->
+		</section> <!-- sidebar -->
+
+		<section id="content" class="twelve columns offset-by-one">
+
+  <h1 class="article-title"><a href="/2022/03/beacon-chain-reorgs" title="Permalink to Investigating Why Reorgs Happen in Proof of Stake Ethereum">Investigating Why Reorgs Happen in Proof of Stake Ethereum</a></h1>
+  <h6 class="article-date">14 Mar 2022</h6>
+  <div class="article-content">
+    <p>As part of my foray into learning about Ethereum, I started looking into the relatively new Proof of Stake supported <a href="https://ethereum.org/en/upgrades/beacon-chain/">Beacon Chain</a> is the main coordinating blockchain for Proof of Stake Ethereum (and is currently running with ~$25 billion USD staked!).</p>
+<p>In doing so, I was surprised to see that there were regular reorganisations (or "reorgs") <a href="https://beaconscan.com/slots-forked">occurring on the Beacon Chain</a>, so I decided to investigate to help learn more about the machinations of Ethereum and Proof of Stake. This article is a (slightly meandering) write up of my investigation into why reorgs happen somewhat regularly on the Beacon Chain. It also details some of my learnings along the way about ETH2 in general. If any of that is interest, stick around!</p>
+<h2 id="what-is-a-reorg-reorgs-in-a-proof-of-work-blockchain">What Is a Reorg? Reorgs in a Proof of Work blockchain</h2>
+<p>As a brief bit of background, in a Proof of Work block chain, such as Bitcoin or the current Ethereum main chain, reorgs occur most commonly because miners are effectively racing each other to mine the next block. When two (or more) miners mine a block at similar times the chain forks:</p>
+<p><img alt="pow reorgs" src="/images/pow_reorgs.png">
+These forks are resolved by the fork choice rule that instructs clients to follow the fork with the most mining difficulty behind it (may also be known as the "longest chain" rule). The idea being that eventually a single fork will "win". This is a very simple way of forming consensus but has been shown to work well in Bitcoin, Ethereum and many other Proof of Work blockchains.</p>
+<p>In this way, the blocks on the "losing" fork are referred to as "reorg"ed blocks as anyone initially following this fork needs to reorganise their chain after they learn that the other fork has "won".</p>
+<p>On the Proof of Work Ethereum blockchain reorgs happen quite regularly. You can see a list of these reorgs on <a href="https://etherscan.io/blocks_forked">the etherscan block explorer</a> but, at a quick glance, they appear to be happening at a rate of around 5 per hour. The rate of reorgs is a function of the block time, which is why they occur more frequently on Ethereum than Bitcoin.</p>
+<p><img alt="eth pow reorgs" src="/images/eth_pow_reorgs.png">
+The reorg depth is how many blocks deep the fork was before the fork was resolved. Just about all the time it's 1 here, which likely occurs similar the scenario above but where one of the forks is chosen in the next block and all miners stick to that fork from then on.</p>
+<p>If you're interested in learning more about reorgs in a proof of work blockchain, this <a href="https://learnmeabitcoin.com/technical/chain-reorganisation">article</a> is informative.</p>
+<h2 id="proof-of-stake-reorgs">Proof of Stake Reorgs</h2>
+<p>Proof of Stake works differently than Proof of Work in that in that validators (who are network participants that have staked ETH) are elected to create blocks, rather than needing to race to create a block. In Ethereum, a particular validator is chosen randomly to create a single block every 12 seconds.</p>
+<p>Validators are rewarded with ETH for successfully creating blocks, so it is very much in the interest of a validator to have their proposed blocks included in the chain. The current reward for proposing a block that does get included is around 0.025 ETH at the time of writing (~$70 USD). There's a block proposed every 12 seconds and with currently around 308,000 validators, each validator will get to propose a block (on average, because it's randomised) every 42 days or so. So if you mess up and miss your slot it can be a while until you get another chance!</p>
+<p>One reason a fork <em>could</em> occur is if a validator were to create and publish more than a single block when it was their turn to create a block. Validators are incentivized not to do this though, by the network "slashing"  their stake if it can be proven that two blocks were created by the same validator for the same period. Looking at the list of <a href="https://beaconcha.in/validators/slashings">slashings</a> we can see that slashing occur much less often than reorgs (monthly instead of daily), so this is probably not usually the reason for the reorgs.</p>
+<p>So then, assuming that proposers aren’t proposing multiple blocks and are attempting to act honestly, why are there still reorgs occurring?</p>
+<h2 id="a-super-high-level-ethereum-proof-of-stake-overview">A Super High Level Ethereum Proof Of Stake Overview</h2>
+<p>There's lots of better resources on eth2, but for the purposes of this article you should know that:</p>
+<ul>
+<li>Ethereum validators are people that have "staked" a large amount of ETH to be able to participate in the validating/proposing/attesting process. To actually perform these processes, validators run software such as <a href="https://lighthouse.sigmaprime.io/">Lighthouse</a>, <a href="https://github.com/prysmaticlabs/prysm">Prysm</a> or <a href="https://docs.teku.consensys.net/en/latest/">Teku</a>.</li>
+<li>Ethereum has the concept of "epochs" and "slots". Every epoch there are 32 slots and in each slot, a single validator is randomly chosen to create a block. Validators fill this block with transactions, and share it with the network.</li>
+<li>Validators are also assigned to "attest" to one slot each epoch. As part of this attestation, the validator will select what it believes is the head of the chain. These attestations help the network form a consensus on what the state of the chain is.</li>
+</ul>
+<h2 id="investigation">Investigation</h2>
+<p>To investigate, I ran my own Lighthouse beacon node and used the standardized ETH2 HTTP API to listen to new blocks and attestations being announced, with the plan to collect enough data to be able to understand more about why these reorgs were occuring.</p>
+<p>Over the ETH2 API, the block data is of the form:</p>
+<div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="c1"># the slot of the block</span>
+  <span class="s2">&quot;slot&quot;</span><span class="p">:</span> <span class="s2">&quot;3332233&quot;</span><span class="p">,</span> 
+  <span class="c1"># the hash of the block</span>
+  <span class="s2">&quot;block&quot;</span><span class="p">:</span> <span class="s2">&quot;0x1dd45a53936a86a167e5e676dc52fef732290f45cd1ed861137ea4d7eba43646&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>Whereas attestations are of the form:</p>
+<div class="highlight"><pre><span></span><span class="p">{</span>
+  <span class="c1"># an aggregation of other validators who are attesting the same thing in the slot</span>
+  <span class="s2">&quot;aggregation_bits&quot;</span><span class="p">:</span> <span class="s2">&quot;0x00000000000000000000000400000000000080&quot;</span><span class="p">,</span>
+  <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="p">{</span>
+    <span class="c1"># the slot of this attestation</span>
+    <span class="s2">&quot;slot&quot;</span><span class="p">:</span> <span class="s2">&quot;3338073&quot;</span><span class="p">,</span>
+    <span class="c1"># the committee this validator is attesting as part of</span>
+    <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="s2">&quot;9&quot;</span><span class="p">,</span> 
+    <span class="c1"># the attester&#39;s vote for the head of the chain</span>
+    <span class="s2">&quot;beacon_block_root&quot;</span><span class="p">:</span> <span class="s2">&quot;0x576513f60421f8aa0a4fa05bba137305cbe100cffac6afcf7c7822364b13fbff&quot;</span><span class="p">,</span> 
+    <span class="c1"># (snipped some data around voting for &quot;checkpoints&quot;)</span>
+  <span class="p">},</span>
+  <span class="c1"># the signature of the attester - to prove that they really submitted this attestation</span>
+  <span class="s2">&quot;signature&quot;</span><span class="p">:</span> <span class="s2">&quot;0xa62ba00daa2096ed24242d358f775b729fa291c6f08dafd26e663cb83b8e7884c432850bc769e436250fb60e072cc43f01d64784aaee935b4bb395d6f9b16ddb26fce05f1bf4043bb3989f6336f3f18ad72b98a79684abee4b73b4cfc7c185bd&quot;</span><span class="p">,</span>
+<span class="p">}</span>
+</pre></div>
+
+
+<p>For around 20 hours I ran a simple script that basically collected all the blocks and attestations published to the network along with their arrival time to my computer.</p>
+<div class="highlight"><pre><span></span><span class="n">messages</span> <span class="o">=</span> <span class="n">SSEClient</span><span class="p">(</span><span class="s1">&#39;http://localhost:5052/eth/v1/events?topics=block&amp;attestation&#39;</span><span class="p">)</span>
+
+<span class="n">blocks_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s1">&#39;blocks.json&#39;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+<span class="n">attestations_log</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;attestations.json&quot;</span><span class="p">,</span> <span class="s1">&#39;a&#39;</span><span class="p">)</span>
+
+<span class="k">for</span> <span class="n">msg</span> <span class="ow">in</span> <span class="n">messages</span><span class="p">:</span>
+    <span class="n">message</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">loads</span><span class="p">(</span><span class="n">msg</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">message</span><span class="p">[</span><span class="s1">&#39;arrival&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">round</span><span class="p">(</span><span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+
+    <span class="k">if</span> <span class="n">msg</span><span class="o">.</span><span class="n">event</span> <span class="o">==</span> <span class="s1">&#39;block&#39;</span><span class="p">:</span>
+        <span class="n">blocks_log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">n&quot;</span><span class="p">)</span>
+    <span class="k">elif</span> <span class="n">msg</span><span class="o">.</span><span class="n">event</span> <span class="o">==</span> <span class="s1">&#39;attestation&#39;</span><span class="p">:</span>
+        <span class="n">attestations_log</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">json</span><span class="o">.</span><span class="n">dumps</span><span class="p">(</span><span class="n">message</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\\</span><span class="s2">n&quot;</span><span class="p">)</span>
+</pre></div>
+
+
+<p>This collected 5912 blocks and 3418459 attestations.</p>
+<h2 id="finding-reorgs">Finding Reorgs</h2>
+<p>With the logged block messages, we can find blocks that are not part of the main chain with a simple algorithm that starts at the most recently collected block and works backwards, using each blocks parent. Any blocks that don’t get visited will be the reorged blocks. Because we're not doing this live, we can do this while being sure that our most recently collected block isn't t a reorged block itself (by manually checking this). In the live system, beacon chain nodes don't get this luxury as they can't see into the future!</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_block_info</span><span class="p">(</span><span class="n">block_hash</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">bn_api_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+    <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bn_api_url</span><span class="si">}</span><span class="s2">/eth/v1/beacon/headers/</span><span class="si">{</span><span class="n">block_hash</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">resp</span><span class="o">.</span><span class="n">raise_for_status</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+
+<span class="k">def</span> <span class="nf">find_reorged_blocks</span><span class="p">(</span><span class="n">blocks</span><span class="p">:</span> <span class="nb">list</span><span class="p">,</span> <span class="n">bn_api_url</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Finds blocks that aren&#39;t part of the main chain.</span>
+
+<span class="sd">    blocks: list of block objects, each with a &#39;slot&#39; and a &#39;block&#39; field</span>
+<span class="sd">    bn_api_url: url of the beacon node api</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">block_map</span> <span class="o">=</span> <span class="p">{</span><span class="n">block</span><span class="p">[</span><span class="s2">&quot;block&quot;</span><span class="p">]</span> <span class="p">:</span> <span class="kc">False</span> <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">blocks</span><span class="p">}</span>
+
+    <span class="c1"># Assume the most recent block we have is the head and is not a reorged block.</span>
+    <span class="n">last_block_on_chain</span><span class="p">,</span> <span class="n">last_slot</span> <span class="o">=</span> <span class="n">blocks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;block&quot;</span><span class="p">],</span> <span class="n">blocks</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">][</span><span class="s2">&quot;slot&quot;</span><span class="p">]</span>
+
+    <span class="c1"># The list of blocks might have some missing blocks (because of</span>
+    <span class="c1"># interruptions in the data collection process) so we iterate until we&#39;re at</span>
+    <span class="c1"># the last slot we know about</span>
+    <span class="n">min_slot</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">blocks</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;slot&quot;</span><span class="p">])</span>
+    <span class="k">while</span> <span class="nb">int</span><span class="p">(</span><span class="n">last_slot</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">min_slot</span><span class="p">:</span>
+        <span class="c1"># mark this block as visited, it&#39;s on the chain!</span>
+        <span class="n">block_map</span><span class="p">[</span><span class="n">last_block_on_chain</span><span class="p">]</span> <span class="o">=</span> <span class="kc">True</span>
+
+        <span class="n">block_info</span> <span class="o">=</span> <span class="n">get_block_info</span><span class="p">(</span><span class="n">last_block_on_chain</span><span class="p">,</span> <span class="n">bn_api_url</span><span class="p">)</span>
+        <span class="n">parent</span> <span class="o">=</span> <span class="n">block_info</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;header&quot;</span><span class="p">][</span><span class="s2">&quot;message&quot;</span><span class="p">][</span><span class="s2">&quot;parent_root&quot;</span><span class="p">]</span>
+        <span class="n">parent_slot</span> <span class="o">=</span> <span class="n">block_info</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;header&quot;</span><span class="p">][</span><span class="s2">&quot;message&quot;</span><span class="p">][</span><span class="s2">&quot;slot&quot;</span><span class="p">]</span>
+
+        <span class="n">last_block_on_chain</span><span class="p">,</span> <span class="n">last_slot</span> <span class="o">=</span> <span class="n">parent</span><span class="p">,</span> <span class="n">parent_slot</span>
+
+    <span class="k">return</span> <span class="p">[</span><span class="n">block</span> <span class="k">for</span> <span class="n">block</span> <span class="ow">in</span> <span class="n">block_map</span> <span class="k">if</span> <span class="ow">not</span> <span class="n">block_map</span><span class="p">[</span><span class="n">block</span><span class="p">]]</span>
+</pre></div>
+
+
+<p>Running this against my list of 5615 collected blocks I got the following blocks as blocks not on the main chain:</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Hash</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3345326</td>
+<td>0xfc54ca25f7df62e9f3b24d8fb9fa6b21ec5bc2d312107ce29a48ba2d6b7188c3</td>
+<td></td>
+</tr>
+<tr>
+<td>3344246</td>
+<td>0xa3b0a48f6cbd0a7ca7e6337e4b939a146e2e91fa7f275ebf75dcaf0630b95ee6</td>
+<td></td>
+</tr>
+<tr>
+<td>3344244</td>
+<td>0x5862cb53788db14b989df390199d69aaebd694894183e152ccfae9bf0df283f6</td>
+<td>Marked as skipped <a href="https://beaconscan.com/slots?epoch=104507">beaconscan</a></td>
+</tr>
+<tr>
+<td>3343277</td>
+<td>0xe2c00aabfc8d584d122518d32e58d8f317f6326205df9ed8b488486a971eef52</td>
+<td></td>
+</tr>
+<tr>
+<td>3340911</td>
+<td>0x6a1adc86f899d66ac8b0cd2848b03112d5a25da3f9feb3e3a320585c4535c683</td>
+<td>I never received this block but it's marked as reorged on <a href="https://beaconscan.com/slot?hash=0x6a1adc86f899d66ac8b0cd2848b03112d5a25da3f9feb3e3a320585c4535c683">beaconscan</a></td>
+</tr>
+<tr>
+<td>3342234</td>
+<td>0x5d97817910ad60452dba75b3cf92890324194ec65bb2c2a0ac484f970b3280ca</td>
+<td>Marked as skipped on <a href="https://beaconscan.com/slots?epoch=3340911">beaconscan</a></td>
+</tr>
+<tr>
+<td>3340347</td>
+<td>0x977491737cb0f60b6f5c1a21d5745162f9a649bc031f467a591a703613927e02</td>
+<td></td>
+</tr>
+<tr>
+<td>3340161</td>
+<td>0x4cc45ee812f161b6eb478e292b9cc19f05f7e954d6d158dd5a503acf734448ee</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<p>Checking this against <a href="https://beaconscan.com/slots-forked">BeaconScan</a> the list looks pretty good, with the exception of slot <code>3340911</code> which looks like it wasn't collected by my event listener. There were also a few slots that BeaconScan marked as skipped but I saw blocks for. These discrepancies are interesting, and potentially give a clues towards why these blocks were not included.</p>
+<p><img alt="beacon scan reorgs" src="/images/beaconscan_reorgs.png">
+Finding information about reorged blocks was actually kind of tricky because beacon chain node implementations seem to prune reorged blocks out of their block storage. This make sense to do as once you're certain that a block isn't part of the main chain it is isn't useful to keep around. However, it does make this sort of investigation harder! For finding parents of these reorged blocks, I relied on block explorers like BeaconChain to find the data. </p>
+<h3 id="slot-3340161">Slot 3340161</h3>
+<p>Starting the investigation by first examining the oldest reorged block: the block proposed at slot <a href="https://beaconscan.com/slot/3340161">3340161</a>. This block has a parent of the block proposed at slot 3340160, however the block at 3340162 also has the same parent. From inspecting how this fork was resolved by looking at the state now, we can see that the end result of this fork was something like this, with the block at slot 3340161 being reorged:</p>
+<p><img alt="Forked slots" src="/images/fork1.png"></p>
+<p>My suspicion here is that 3340161 might have be sent "late" and wasn't received by the proposer of 3340162 in time. Looking at my log of blocks and their arrival time lends some credence to this theory:</p>
+<div class="highlight"><pre><span></span><span class="p">{</span><span class="nt">&quot;slot&quot;</span><span class="p">:</span> <span class="s2">&quot;3340158&quot;</span><span class="p">,</span> <span class="nt">&quot;arrival&quot;</span><span class="p">:</span> <span class="mi">1646905919766</span><span class="p">}</span>
+<span class="p">{</span><span class="nt">&quot;slot&quot;</span><span class="p">:</span> <span class="s2">&quot;3340159&quot;</span><span class="p">,</span> <span class="nt">&quot;arrival&quot;</span><span class="p">:</span> <span class="mi">1646905932380</span><span class="p">}</span>
+<span class="p">{</span><span class="nt">&quot;slot&quot;</span><span class="p">:</span> <span class="s2">&quot;3340160&quot;</span><span class="p">,</span> <span class="nt">&quot;arrival&quot;</span><span class="p">:</span> <span class="mi">1646905946542</span><span class="p">}</span>
+<span class="p">{</span><span class="nt">&quot;slot&quot;</span><span class="p">:</span> <span class="s2">&quot;3340161&quot;</span><span class="p">,</span> <span class="nt">&quot;arrival&quot;</span><span class="p">:</span> <span class="mi">1646905964624</span><span class="p">}</span>
+<span class="p">{</span><span class="nt">&quot;slot&quot;</span><span class="p">:</span> <span class="s2">&quot;3340162&quot;</span><span class="p">,</span> <span class="nt">&quot;arrival&quot;</span><span class="p">:</span> <span class="mi">1646905968938</span><span class="p">}</span>
+<span class="p">{</span><span class="nt">&quot;slot&quot;</span><span class="p">:</span> <span class="s2">&quot;3340163&quot;</span><span class="p">,</span> <span class="nt">&quot;arrival&quot;</span><span class="p">:</span> <span class="mi">1646905981605</span><span class="p">}</span>
+<span class="p">{</span><span class="nt">&quot;slot&quot;</span><span class="p">:</span> <span class="s2">&quot;3340164&quot;</span><span class="p">,</span> <span class="nt">&quot;arrival&quot;</span><span class="p">:</span> <span class="mi">1646905991401</span><span class="p">}</span>
+</pre></div>
+
+
+<p>Which can be summarized as (reorged slot is <strong>bolded</strong>):</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Time from last slot (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3340159</td>
+<td>12614</td>
+</tr>
+<tr>
+<td>3340160</td>
+<td>14162</td>
+</tr>
+<tr>
+<td><strong>3340161</strong></td>
+<td>18082</td>
+</tr>
+<tr>
+<td>3340162</td>
+<td>4314</td>
+</tr>
+<tr>
+<td>3340163</td>
+<td>12667</td>
+</tr>
+<tr>
+<td>3340164</td>
+<td>9796</td>
+</tr>
+</tbody>
+</table>
+<p>Blocks are supposed to be produced every 12 seconds, so I think you'd expect the delay between blocks to be around 12 seconds. Indeed, looking at a histogram of the time between received blocks, we see a big spike around the 12s mark.</p>
+<p><img alt="Time between beacon node blocks" src="/images/delaydist.png"></p>
+<p>This is, of course, only showing my particular view of the network and because of the distributed nature of the system, other nodes might be seeing very different message arrival times. Still, it's all I have to work with so I'll use my view of the network as an approximation of what other nodes would have likely seen as well. </p>
+<p>Given that, it does make some sense that the proposer of 3340162 has built their block on top of 3340160 instead of 3340161. A validator knows it has to meet slot deadlines (remembering a new block needs to be produced every 12 seconds), so will start building it on top of the last block it has received and verified. In this case, it seems like this block was 3340160.</p>
+<p>Once we get to the next slot, 3340163, the validator chosen to produce a block a choice to make. The validator has had enough time to receive <strong>both</strong> 3340161 and 3340162 and needs to pick which block to build this block on top of. So why did it choose to build its block on top of 3340162 and not 3340161?</p>
+<p>Looking at the ethereum 2 beacon chain specification (that is written in Python! Executable specifications are pretty cool) for the fork_choice <a href="https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#get_head"><code>get_head</code> function</a> gives a clue:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">get_head</span><span class="p">(</span><span class="n">store</span><span class="p">:</span> <span class="n">Store</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Root</span><span class="p">:</span>
+    <span class="c1"># Get filtered block tree that only includes viable branches</span>
+    <span class="n">blocks</span> <span class="o">=</span> <span class="n">get_filtered_block_tree</span><span class="p">(</span><span class="n">store</span><span class="p">)</span>
+    <span class="c1"># Execute the LMD-GHOST fork choice</span>
+    <span class="n">head</span> <span class="o">=</span> <span class="n">store</span><span class="o">.</span><span class="n">justified_checkpoint</span><span class="o">.</span><span class="n">root</span>
+    <span class="k">while</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">children</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">root</span> <span class="k">for</span> <span class="n">root</span> <span class="ow">in</span> <span class="n">blocks</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span>
+            <span class="k">if</span> <span class="n">blocks</span><span class="p">[</span><span class="n">root</span><span class="p">]</span><span class="o">.</span><span class="n">parent_root</span> <span class="o">==</span> <span class="n">head</span>
+        <span class="p">]</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">children</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">head</span>
+        <span class="c1"># Sort by latest attesting balance with ties broken lexicographically</span>
+        <span class="c1"># Ties broken by favoring block with lexicographically higher root</span>
+        <span class="n">head</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">children</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">root</span><span class="p">:</span> <span class="p">(</span><span class="n">get_latest_attesting_balance</span><span class="p">(</span><span class="n">store</span><span class="p">,</span> <span class="n">root</span><span class="p">),</span> <span class="n">root</span><span class="p">))</span>
+</pre></div>
+
+
+<p>This code, as I understand it, will walk the chain until it comes to a fork. When it comes to a fork (like we have in the scenario above) it will choose the block that has the most attestation stake behind it.</p>
+<p>Luckily we also collected attestations so we can try to verify this! But first some background on the attestation data that we collected: to decrease the network and processing load of thousands of individual attestations flying around the network, validators are divided up into <em>committees</em> to perform the attestations. Validators communicate their attestations to other validators within their committee, and select validators are selected to aggregate these attestations globally. These aggregations are stored in the <code>aggregation_bits</code> field of the aggregations messaged we received, so to find the total support for a particular head there's a little extra processing needed:</p>
+<div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">calculate_head_attestation_votes</span><span class="p">(</span><span class="n">attestations</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes an array of attestation objects (as returned by the Beacon API) for a</span>
+<span class="sd">    particular slot and returns a dictionary of head : number of votes</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Mapping of: head -&gt; committee index -&gt; votes</span>
+    <span class="n">attestation_aggregations_by_committee</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="k">lambda</span><span class="p">:</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">))</span>
+
+    <span class="c1"># Multiple attestations might have the same aggregation bits set, so we need</span>
+    <span class="c1"># to OR them together to avoid double counting</span>
+    <span class="k">for</span> <span class="n">attestation</span> <span class="ow">in</span> <span class="n">attestations</span><span class="p">:</span>
+        <span class="n">aggregate</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">attestation</span><span class="p">[</span><span class="s2">&quot;aggregation_bits&quot;</span><span class="p">],</span> <span class="mi">16</span><span class="p">)</span>
+        <span class="c1"># This is what this attestation is voting as the head of the chain</span>
+        <span class="n">head</span> <span class="o">=</span> <span class="n">attestation</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;beacon_block_root&quot;</span><span class="p">]</span>
+        <span class="c1"># The particular committee this aggregation is part of</span>
+        <span class="n">index</span> <span class="o">=</span> <span class="n">attestation</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="s2">&quot;index&quot;</span><span class="p">]</span>
+        <span class="n">attestation_aggregations_by_committee</span><span class="p">[</span><span class="n">head</span><span class="p">][</span><span class="n">index</span><span class="p">]</span> <span class="o">|=</span> <span class="n">aggregate</span>
+
+    <span class="n">attestation_head_votes</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">int</span><span class="p">)</span>
+
+    <span class="c1"># sum the aggregations to get the total number of votes for each head each</span>
+    <span class="c1"># bit in the aggregate represents a particular validator&#39;s vote</span>
+    <span class="k">for</span> <span class="n">head</span><span class="p">,</span> <span class="n">aggregations</span> <span class="ow">in</span> <span class="n">attestation_aggregations_by_committee</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">for</span> <span class="n">_</span><span class="p">,</span> <span class="n">aggregate</span> <span class="ow">in</span> <span class="n">aggregations</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="n">attestation_head_votes</span><span class="p">[</span><span class="n">head</span><span class="p">]</span> <span class="o">+=</span> <span class="n">aggregate</span><span class="o">.</span><span class="n">bit_count</span><span class="p">()</span>
+
+    <span class="k">return</span> <span class="n">attestation_head_votes</span>
+</pre></div>
+
+
+<p>This code basically sums up the aggregations we've received so we can find the total support for each particular head. (I manually filtered out aggregations for individual slots with a little <code>jq</code> scripting: <code>jq -c 'select(.data.slot=="&lt;slot&gt;")' &lt; attestations.json &gt; attestations_for_slot.json</code>).</p>
+<p><code>beacon_block_root</code> here is what the validator is voting as the head of the chain at that point of time, so running this script to see how validators were attesting for the slots of interest.</p>
+<p>First, looking at the attestations for the <strong>3340161</strong> slot:</p>
+<table>
+<thead>
+<tr>
+<th>Slot <code>beacon_block_root</code> vote</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3340160</td>
+<td>5430</td>
+</tr>
+</tbody>
+</table>
+<p>And then looking at the attestations for the <strong>3340162</strong> slot:</p>
+<table>
+<thead>
+<tr>
+<th>Slot <code>beacon_block_root</code> vote</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3340162</td>
+<td>6384</td>
+</tr>
+<tr>
+<td>3340160</td>
+<td>36</td>
+</tr>
+<tr>
+<td>3340161</td>
+<td>7</td>
+</tr>
+<tr>
+<td>3340122</td>
+<td>2</td>
+</tr>
+<tr>
+<td>3340156</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>These two tables are really quite informative because they show:</p>
+<ul>
+<li>In the slot that the <strong>3340161</strong> block was produced, there was not a single attestation for that block. All attestations were for the block in the previous slot.</li>
+<li>In the next slot, there are attestations for the <strong>3340161</strong> block, but there are a lot more for the block that was produced in the same slot.</li>
+</ul>
+<p>Again the <a href="https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/validator.md#attesting">spec</a> is illustrative in making sense of what might be going on here:</p>
+<blockquote>
+<p>A validator should create and broadcast the <code>attestation</code> to the associated attestation subnet when either (a) the validator has received a valid block from the expected block proposer for the assigned <code>slot</code> or (b) <code>1 / INTERVALS_PER_SLOT</code> of the <code>slot</code> has transpired (<code>SECONDS_PER_SLOT / INTERVALS_PER_SLOT</code> seconds after the start of <code>slot</code>) -- whichever comes <em>first</em>.</p>
+</blockquote>
+<p>So, we can probably reasonably guess that: </p>
+<p>In slot <strong>3340161</strong> it's likely no validators had received the 3340161 block, so all attested that the head of the chain was the <strong>3340160</strong> block. We can plot the arrival time of the block compared to the arrival time of the attestations for this slot, relative to the start of the slot to make extra sure (again with the caveat that this only represents my view of the distributed network, other participants likely saw a slightly different view):</p>
+<p><img alt="attestation delays" src="/images/61delays.png">
+The dashed line here represents when we received the block for this slot, whereas the red bars show a distribution of when we received attestations for this slot. <code>INTERVALS_PER_SLOT</code> is currently <code>3</code> so validators should wait only 4 seconds (12/3) before publishing an attestation if they haven't received the block from the proposer. There are, however, a considerable attestations received after a longer amount of time, which might be because of delays in me receiving the attestations or perhaps could mean that the validators aren't perfectly following the spec. It is curious that there's a big spike of attestations arrived <em>after</em> the (quite block) arrives but given that no validators seemed to attest to the late block, it seems likely that it might just be because of network delays.</p>
+<p>In slot <strong>3340162</strong> we have a few different attestations for the head:</p>
+<ul>
+<li>Attestations for <strong>3340162</strong>: these are probably validators that received this block before <code>SECONDS_PER_SLOT / INTERVALS_PER_SLOT</code> . These attestations are essentially picking this block over the <strong>3340161</strong> block. At this stage, to these proposers, we can infer that both the <strong>3340161</strong> and <strong>3340162</strong> blocks have no attestations, as the fork choice rule says to pick the lexicographically higher root.</li>
+<li>Attestations for <strong>3340160</strong>: these are probably validators that didn't yet receive the <strong>3340162</strong> or <strong>3340161</strong> block so are voting for the last block they know about.</li>
+<li>Attestations for <strong>3340161</strong>: I think these are validators that are, at this point in time, following the "3340161 fork". I think this might be because they've received this block and haven't received <strong>3340162</strong> or perhaps because they <em>have</em> received attestations for <strong>3340161</strong>.</li>
+<li>Other attestations: Not really sure why these validators are voting for such old blocks as the head. Maybe they are experiencing network or processing issues and are really far behind?</li>
+</ul>
+<p>Some other thoughts:
+- I think that the <strong>3340161</strong> block being late is likely the reason that the attestations aren't split at all for that block - with that block being late, all validators effectively have an extra slot time to receive the proceeding block so can all agree it is the up to date head. There's also probably an element of luck involved, the next block has some fairly "wrong" votes in it.
+- With ~312k current validators, there should be about 312k/32 = ~9700 attestations per slot. I'm not totally sure why I get a bit less than this amount, but I suppose it could be because my node couldn't keep up with the amount of attestations or perhaps it could mean that some validators were missed in the aggregated data. 
+- It's a little curious that we see 7 validators following the "3340161 fork". I suspect (but really have no way of checking) that these validators received an attestations for this block before they made their attestations. Maybe this is because some small set of the network was able to receive this block without much delay.</p>
+<p>Overall it's pretty neat that the protocol is able to resolve and move past the the problematic late block, essentially by skipping over it!</p>
+<h3 id="slot-3340347">Slot 3340347</h3>
+<p>Lets then look at the next forked block, which was the block produced in slot 3340347. This fork looks slightly different to the last fork, in that the later block is the reorged block, not the earlier block:</p>
+<p><img alt="forked blocks" src="/images/fork2.png"></p>
+<p>Looking first at block arrival times:</p>
+<table>
+<thead>
+<tr>
+<th>Slot</th>
+<th>Time from last slot (ms)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3340345</td>
+<td>13304</td>
+</tr>
+<tr>
+<td>3340346</td>
+<td>22950</td>
+</tr>
+<tr>
+<td><strong>3340347</strong></td>
+<td>557</td>
+</tr>
+<tr>
+<td>3340348</td>
+<td>11481</td>
+</tr>
+<tr>
+<td>3340349</td>
+<td>13332</td>
+</tr>
+</tbody>
+</table>
+<p>This is different to the previous case in that this block appears to have not actually been that slow to arrive, relative to the last block. The previous block <em>was</em> slow to arrive though!</p>
+<p>Looking again at the attestations for the slots:</p>
+<p>The <strong>3340345</strong> slot:</p>
+<table>
+<thead>
+<tr>
+<th>Slot <code>beacon_block_root</code> vote</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3340345</td>
+<td>9667</td>
+</tr>
+<tr>
+<td>3340344</td>
+<td>2</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>3340346</strong> slot:</p>
+<table>
+<thead>
+<tr>
+<th>Slot <code>beacon_block_root</code> vote</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3340345</td>
+<td>7772</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>3340347</strong> slot:</p>
+<table>
+<thead>
+<tr>
+<th>Slot <code>beacon_block_root</code> vote</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3340346</td>
+<td>6063</td>
+</tr>
+<tr>
+<td>3340345</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>The <strong>3340348</strong> slot:</p>
+<table>
+<thead>
+<tr>
+<th>Slot <code>beacon_block_root</code> vote</th>
+<th>Count</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3340348</td>
+<td>4333</td>
+</tr>
+<tr>
+<td>3340346</td>
+<td>4</td>
+</tr>
+</tbody>
+</table>
+<p>So the reconstructed timeline is:</p>
+<ol>
+<li><strong>3340345</strong> is created on schedule and the vast majority of validators attest to this block</li>
+<li><strong>3340346</strong> is created with some delays, no validators receive it in this block so all attest that <strong>3340345</strong> is the current head</li>
+<li><strong>3340347</strong> is created, building off of <strong>3340345</strong>, likely because the proposer didn't receive <strong>3340346</strong> in time. No attesters attest to <strong>3340347</strong> and instead all attest to  <strong>3340346</strong>.</li>
+<li><strong>3340348</strong> builds off the head of the chain, which in this case is  <strong>3340346</strong> as it has attestations whereas  <strong>3340347</strong> does not.</li>
+</ol>
+<p>This is a little weird to me, I don't completely understand why at the <strong>3340347</strong> slot there was not a single validator who voted for the block produced at <strong>3340347</strong>. I initially thought that this might be due to the block arriving later than it should, so plotted the arrival time of the block relative to the attestations:</p>
+<p><img alt="arrival times" src="/images/47delays.png">
+This time the block is <em>not</em> later than the 4 second <code>SECONDS_PER_SLOT / INTERVALS_PER_SLOT</code> deadline, and it looks like the validators have waited for the block before sending out attestations.</p>
+<p>Unfortunately, I don't have a good handle on why the network didn't choose the  <strong>3340347</strong> block when choosing the fork to follow. Reading through the specification, the fork choice appears to dictate that this block should be chosen and even incentived to be chosen, through the <a href="https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#get_latest_attesting_balance"><code>proposer_boost_root</code></a> mechanism that 'boosts' blocks that arrive on time.</p>
+<p>In my understanding, the only reasons for this block to not be chosen are either:</p>
+<ul>
+<li>My view of the network was significantly different to what the rest of the network saw. Perhaps the <strong>3340347</strong> block was delayed for all other participants.</li>
+<li>The <strong>3340347</strong> block did not pass the <a href="https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#filter_block_tree">filter_block_tree</a> check. I believe this could have been because it had a different finalized or justified checkpoint to what the rest of the network agrees upon.</li>
+</ul>
+<p>Unfortunately, with the data I have, I'm not quite sure how to definitively prove or discover which of the two options caused this block to not included in the chain. The contents of this block is (as far as I can find) no longer available, due to beacon nodes pruning it from their history. </p>
+<p>The rest of the reorged blocks in my log seem to have very similar symptoms to this block, in that:</p>
+<ul>
+<li>The reorged block follows a delayed block</li>
+<li>The reorged block creates fork to be created, most likely because they didn't receive the preceeding block in time</li>
+<li>The network follows the earlier block instead of the later block</li>
+</ul>
+<p>I think there most likely must be a possibility that I'm missing here as I don't think it's coincidence that these reorgs seem to happen under the same circumstances. It seems unlikely that each of these blocks were skipped by <code>filter_block_tree</code> or that my view of the network was considerably different to the rest of the network each time. </p>
+<h2 id="conclusion">Conclusion</h2>
+<p>I learnt a lot about how attestation works on the beacon chain while investigating this, despite not completely solving the mystery of why exactly there are some reorged blocks.</p>
+<p>To continue this investigation, maybe it would make sense to:</p>
+<ul>
+<li>Have more collectors logging data, possibly on compute instances geographically distributed. This should allow me to get a better sense of what the rest of the network sees.</li>
+<li>Log the contents of blocks, to better discover why nodes skip over them.</li>
+</ul>
+<p>If anyone has any theories on what might've happened in the second reorged block (and the other, similar, reorged blocks), please let me know!</p>
+  </div>
+    
+   <!--End mc_embed_signup-->
+   <hr class="large">
+        <!-- Begin Mailchimp Signup Form -->
+        <link href="//cdn-images.mailchimp.com/embedcode/horizontal-slim-10_7.css" rel="stylesheet" type="text/css">
+        <style type="text/css">
+          #mc_embed_signup {
+            background: #fff;
+            clear: left;
+            font: 14px Helvetica, Arial, sans-serif;
+            width: 100%;
+          }
+        
+          /* Add your own Mailchimp form style overrides in your site stylesheet or in this style block.
+             We recommend moving this block and the preceding CSS link to the HEAD of your HTML file. */
+        </style>
+        <div id="mc_embed_signup">
+          <form action="https://samlewis.us1.list-manage.com/subscribe/post?u=42af8068ea0295eafe2477482&amp;id=35efa8dbeb"
+            method="post" id="mc-embedded-subscribe-form" name="mc-embedded-subscribe-form" class="validate" target="_blank"
+            novalidate>
+            <div id="mc_embed_signup_scroll">
+              <label for="mce-EMAIL">Enjoyed this and want to hear about new posts?</label>
+              <input type="email" value="" name="EMAIL" class="email" id="mce-EMAIL" placeholder="email address" required>
+              <!-- real people should not fill this in and expect good things - do not remove this or risk form bot signups-->
+              <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text"
+                  name="b_42af8068ea0295eafe2477482_35efa8dbeb" tabindex="-1" value=""></div>
+              <div><input type="submit" value="Subscribe" name="subscribe" id="mc-embedded-subscribe"
+                  class="button" style="margin-top: 5px;background: orange;"></div>
+            </div>
+          </form>
+        </div>
+    
+    <!--End mc_embed_signup-->
+    <hr class="large">
+    
+    <!-- DISQUS -->
+      <div id="disqus_thread"></div>
+      <script type="text/javascript">
+          /* * * CONFIGURATION VARIABLES: EDIT BEFORE PASTING INTO YOUR WEBPAGE * * */
+          var disqus_shortname = 'sam-lewis'; // required: replace example with your forum shortname
+
+          /* * * DON'T EDIT BELOW THIS LINE * * */
+          (function() {
+              var dsq = document.createElement('script'); dsq.type = 'text/javascript'; dsq.async = true;
+              dsq.src = 'https://' + disqus_shortname + '.disqus.com/embed.js';
+              (document.getElementsByTagName('head')[0] || document.getElementsByTagName('body')[0]).appendChild(dsq);
+          })();
+      </script>
+      <noscript>Please enable JavaScript to view the <a href="http://disqus.com/?ref_noscript">comments powered by Disqus.</a></noscript>
+      <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
+
+<!-- twitter.js -->
+<script>!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src="//platform.twitter.com/widgets.js";fjs.parentNode.insertBefore(js,fjs);}}(document,"script","twitter-wjs");</script>
+		</section>
+
+	</div><!-- container -->
+
+<!-- Google Analytics -->
+
+  <script type="text/javascript">
+    $("a").on('click', function(e) {
+      var url = $(this).attr("href");
+      if (e.currentTarget.host != window.location.host) {
+        _gaq.push(['_trackEvent', 'Outbound Links', e.currentTarget.host, url, 0]);
+        if (e.metaKey || e.ctrlKey) {
+          var newtab = true;
+        }
+        if (!newtab) {
+          e.preventDefault();
+          setTimeout('document.location = "' + url + '"', 100);
+        }
+      }
+    });
+  </script>
+
+	<script>var clicky_site_ids = clicky_site_ids || []; clicky_site_ids.push(100779389);</script>
+<script async src="//static.getclicky.com/js"></script>
+<noscript><p><img alt="Clicky" width="1" height="1" src="//in.getclicky.com/100779389ns.gif" /></p></noscript>
+<!-- End Document
+================================================== -->
+</body>
+</html>

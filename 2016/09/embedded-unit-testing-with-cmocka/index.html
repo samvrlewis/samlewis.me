@@ -29,7 +29,7 @@
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://www.samlewis.me">
   <meta property="og:image" content="/theme/images/avatar.jpg">
-  <meta property="og:description" content="Sam Lewis is a geek based in Melbourne. He enjoys hacking on a variety of stuff.">
+  <meta property="og:description" content="Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL.">
 
   <!-- Twitter Cards
   ================================================== -->
@@ -96,7 +96,7 @@
   <h6 class="article-date">26 Sep 2016</h6>
   <div class="article-content">
     <p><a href="https://en.wikipedia.org/wiki/Unit_testing">Unit testing</a> is a great software testing practice that gets a lot of love in web and application development but unfortunately isn't practiced as often in embedded/firmware development. This is a shame as the impacts of having a bug in firmware can be considerably more catastrophic than having a bug in a webapp. I've written this article in the hope of demonstrating some of the benefits that come when writing unit tests for embedded software and have also given a small toy example of how it's possible to unit test firmware using the <code>cmocka</code> framework. </p>
-<h3>Why unit test embedded software?</h3>
+<h3 id="why-unit-test-embedded-software">Why unit test embedded software?</h3>
 <p>System level embedded software testing is notoriously difficult, mainly because embedded software runs on bare metal hardware. While you can never completely get away from testing embedded software on real hardware, testing the logic in the embedded software through unit testing is very valuable and gets you a lot of the way there. If you still need convincing, some of the things I really like about having unit tests for my embedded code:</p>
 <ul>
 <li>Allows you to develop your application layer logic without the need for any hardware, saving lots of time</li>
@@ -109,34 +109,34 @@
 </ul>
 <p>There are a lot of unit testing frameworks for <code>C</code> but for embedded testing, the framework I like best is <a href="https://cmocka.org/">cmocka</a>. I've looked at others in the past, such as <a href="http://www.throwtheswitch.org/cmock/">cmock</a> and <a href="https://github.com/mity/cutest">cutest</a> but cmocka stands out as having all testing &amp; mocking functionality I need while having minimal dependencies. </p>
 <p>On caveat worth mentioning is that to properly use these frameworks, you'll most likely need to compiler your code with a different compiler to what your compile with for your hardware - both so that the framework can run and so that you can execute the tests on your workstation. However, this shouldn't present a major problem as long as you're not relying on non-standard or undefined compiler behaviour. Logic errors in your code will still be logic errors no matter what compiler you use to compile the code. </p>
-<h3>An example of unit testing C in an embedded context</h3>
+<h3 id="an-example-of-unit-testing-c-in-an-embedded-context">An example of unit testing C in an embedded context</h3>
 <p>To give a concrete example of how you could make use of <code>cmocka</code> in an embedded context, I'll show the process of unit testing code for a temperature sensor. I've chosen the TI <a href="http://www.ti.com/lit/ds/symlink/tmp101.pdf">TMP101</a> as the temperature sensor, which is a temperature sensor that works over I2C. The complete listing of code <a href="https://github.com/samvrlewis/cmocka-embedded-example/">is checked in on my github</a>, the below text gives a rundown of how it all comes together. </p>
 <p>The first step as normal, is to write some code for the tmp101 sensor that can fetch a temperature. You can find the full code listing <a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/src/tmp101.c">on my github</a>. It's also reproduced below. </p>
-<div class="highlight"><pre><span></span><span class="cp">#include</span> <span class="cpf">&quot;tmp101.h&quot;</span><span class="cp"></span>
+<div class="highlight"><pre><span></span><span class="c1">#include &quot;tmp101.h&quot;</span>
 
-<span class="k">static</span> <span class="k">const</span> <span class="kt">float</span> <span class="n">TMP_BIT_RESOLUTION</span> <span class="o">=</span> <span class="mf">0.0625</span><span class="p">;</span>
+<span class="k">static</span> <span class="k">const</span> <span class="nb nb-Type">float</span> <span class="n">TMP_BIT_RESOLUTION</span> <span class="o">=</span> <span class="mf">0.0625</span><span class="p">;</span>
 
-<span class="kt">float</span> <span class="nf">tmp101_get_temperature</span><span class="p">(</span><span class="kt">void</span><span class="p">)</span> 
+<span class="nb nb-Type">float</span> <span class="n">tmp101_get_temperature</span><span class="p">(</span><span class="n">void</span><span class="p">)</span> 
 <span class="p">{</span>   
-    <span class="c1">// Need to set the TMP101 pointer register to point to the temp register</span>
-    <span class="kt">uint8_t</span> <span class="n">pointer_address</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
+    <span class="o">//</span> <span class="n">Need</span> <span class="n">to</span> <span class="n">set</span> <span class="n">the</span> <span class="n">TMP101</span> <span class="n">pointer</span> <span class="n">register</span> <span class="n">to</span> <span class="n">point</span> <span class="n">to</span> <span class="n">the</span> <span class="n">temp</span> <span class="n">register</span>
+    <span class="n">uint8_t</span> <span class="n">pointer_address</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span>
     <span class="n">i2c_transmit_blocking</span><span class="p">(</span><span class="n">TMP101_ADDRESS</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">pointer_address</span><span class="p">,</span> <span class="mi">1</span><span class="p">);</span>
 
-    <span class="c1">// The TMP101 stores 12 bit samples that are retrieved in two byte blocks</span>
-    <span class="kt">uint8_t</span> <span class="n">data</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
+    <span class="o">//</span> <span class="n">The</span> <span class="n">TMP101</span> <span class="n">stores</span> <span class="mi">12</span> <span class="n">bit</span> <span class="n">samples</span> <span class="n">that</span> <span class="n">are</span> <span class="n">retrieved</span> <span class="ow">in</span> <span class="n">two</span> <span class="n">byte</span> <span class="n">blocks</span>
+    <span class="n">uint8_t</span> <span class="n">data</span><span class="p">[</span><span class="mi">2</span><span class="p">];</span>
     <span class="n">i2c_read_blocking</span><span class="p">(</span><span class="n">TMP101_ADDRESS</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">2</span><span class="p">);</span>
 
-    <span class="c1">// the 1st byte is bits 12 to 4 of the sample and the 2nd byte is bits 4 to 0</span>
-    <span class="c1">// see page 16 of the TMP_101 datasheet</span>
-    <span class="kt">uint16_t</span> <span class="n">temperature_bits</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">);</span>
+    <span class="o">//</span> <span class="n">the</span> <span class="mi">1</span><span class="n">st</span> <span class="n">byte</span> <span class="k">is</span> <span class="n">bits</span> <span class="mi">12</span> <span class="n">to</span> <span class="mi">4</span> <span class="n">of</span> <span class="n">the</span> <span class="n">sample</span> <span class="ow">and</span> <span class="n">the</span> <span class="mi">2</span><span class="n">nd</span> <span class="n">byte</span> <span class="k">is</span> <span class="n">bits</span> <span class="mi">4</span> <span class="n">to</span> <span class="mi">0</span>
+    <span class="o">//</span> <span class="n">see</span> <span class="n">page</span> <span class="mi">16</span> <span class="n">of</span> <span class="n">the</span> <span class="n">TMP_101</span> <span class="n">datasheet</span>
+    <span class="n">uint16_t</span> <span class="n">temperature_bits</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="p">)</span> <span class="o">|</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">&gt;&gt;</span> <span class="mi">4</span><span class="p">);</span>
 
-    <span class="c1">// The 12 bit sample is represented using 2s complement, for simplicity </span>
-    <span class="c1">// (and because there&#39;s no 12 bit int representation), scale up the sample</span>
-    <span class="c1">// to 16 bits and adjust the bit resolution when converting later</span>
-    <span class="kt">int16_t</span> <span class="n">temperature</span> <span class="o">=</span> <span class="n">temperature_bits</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="p">;</span>
+    <span class="o">//</span> <span class="n">The</span> <span class="mi">12</span> <span class="n">bit</span> <span class="n">sample</span> <span class="k">is</span> <span class="n">represented</span> <span class="n">using</span> <span class="mi">2</span><span class="n">s</span> <span class="n">complement</span><span class="p">,</span> <span class="k">for</span> <span class="n">simplicity</span> 
+    <span class="o">//</span> <span class="p">(</span><span class="ow">and</span> <span class="n">because</span> <span class="n">there</span><span class="s1">&#39;s no 12 bit int representation), scale up the sample</span>
+    <span class="o">//</span> <span class="n">to</span> <span class="mi">16</span> <span class="n">bits</span> <span class="ow">and</span> <span class="n">adjust</span> <span class="n">the</span> <span class="n">bit</span> <span class="n">resolution</span> <span class="n">when</span> <span class="n">converting</span> <span class="n">later</span>
+    <span class="n">int16_t</span> <span class="n">temperature</span> <span class="o">=</span> <span class="n">temperature_bits</span> <span class="o">&lt;&lt;</span> <span class="mi">4</span><span class="p">;</span>
 
-    <span class="c1">// shift the sample back down and convert by the TMP_101 bit resolution</span>
-    <span class="k">return</span> <span class="p">((</span><span class="n">temperature</span> <span class="o">/</span> <span class="mi">16</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.0625f</span><span class="p">);</span>
+    <span class="o">//</span> <span class="n">shift</span> <span class="n">the</span> <span class="n">sample</span> <span class="n">back</span> <span class="n">down</span> <span class="ow">and</span> <span class="nb">convert</span> <span class="n">by</span> <span class="n">the</span> <span class="n">TMP_101</span> <span class="n">bit</span> <span class="n">resolution</span>
+    <span class="k">return</span> <span class="p">((</span><span class="n">temperature</span> <span class="o">/</span> <span class="mi">16</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.0625</span><span class="n">f</span><span class="p">);</span>
 <span class="p">}</span>
 </pre></div>
 
@@ -157,33 +157,33 @@
 
 
 <p>But mixing test code with production code is ugly and an antipattern that should be avoided if possible. A much better way that allows us to both completely separate our testing and source code is to use the <code>cmocka</code> framework to help us (dynamically!) control what our <code>i2c_read_blocking</code> function does. The first step of using <code>cmocka</code> is to define mocks for the functions you want to mock out. The two mocked functions are shown below.</p>
-<div class="highlight"><pre><span></span>void __wrap_i2c_transmit_blocking(uint8_t address, uint8_t offset, uint8_t* data, uint8_t data_size)
-{
-    // allows the calling test to check if the supplied parameters are as expected
-    check_expected(address);
-    check_expected(offset);
-}
+<div class="highlight"><pre><span></span><span class="n">void</span><span class="w"> </span><span class="n">__wrap_i2c_transmit_blocking</span><span class="p">(</span><span class="n">uint8_t</span><span class="w"> </span><span class="n">address</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="k">data</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">)</span><span class="w"></span>
+<span class="err">{</span><span class="w"></span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">allows</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">calling</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="k">check</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">supplied</span><span class="w"> </span><span class="k">parameters</span><span class="w"> </span><span class="k">are</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="n">expected</span><span class="w"></span>
+<span class="w">    </span><span class="n">check_expected</span><span class="p">(</span><span class="n">address</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="n">check_expected</span><span class="p">(</span><span class="n">offset</span><span class="p">);</span><span class="w"></span>
+<span class="err">}</span><span class="w"></span>
 
-void __wrap_i2c_read_blocking(uint8_t address, uint8_t offset, uint8_t* pData, uint8_t data_size) 
-{
-    // allow the calling test to specify the data it wants back
-    // and copy it back out
-    for(int i=0; i &lt; data_size; i++) {
-        pData[i] = mock_type(uint8_t);
-    }
-}
+<span class="n">void</span><span class="w"> </span><span class="n">__wrap_i2c_read_blocking</span><span class="p">(</span><span class="n">uint8_t</span><span class="w"> </span><span class="n">address</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">offset</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="o">*</span><span class="w"> </span><span class="n">pData</span><span class="p">,</span><span class="w"> </span><span class="n">uint8_t</span><span class="w"> </span><span class="n">data_size</span><span class="p">)</span><span class="w"> </span>
+<span class="err">{</span><span class="w"></span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="n">allow</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="n">calling</span><span class="w"> </span><span class="n">test</span><span class="w"> </span><span class="k">to</span><span class="w"> </span><span class="n">specify</span><span class="w"> </span><span class="n">the</span><span class="w"> </span><span class="k">data</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">wants</span><span class="w"> </span><span class="n">back</span><span class="w"></span>
+<span class="w">    </span><span class="o">//</span><span class="w"> </span><span class="ow">and</span><span class="w"> </span><span class="n">copy</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="n">back</span><span class="w"> </span><span class="k">out</span><span class="w"></span>
+<span class="w">    </span><span class="k">for</span><span class="p">(</span><span class="nc">int</span><span class="w"> </span><span class="n">i</span><span class="o">=</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="n">data_size</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="err">{</span><span class="w"></span>
+<span class="w">        </span><span class="n">pData</span><span class="o">[</span><span class="n">i</span><span class="o">]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mock_type</span><span class="p">(</span><span class="n">uint8_t</span><span class="p">);</span><span class="w"></span>
+<span class="w">    </span><span class="err">}</span><span class="w"></span>
+<span class="err">}</span><span class="w"></span>
 </pre></div>
 
 
 <p><code>cmocka</code> cleverly uses the linker to swap out the real function calls for the mocked ones. To allow for this, mocked out functions are prefixed with <code>__wrap_</code>. The linker is then provided with the arguments <code>--wrap=i2c_read_blocking -Wl,--wrap=i2c_transmit_blocking</code> which allows these functions to be mocked out. For a complete example of compiling/linking with cmocka, see the <a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/Makefile">makefile</a> in my example project.</p>
 <p>With the mocks in place we can now write some tests! A complete look at the tests in my example project can be found <a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/test_tmp101.c">on my github</a> but, as an example, here's a single test:</p>
-<div class="highlight"><pre><span></span>static void test_negative_temperature(void **state)
-{
-    will_return(__wrap_i2c_read_blocking, 0b11100111);
-    will_return(__wrap_i2c_read_blocking, 0b00000000);
+<div class="highlight"><pre><span></span><span class="k">static</span> <span class="n">void</span> <span class="n">test_negative_temperature</span><span class="p">(</span><span class="n">void</span> <span class="o">**</span><span class="k">state</span><span class="p">)</span>
+<span class="err">{</span>
+    <span class="n">will_return</span><span class="p">(</span><span class="n">__wrap_i2c_read_blocking</span><span class="p">,</span> <span class="mi">0</span><span class="n">b11100111</span><span class="p">);</span>
+    <span class="n">will_return</span><span class="p">(</span><span class="n">__wrap_i2c_read_blocking</span><span class="p">,</span> <span class="mi">0</span><span class="n">b00000000</span><span class="p">);</span>
 
-    assert_true(tmp101_get_temperature() == -25);
-}
+    <span class="n">assert_true</span><span class="p">(</span><span class="n">tmp101_get_temperature</span><span class="p">()</span> <span class="o">==</span> <span class="o">-</span><span class="mi">25</span><span class="p">);</span>
+<span class="err">}</span>
 </pre></div>
 
 

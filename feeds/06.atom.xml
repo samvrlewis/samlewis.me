@@ -3,7 +3,7 @@
 &lt;p&gt;Unfortunately, while there's a lot of resources out there that give high level explanations of how Bitcoin works (one such resource I'd highly recommend is Anders Brownworth's fantastic &lt;a href="https://anders.com/blockchain/"&gt;blockchain visual 101&lt;/a&gt; video), there isn't a whole heap of information at a lower level and, in my opinion, there's only so much you can properly grok if you're looking at the 10000 ft view. &lt;/p&gt;
 &lt;p&gt;As someone relatively new to the space, I found myself hungry to understand the mechanics of how Bitcoin works. Luckily, because Bitcoin is decentralised and peer to peer by its nature, anyone is able to develop a client that conforms to the protocol. In order to get a greater appreciation of how Bitcoin works, I decided to write my own small toy Bitcoin client that was able to publish a transaction to the Bitcoin blockchain. &lt;/p&gt;
 &lt;p&gt;This post walks through the process of creating a minimally viable Bitcoin client that can create a transaction and submit it to the Bitcoin peer to peer network so that it is included in the Blockchain. If you'd rather just read the raw code, feel free to check out my &lt;a href="https://github.com/samvrlewis/simple-bitcoin"&gt;Github repo&lt;/a&gt;.&lt;/p&gt;
-&lt;h2&gt;Address generation&lt;/h2&gt;
+&lt;h2 id="address-generation"&gt;Address generation&lt;/h2&gt;
 &lt;p&gt;In order to be part of the Bitcoin network, it's necessary to have an address from which you can send and receive funds. Bitcoin uses public key cryptography and an address is basically a hashed version of a public key that has been derived from a secret private key. Surprisingly, and unlike most public key cryptography, the public key is also kept secret until funds are sent from the address - but more on that later. &lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;A quick aside on terminology: In Bitcoin, the term "wallet" is used by clients to mean a collection of addresses. There's no concept of wallets at a protocol level, only addresses.&lt;/p&gt;
@@ -31,12 +31,12 @@
 
 
 &lt;p&gt;Running this code gets the private key (in hex) of  &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;0000000000000000000000000000000000000000000000000feedb0bdeadbeef
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;0000000000000000000000000000000000000000000000000feedb0bdeadbeef&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;And the public key (in hex) of &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -77,7 +77,7 @@
 
     &lt;span class="n"&gt;result&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;from_bytes&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;byteorder&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;big&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-    &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;result&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;result&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
     &lt;span class="c1"&gt;# count the leading 0s&lt;/span&gt;
     &lt;span class="n"&gt;padding&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lstrip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;b&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\0&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
@@ -95,9 +95,9 @@
 
 &lt;p&gt;After all of that, starting with my private key of &lt;code&gt;feedb0bdeadbeef&lt;/code&gt; (front padded with zeros), I've arrived with a Bitcoin address of &lt;code&gt;1KK2xni6gmTtdnSGRiuAf94jciFgRjDj7W&lt;/code&gt;!&lt;/p&gt;
 &lt;p&gt;With an address, it's now possible to get some Bitcoin! To get some Bitcoin into my address, I bought 0.0045 BTC (at the time of writing, around $11 USD) from &lt;a href="https://www.btcmarkets.com"&gt;btcmarkets&lt;/a&gt; using Australian dollars. Using btcmarket's trading portal, I transferred it to the above address, losing 0.0005 BTC to transaction fees in the process. You can see this transaction on the blockchain in transaction &lt;a href="https://blockchain.info/tx/95855ba9f46c6936d7b5ee6733c81e715ac92199938ce30ac3e1214b8c2cd8d7"&gt;95855ba9f46c6936d7b5ee6733c81e715ac92199938ce30ac3e1214b8c2cd8d7&lt;/a&gt;.&lt;/p&gt;
-&lt;h2&gt;Connecting to the p2p network&lt;/h2&gt;
+&lt;h2 id="connecting-to-the-p2p-network"&gt;Connecting to the p2p network&lt;/h2&gt;
 &lt;p&gt;Now that I have an address with some Bitcoin in it, things get more interesting. If I want to send that Bitcoin somewhere else, it's necessary to connect to the Bitcoin peer to peer network.&lt;/p&gt;
-&lt;h3&gt;Bootstrapping&lt;/h3&gt;
+&lt;h3 id="bootstrapping"&gt;Bootstrapping&lt;/h3&gt;
 &lt;p&gt;One of the sticking points I had when first learning about Bitcoin was, given the decentralised nature of the network, how do peers of the network find other peers? Without a centralised authority, how does a Bitcoin client know how to bootstrap and start talking to the rest of the network? &lt;/p&gt;
 &lt;p&gt;As it turns out, idealism submits to practicality and there is the slightest amount of centralisation in the initial peer discovery process. The principle way for a new client to find peers to connect to is to use a DNS lookup to any number of "DNS seed" servers that are maintained by members of the Bitcoin community.&lt;/p&gt;
 &lt;p&gt;It turns out DNS is well suited to this purpose of bootstrapping clients as the DNS protocol, which runs over UDP and is lightweight, is hard to DDoS. IRC was used as a previous bootstrapping method but was discontinued due to its weakness to DDoS attacks.  &lt;/p&gt;
@@ -114,7 +114,7 @@
 
 
 &lt;p&gt;After running this, the address returned was &lt;code&gt;208.67.251.126&lt;/code&gt; which is a friendly peer that I can connect to!&lt;/p&gt;
-&lt;h3&gt;Saying hi to my new peer friend&lt;/h3&gt;
+&lt;h3 id="saying-hi-to-my-new-peer-friend"&gt;Saying hi to my new peer friend&lt;/h3&gt;
 &lt;p&gt;Bitcoin connections between peers are through TCP. Upon connecting to a peer, the beginning handshake message of the Bitcoin protocol is a &lt;em&gt;Version&lt;/em&gt; message. Until peers swap Version messages, no other messages will be accepted. &lt;/p&gt;
 &lt;p&gt;Bitcoin protocol messages are well documented in the &lt;a href="https://bitcoin.org/en/developer-reference"&gt;Bitcoin developer reference&lt;/a&gt;. Using the developer reference as guide, the &lt;a href="https://bitcoin.org/en/developer-reference#version"&gt;version&lt;/a&gt; message can be constructed in Python as the snippet below shows. Most of the data is fairly uninteresting, administrative data which is used to establish the peer connection. If you're interested in more details than the attached comments provide, have a read of the developer reference.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;version&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;70014&lt;/span&gt;
@@ -164,7 +164,7 @@
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;connect&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;node&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;8333&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;send&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_message&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;version&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
-&lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -174,7 +174,7 @@
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;h2&gt;Bitcoin transactions&lt;/h2&gt;
+&lt;h2 id="bitcoin-transactions"&gt;Bitcoin transactions&lt;/h2&gt;
 &lt;p&gt;To transfer Bitcoin it's necessary to broadcast a &lt;em&gt;transaction&lt;/em&gt; to the Bitcoin network.&lt;/p&gt;
 &lt;p&gt;Critically, the most important idea to understand is that the balance of a Bitcoin address is comprised solely by the number of "Unspent Transaction Outputs" (UTXO) that the address can spend. When Bob sends a Bitcoin to Alice, he's really just creating a UTXO that Alice (and only Alice) can later use to create another UTXO and send that Bitcoin on. The balance of a Bitcoin address is therefore defined by the amount of Bitcoin it is able to transfer to another address, rather than the amount of Bitcoin it &lt;em&gt;has&lt;/em&gt;. &lt;/p&gt;
 &lt;p&gt;To emphasize, when someone says that they have X bitcoin, they're really saying that all of the UTXOs that they can spend sum to X bitcoin of value. The distinction is subtle but important, the balance of a Bitcoin address isn't recorded anywhere directly but rather can be found by summing the UTXOs that it can spend. When I came to this realisation it was definitely a "oh, that's how it works!" moment.&lt;/p&gt;
@@ -184,7 +184,7 @@
 &lt;p&gt;Through Script, it's possible to create simple contract based transactions. Script is a basic stack based language with number of operations centred around checking equality of hashes and verifying signatures. Script is not Turing complete and does not have the ability to have any loops. The competing cryptocurrency Ethereum built on this to be able to have "smart contracts", which does have a Turing complete language. There's much debate about the utility, necessity and security of including a Turing complete language in cryptocurrencies but I'll leave that debate to others!&lt;/p&gt;
 &lt;p&gt;In standard terminology, a Bitcoin transaction is made up of inputs and outputs. An input is a UTXO (that is now being spent) and an output is a new UTXO. There can be multiple outputs for a single input but an input needs to be completely spent in a transaction. Any part of an input leftover is claimed by miners as a mining fee. &lt;/p&gt;
 &lt;p&gt;For my toy client I want to be able to send on the Bitcoin previously transferred from an exchange to my &lt;code&gt;FEEDB0BDEADBEEF&lt;/code&gt; address. Using the same process as before, I generated another address using the private key (before padding of) &lt;code&gt;BADCAFEFABC0FFEE&lt;/code&gt;. This generated the address &lt;code&gt;1QGNXLzGXhWTKF3HTSjuBMpQyUYFkWfgVC&lt;/code&gt;. &lt;/p&gt;
-&lt;h3&gt;Creating a raw transaction&lt;/h3&gt;
+&lt;h3 id="creating-a-raw-transaction"&gt;Creating a raw transaction&lt;/h3&gt;
 &lt;p&gt;Creating a transaction is a matter of first packing a "raw transaction" and then signing the raw transaction. Again, the &lt;a href="https://bitcoin.org/en/developer-reference#raw-transaction-format"&gt;developer reference&lt;/a&gt; has a description of what goes into a transaction. What makes up a transaction is shown below but a few notes first:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
@@ -264,27 +264,27 @@
 &lt;p&gt;For the Pubkey script of our transaction, we use a &lt;a href="https://en.bitcoin.it/wiki/Transaction#Pay-to-PubkeyHash"&gt;Pay to Pubkey hash&lt;/a&gt; (or p2pk) script. The script ensures that only the person that holds the public key that hashes to the provided Bitcoin address is able to spend the created output and that a supplied signature has been generated by the person that holds the corresponding private key to the public key.&lt;/p&gt;
 &lt;p&gt;To unlock a transaction that has been locked by a p2pk script, the user provides their public key and a signature of the hash of the raw transaction. The public key is hashed and compared to the address that the script was created with and the signature is verified for the supplied public key. If the hash of the public key and the address are equal, and the signature is verified, the output can be spent.&lt;/p&gt;
 &lt;p&gt;In Bitcoin script operands, the p2pk script looks as follows.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;OP_DUP
-OP_HASH160
-&amp;lt;Length of address in bytes&amp;gt;
-&amp;lt;Bitcoin address&amp;gt;
-OP_EQUALVERIFY
-OP_CHECKSIG
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;OP_DUP&lt;/span&gt;
+&lt;span class="err"&gt;OP_HASH160&lt;/span&gt;
+&lt;span class="err"&gt;&amp;lt;Length of address in bytes&amp;gt;&lt;/span&gt;
+&lt;span class="err"&gt;&amp;lt;Bitcoin address&amp;gt;&lt;/span&gt;
+&lt;span class="err"&gt;OP_EQUALVERIFY&lt;/span&gt;
+&lt;span class="err"&gt;OP_CHECKSIG&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;Converting the operands to their values (these can be found on the &lt;a href="https://en.bitcoin.it/wiki/Script"&gt;wiki&lt;/a&gt;) and inputting the public address (before it has been Base58Check encoded) gives the following script in hex:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;0x76
-0xA9
-0x14
-0xFF33195EC053D6E58D5FD3CC67747D3E1C71B280
-0x88
-0xAC
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;0x76&lt;/span&gt;
+&lt;span class="err"&gt;0xA9&lt;/span&gt;
+&lt;span class="err"&gt;0x14&lt;/span&gt;
+&lt;span class="err"&gt;0xFF33195EC053D6E58D5FD3CC67747D3E1C71B280&lt;/span&gt;
+&lt;span class="err"&gt;0x88&lt;/span&gt;
+&lt;span class="err"&gt;0xAC&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;The address is found using the earlier shown code for deriving an address from a private key, for the private key we're sending to, &lt;code&gt;0xBADCAFEFABC0FFEE&lt;/code&gt;. &lt;/p&gt;
-&lt;h3&gt;Signing the transaction&lt;/h3&gt;
+&lt;h3 id="signing-the-transaction"&gt;Signing the transaction&lt;/h3&gt;
 &lt;p&gt;There are two separate, but somewhat related, uses for the signature script in a (p2pk) transaction:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;The script verifies (unlocks) the UTXO that we are are trying to spend, by providing our public key that hashes to the address that the UTXO has been sent&lt;/li&gt;
@@ -437,7 +437,7 @@ OP_CHECKSIG
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;h3&gt;Publishing the transaction&lt;/h3&gt;
+&lt;h3 id="publishing-the-transaction"&gt;Publishing the transaction&lt;/h3&gt;
 &lt;p&gt;With the transaction packed and signed, it's a matter of telling the network about it. Using a few functions previously defined in this article in &lt;a href="https://github.com/samvrlewis/simple-bitcoin/blob/master/bitcoin_p2p_message_utils.py"&gt;bitcoin_p2p_message_utils.py&lt;/a&gt;,  the below piece of code puts the Bitcoin message header on the transmission and transmits it to a peer. As mentioned earlier, it's first necessary to send a version message to the peer so that it accepts subsequent messages. &lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;connect&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_peer&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; &lt;span class="mi"&gt;8333&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
@@ -450,12 +450,12 @@ OP_CHECKSIG
 &lt;p&gt;In any case, I eventually got it to work and was very excited when I saw that my &lt;a href="https://blockchain.info/tx/ac812978fb87232ed5700fc64e8733546d70eaa4d9aa80cf1d20a3f71bd8d133"&gt;transaction made its way into the blockchain&lt;/a&gt;!! It was a great feeling of accomplishment knowing that my small, dinky, hand crafted transaction will now forever be a part of Bitcoin's ledger. &lt;/p&gt;
 &lt;p&gt;&lt;img alt="transaction success" src="/images/final_transaction.png"&gt;&lt;/p&gt;
 &lt;p&gt;When I submitted the transaction, my transaction fee was actually quite low compared to the median (I used the &lt;a href="https://bitcoinfees.21.co/"&gt;bitcoin fees&lt;/a&gt; website to check) and as such it took around 5 hours for a miner to decide to include it in a block. I checked this by looking at the number of confirmations the transaction had - this is a measure of how many blocks deep the block with the transaction is in. At the time of writing this was at 190 confirmations.. meaning that after the block my transaction is in, there's another 190 blocks. This can be pretty safely considered confirmed, as it would take an impressive attack on the network to rewrite 190 blocks to remove my transaction.&lt;/p&gt;
-&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;h2 id="conclusion"&gt;Conclusion&lt;/h2&gt;
 &lt;p&gt;I hope you've gained some appreciation of how Bitcoin works through reading this article, I know I certainly did during the months it took me to put all of this together! While most of the information presented here isn't too practicably applicable - you'd normally just use a client that does it all for you - I think having a greater understanding of how things work gives you a better appreciation of what's happening under the covers and gives makes you a more confident user of the technology.&lt;/p&gt;
 &lt;p&gt;If you'd like to peruse the code, or play around further with the toy examples, please check out my associated &lt;a href="https://github.com/samvrlewis/simple-bitcoin"&gt;Github repo&lt;/a&gt;. There's a lot of room to explore further in the Bitcoin world, I've only really looked at a very common use case of Bitcoin. There's certainly room out there to do cooler feats than just transferring value between two addresses! I also didn't touch how mining, the process of adding transactions to the blockchain, works.. which is another rabbit hole all together. &lt;/p&gt;
 &lt;p&gt;If you've read this far you might have realised that the 380000 Satoshi (or 0.0038 BTC) that I transferred into &lt;code&gt;1QGNXLzGXhWTKF3HTSjuBMpQyUYFkWfgVC&lt;/code&gt; can, with enough smarts, be taken by anyone.. as the private key for the address exists within this article. I'm very interested to see how long it takes to be transferred away and hope that whoever takes it has the decency to do so using some of the techniques I've detailed here! It'd be pretty lame if you just loaded the private key into a wallet app to take it, but I guess I can't stop you! At the time of writing this amount is worth about $10 USD, but if Bitcoin "goes to the moon" who knows how much it might be worth! &lt;em&gt;(Edit: And it's gone now! Taken by &lt;a href="https://blockchain.info/tx/2685ff794de17cebdf94eb0f111e8b8c03529a9ae628909cef4090663b54e565"&gt;1KgoPFVDNcx7H2VY9bB2dxxP9yNM2Nar1N&lt;/a&gt; after a few hours of posting this article. Well played!)&lt;/em&gt;&lt;/p&gt;
 &lt;p&gt;And just in case you're looking for an address to send Bitcoin to when you're playing around with this stuff, or if you think this post was valuable enough to warrant a tip - my address of &lt;code&gt;18uKa5c9S84tkN1ktuG568CR23vmeU7F5H&lt;/code&gt; is happy to take any small donations! Alternatively, if you want to yell at me about getting anything wrong, I'd love to hear it.&lt;/p&gt;
-&lt;h2&gt;Further resources&lt;/h2&gt;
+&lt;h2 id="further-resources"&gt;Further resources&lt;/h2&gt;
 &lt;p&gt;If you found this article interesting, some further resources to check out:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href="https://www.amazon.com/Mastering-Bitcoin-Unlocking-Digital-Cryptocurrencies/dp/1449374042"&gt;Mastering Bitcoin&lt;/a&gt; is a book that explains the technical details of Bitcoins. I haven't read this completely, but on a skim it looks like it is a wealth of good information.&lt;/li&gt;

@@ -1,5 +1,487 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="https://www.samlewis.me/" rel="alternate"></link><link href="https://www.samlewis.me/feeds/all.atom.xml" rel="self"></link><id>https://www.samlewis.me/</id><updated>2021-07-07T00:00:00+10:00</updated><entry><title>How do Mesh VPNs work? Writing my own VPN tool in Golang to find out</title><link href="https://www.samlewis.me/2021/07/creating-mesh-vpn-tool-for-fun" rel="alternate"></link><published>2021-07-07T00:00:00+10:00</published><updated>2021-07-07T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2021-07-07:/2021/07/creating-mesh-vpn-tool-for-fun</id><summary type="html">&lt;blockquote&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Sam Lewis</title><link href="https://www.samlewis.me/" rel="alternate"></link><link href="https://www.samlewis.me/feeds/all.atom.xml" rel="self"></link><id>https://www.samlewis.me/</id><updated>2022-03-14T00:00:00+10:00</updated><entry><title>Investigating Why Reorgs Happen in Proof of Stake Ethereum</title><link href="https://www.samlewis.me/2022/03/beacon-chain-reorgs" rel="alternate"></link><published>2022-03-14T00:00:00+10:00</published><updated>2022-03-14T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2022-03-14:/2022/03/beacon-chain-reorgs</id><summary type="html">&lt;p&gt;As part of my foray into learning about Ethereum, I started looking into the relatively new Proof of Stake supported &lt;a href="https://ethereum.org/en/upgrades/beacon-chain/"&gt;Beacon Chain&lt;/a&gt; is the main coordinating blockchain for Proof of Stake Ethereum (and is currently running with ~$25 billion USD staked!).&lt;/p&gt;
+&lt;p&gt;In doing so, I was surprised to see that …&lt;/p&gt;</summary><content type="html">&lt;p&gt;As part of my foray into learning about Ethereum, I started looking into the relatively new Proof of Stake supported &lt;a href="https://ethereum.org/en/upgrades/beacon-chain/"&gt;Beacon Chain&lt;/a&gt; is the main coordinating blockchain for Proof of Stake Ethereum (and is currently running with ~$25 billion USD staked!).&lt;/p&gt;
+&lt;p&gt;In doing so, I was surprised to see that there were regular reorganisations (or "reorgs") &lt;a href="https://beaconscan.com/slots-forked"&gt;occurring on the Beacon Chain&lt;/a&gt;, so I decided to investigate to help learn more about the machinations of Ethereum and Proof of Stake. This article is a (slightly meandering) write up of my investigation into why reorgs happen somewhat regularly on the Beacon Chain. It also details some of my learnings along the way about ETH2 in general. If any of that is interest, stick around!&lt;/p&gt;
+&lt;h2 id="what-is-a-reorg-reorgs-in-a-proof-of-work-blockchain"&gt;What Is a Reorg? Reorgs in a Proof of Work blockchain&lt;/h2&gt;
+&lt;p&gt;As a brief bit of background, in a Proof of Work block chain, such as Bitcoin or the current Ethereum main chain, reorgs occur most commonly because miners are effectively racing each other to mine the next block. When two (or more) miners mine a block at similar times the chain forks:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="pow reorgs" src="/images/pow_reorgs.png"&gt;
+These forks are resolved by the fork choice rule that instructs clients to follow the fork with the most mining difficulty behind it (may also be known as the "longest chain" rule). The idea being that eventually a single fork will "win". This is a very simple way of forming consensus but has been shown to work well in Bitcoin, Ethereum and many other Proof of Work blockchains.&lt;/p&gt;
+&lt;p&gt;In this way, the blocks on the "losing" fork are referred to as "reorg"ed blocks as anyone initially following this fork needs to reorganise their chain after they learn that the other fork has "won".&lt;/p&gt;
+&lt;p&gt;On the Proof of Work Ethereum blockchain reorgs happen quite regularly. You can see a list of these reorgs on &lt;a href="https://etherscan.io/blocks_forked"&gt;the etherscan block explorer&lt;/a&gt; but, at a quick glance, they appear to be happening at a rate of around 5 per hour. The rate of reorgs is a function of the block time, which is why they occur more frequently on Ethereum than Bitcoin.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="eth pow reorgs" src="/images/eth_pow_reorgs.png"&gt;
+The reorg depth is how many blocks deep the fork was before the fork was resolved. Just about all the time it's 1 here, which likely occurs similar the scenario above but where one of the forks is chosen in the next block and all miners stick to that fork from then on.&lt;/p&gt;
+&lt;p&gt;If you're interested in learning more about reorgs in a proof of work blockchain, this &lt;a href="https://learnmeabitcoin.com/technical/chain-reorganisation"&gt;article&lt;/a&gt; is informative.&lt;/p&gt;
+&lt;h2 id="proof-of-stake-reorgs"&gt;Proof of Stake Reorgs&lt;/h2&gt;
+&lt;p&gt;Proof of Stake works differently than Proof of Work in that in that validators (who are network participants that have staked ETH) are elected to create blocks, rather than needing to race to create a block. In Ethereum, a particular validator is chosen randomly to create a single block every 12 seconds.&lt;/p&gt;
+&lt;p&gt;Validators are rewarded with ETH for successfully creating blocks, so it is very much in the interest of a validator to have their proposed blocks included in the chain. The current reward for proposing a block that does get included is around 0.025 ETH at the time of writing (~$70 USD). There's a block proposed every 12 seconds and with currently around 308,000 validators, each validator will get to propose a block (on average, because it's randomised) every 42 days or so. So if you mess up and miss your slot it can be a while until you get another chance!&lt;/p&gt;
+&lt;p&gt;One reason a fork &lt;em&gt;could&lt;/em&gt; occur is if a validator were to create and publish more than a single block when it was their turn to create a block. Validators are incentivized not to do this though, by the network "slashing"  their stake if it can be proven that two blocks were created by the same validator for the same period. Looking at the list of &lt;a href="https://beaconcha.in/validators/slashings"&gt;slashings&lt;/a&gt; we can see that slashing occur much less often than reorgs (monthly instead of daily), so this is probably not usually the reason for the reorgs.&lt;/p&gt;
+&lt;p&gt;So then, assuming that proposers aren’t proposing multiple blocks and are attempting to act honestly, why are there still reorgs occurring?&lt;/p&gt;
+&lt;h2 id="a-super-high-level-ethereum-proof-of-stake-overview"&gt;A Super High Level Ethereum Proof Of Stake Overview&lt;/h2&gt;
+&lt;p&gt;There's lots of better resources on eth2, but for the purposes of this article you should know that:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Ethereum validators are people that have "staked" a large amount of ETH to be able to participate in the validating/proposing/attesting process. To actually perform these processes, validators run software such as &lt;a href="https://lighthouse.sigmaprime.io/"&gt;Lighthouse&lt;/a&gt;, &lt;a href="https://github.com/prysmaticlabs/prysm"&gt;Prysm&lt;/a&gt; or &lt;a href="https://docs.teku.consensys.net/en/latest/"&gt;Teku&lt;/a&gt;.&lt;/li&gt;
+&lt;li&gt;Ethereum has the concept of "epochs" and "slots". Every epoch there are 32 slots and in each slot, a single validator is randomly chosen to create a block. Validators fill this block with transactions, and share it with the network.&lt;/li&gt;
+&lt;li&gt;Validators are also assigned to "attest" to one slot each epoch. As part of this attestation, the validator will select what it believes is the head of the chain. These attestations help the network form a consensus on what the state of the chain is.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h2 id="investigation"&gt;Investigation&lt;/h2&gt;
+&lt;p&gt;To investigate, I ran my own Lighthouse beacon node and used the standardized ETH2 HTTP API to listen to new blocks and attestations being announced, with the plan to collect enough data to be able to understand more about why these reorgs were occuring.&lt;/p&gt;
+&lt;p&gt;Over the ETH2 API, the block data is of the form:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="c1"&gt;# the slot of the block&lt;/span&gt;
+  &lt;span class="s2"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;3332233&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; 
+  &lt;span class="c1"&gt;# the hash of the block&lt;/span&gt;
+  &lt;span class="s2"&gt;&amp;quot;block&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;0x1dd45a53936a86a167e5e676dc52fef732290f45cd1ed861137ea4d7eba43646&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Whereas attestations are of the form:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;
+  &lt;span class="c1"&gt;# an aggregation of other validators who are attesting the same thing in the slot&lt;/span&gt;
+  &lt;span class="s2"&gt;&amp;quot;aggregation_bits&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;0x00000000000000000000000400000000000080&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+  &lt;span class="s2"&gt;&amp;quot;data&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="c1"&gt;# the slot of this attestation&lt;/span&gt;
+    &lt;span class="s2"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;3338073&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+    &lt;span class="c1"&gt;# the committee this validator is attesting as part of&lt;/span&gt;
+    &lt;span class="s2"&gt;&amp;quot;index&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;9&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; 
+    &lt;span class="c1"&gt;# the attester&amp;#39;s vote for the head of the chain&lt;/span&gt;
+    &lt;span class="s2"&gt;&amp;quot;beacon_block_root&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;0x576513f60421f8aa0a4fa05bba137305cbe100cffac6afcf7c7822364b13fbff&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; 
+    &lt;span class="c1"&gt;# (snipped some data around voting for &amp;quot;checkpoints&amp;quot;)&lt;/span&gt;
+  &lt;span class="p"&gt;},&lt;/span&gt;
+  &lt;span class="c1"&gt;# the signature of the attester - to prove that they really submitted this attestation&lt;/span&gt;
+  &lt;span class="s2"&gt;&amp;quot;signature&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;0xa62ba00daa2096ed24242d358f775b729fa291c6f08dafd26e663cb83b8e7884c432850bc769e436250fb60e072cc43f01d64784aaee935b4bb395d6f9b16ddb26fce05f1bf4043bb3989f6336f3f18ad72b98a79684abee4b73b4cfc7c185bd&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;For around 20 hours I ran a simple script that basically collected all the blocks and attestations published to the network along with their arrival time to my computer.&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;messages&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;SSEClient&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;http://localhost:5052/eth/v1/events?topics=block&amp;amp;attestation&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="n"&gt;blocks_log&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;blocks.json&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;a&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="n"&gt;attestations_log&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;open&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;attestations.json&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;a&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+&lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;msg&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;messages&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;message&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;json&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;loads&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;msg&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;arrival&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;round&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;time&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mi"&gt;1000&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;msg&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;event&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;block&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="n"&gt;blocks_log&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;json&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dumps&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="se"&gt;\\&lt;/span&gt;&lt;span class="s2"&gt;n&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="k"&gt;elif&lt;/span&gt; &lt;span class="n"&gt;msg&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;event&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;attestation&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="n"&gt;attestations_log&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;write&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;json&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;dumps&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;message&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="se"&gt;\\&lt;/span&gt;&lt;span class="s2"&gt;n&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;This collected 5912 blocks and 3418459 attestations.&lt;/p&gt;
+&lt;h2 id="finding-reorgs"&gt;Finding Reorgs&lt;/h2&gt;
+&lt;p&gt;With the logged block messages, we can find blocks that are not part of the main chain with a simple algorithm that starts at the most recently collected block and works backwards, using each blocks parent. Any blocks that don’t get visited will be the reorged blocks. Because we're not doing this live, we can do this while being sure that our most recently collected block isn't t a reorged block itself (by manually checking this). In the live system, beacon chain nodes don't get this luxury as they can't see into the future!&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_block_info&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;block_hash&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nb"&gt;str&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;bn_api_url&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nb"&gt;str&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="nb"&gt;dict&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="n"&gt;resp&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;requests&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;get&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;f&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="si"&gt;{&lt;/span&gt;&lt;span class="n"&gt;bn_api_url&lt;/span&gt;&lt;span class="si"&gt;}&lt;/span&gt;&lt;span class="s2"&gt;/eth/v1/beacon/headers/&lt;/span&gt;&lt;span class="si"&gt;{&lt;/span&gt;&lt;span class="n"&gt;block_hash&lt;/span&gt;&lt;span class="si"&gt;}&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="n"&gt;resp&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;raise_for_status&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;resp&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;json&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;find_reorged_blocks&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;blocks&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nb"&gt;list&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;bn_api_url&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="nb"&gt;str&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+&lt;span class="sd"&gt;    Finds blocks that aren&amp;#39;t part of the main chain.&lt;/span&gt;
+
+&lt;span class="sd"&gt;    blocks: list of block objects, each with a &amp;#39;slot&amp;#39; and a &amp;#39;block&amp;#39; field&lt;/span&gt;
+&lt;span class="sd"&gt;    bn_api_url: url of the beacon node api&lt;/span&gt;
+&lt;span class="sd"&gt;    &amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+    &lt;span class="n"&gt;block_map&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="n"&gt;block&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;block&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="kc"&gt;False&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;block&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;blocks&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# Assume the most recent block we have is the head and is not a reorged block.&lt;/span&gt;
+    &lt;span class="n"&gt;last_block_on_chain&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;last_slot&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;blocks&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;block&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="n"&gt;blocks&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# The list of blocks might have some missing blocks (because of&lt;/span&gt;
+    &lt;span class="c1"&gt;# interruptions in the data collection process) so we iterate until we&amp;#39;re at&lt;/span&gt;
+    &lt;span class="c1"&gt;# the last slot we know about&lt;/span&gt;
+    &lt;span class="n"&gt;min_slot&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;blocks&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;])&lt;/span&gt;
+    &lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;last_slot&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;=&lt;/span&gt; &lt;span class="n"&gt;min_slot&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="c1"&gt;# mark this block as visited, it&amp;#39;s on the chain!&lt;/span&gt;
+        &lt;span class="n"&gt;block_map&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;last_block_on_chain&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="kc"&gt;True&lt;/span&gt;
+
+        &lt;span class="n"&gt;block_info&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;get_block_info&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;last_block_on_chain&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;bn_api_url&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;parent&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;block_info&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;data&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;header&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;message&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;parent_root&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="n"&gt;parent_slot&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;block_info&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;data&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;header&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;message&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+
+        &lt;span class="n"&gt;last_block_on_chain&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;last_slot&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;parent&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;parent_slot&lt;/span&gt;
+
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;block&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;block&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;block_map&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="ow"&gt;not&lt;/span&gt; &lt;span class="n"&gt;block_map&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;block&lt;/span&gt;&lt;span class="p"&gt;]]&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Running this against my list of 5615 collected blocks I got the following blocks as blocks not on the main chain:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Slot&lt;/th&gt;
+&lt;th&gt;Hash&lt;/th&gt;
+&lt;th&gt;Notes&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;3345326&lt;/td&gt;
+&lt;td&gt;0xfc54ca25f7df62e9f3b24d8fb9fa6b21ec5bc2d312107ce29a48ba2d6b7188c3&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3344246&lt;/td&gt;
+&lt;td&gt;0xa3b0a48f6cbd0a7ca7e6337e4b939a146e2e91fa7f275ebf75dcaf0630b95ee6&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3344244&lt;/td&gt;
+&lt;td&gt;0x5862cb53788db14b989df390199d69aaebd694894183e152ccfae9bf0df283f6&lt;/td&gt;
+&lt;td&gt;Marked as skipped &lt;a href="https://beaconscan.com/slots?epoch=104507"&gt;beaconscan&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3343277&lt;/td&gt;
+&lt;td&gt;0xe2c00aabfc8d584d122518d32e58d8f317f6326205df9ed8b488486a971eef52&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340911&lt;/td&gt;
+&lt;td&gt;0x6a1adc86f899d66ac8b0cd2848b03112d5a25da3f9feb3e3a320585c4535c683&lt;/td&gt;
+&lt;td&gt;I never received this block but it's marked as reorged on &lt;a href="https://beaconscan.com/slot?hash=0x6a1adc86f899d66ac8b0cd2848b03112d5a25da3f9feb3e3a320585c4535c683"&gt;beaconscan&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3342234&lt;/td&gt;
+&lt;td&gt;0x5d97817910ad60452dba75b3cf92890324194ec65bb2c2a0ac484f970b3280ca&lt;/td&gt;
+&lt;td&gt;Marked as skipped on &lt;a href="https://beaconscan.com/slots?epoch=3340911"&gt;beaconscan&lt;/a&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340347&lt;/td&gt;
+&lt;td&gt;0x977491737cb0f60b6f5c1a21d5745162f9a649bc031f467a591a703613927e02&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340161&lt;/td&gt;
+&lt;td&gt;0x4cc45ee812f161b6eb478e292b9cc19f05f7e954d6d158dd5a503acf734448ee&lt;/td&gt;
+&lt;td&gt;&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Checking this against &lt;a href="https://beaconscan.com/slots-forked"&gt;BeaconScan&lt;/a&gt; the list looks pretty good, with the exception of slot &lt;code&gt;3340911&lt;/code&gt; which looks like it wasn't collected by my event listener. There were also a few slots that BeaconScan marked as skipped but I saw blocks for. These discrepancies are interesting, and potentially give a clues towards why these blocks were not included.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="beacon scan reorgs" src="/images/beaconscan_reorgs.png"&gt;
+Finding information about reorged blocks was actually kind of tricky because beacon chain node implementations seem to prune reorged blocks out of their block storage. This make sense to do as once you're certain that a block isn't part of the main chain it is isn't useful to keep around. However, it does make this sort of investigation harder! For finding parents of these reorged blocks, I relied on block explorers like BeaconChain to find the data. &lt;/p&gt;
+&lt;h3 id="slot-3340161"&gt;Slot 3340161&lt;/h3&gt;
+&lt;p&gt;Starting the investigation by first examining the oldest reorged block: the block proposed at slot &lt;a href="https://beaconscan.com/slot/3340161"&gt;3340161&lt;/a&gt;. This block has a parent of the block proposed at slot 3340160, however the block at 3340162 also has the same parent. From inspecting how this fork was resolved by looking at the state now, we can see that the end result of this fork was something like this, with the block at slot 3340161 being reorged:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Forked slots" src="/images/fork1.png"&gt;&lt;/p&gt;
+&lt;p&gt;My suspicion here is that 3340161 might have be sent "late" and wasn't received by the proposer of 3340162 in time. Looking at my log of blocks and their arrival time lends some credence to this theory:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nt"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;3340158&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nt"&gt;&amp;quot;arrival&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;1646905919766&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nt"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;3340159&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nt"&gt;&amp;quot;arrival&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;1646905932380&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nt"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;3340160&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nt"&gt;&amp;quot;arrival&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;1646905946542&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nt"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;3340161&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nt"&gt;&amp;quot;arrival&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;1646905964624&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nt"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;3340162&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nt"&gt;&amp;quot;arrival&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;1646905968938&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nt"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;3340163&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nt"&gt;&amp;quot;arrival&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;1646905981605&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;&lt;span class="nt"&gt;&amp;quot;slot&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="s2"&gt;&amp;quot;3340164&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="nt"&gt;&amp;quot;arrival&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="mi"&gt;1646905991401&lt;/span&gt;&lt;span class="p"&gt;}&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;Which can be summarized as (reorged slot is &lt;strong&gt;bolded&lt;/strong&gt;):&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Slot&lt;/th&gt;
+&lt;th&gt;Time from last slot (ms)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;3340159&lt;/td&gt;
+&lt;td&gt;12614&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340160&lt;/td&gt;
+&lt;td&gt;14162&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;3340161&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;18082&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340162&lt;/td&gt;
+&lt;td&gt;4314&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340163&lt;/td&gt;
+&lt;td&gt;12667&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340164&lt;/td&gt;
+&lt;td&gt;9796&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;Blocks are supposed to be produced every 12 seconds, so I think you'd expect the delay between blocks to be around 12 seconds. Indeed, looking at a histogram of the time between received blocks, we see a big spike around the 12s mark.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Time between beacon node blocks" src="/images/delaydist.png"&gt;&lt;/p&gt;
+&lt;p&gt;This is, of course, only showing my particular view of the network and because of the distributed nature of the system, other nodes might be seeing very different message arrival times. Still, it's all I have to work with so I'll use my view of the network as an approximation of what other nodes would have likely seen as well. &lt;/p&gt;
+&lt;p&gt;Given that, it does make some sense that the proposer of 3340162 has built their block on top of 3340160 instead of 3340161. A validator knows it has to meet slot deadlines (remembering a new block needs to be produced every 12 seconds), so will start building it on top of the last block it has received and verified. In this case, it seems like this block was 3340160.&lt;/p&gt;
+&lt;p&gt;Once we get to the next slot, 3340163, the validator chosen to produce a block a choice to make. The validator has had enough time to receive &lt;strong&gt;both&lt;/strong&gt; 3340161 and 3340162 and needs to pick which block to build this block on top of. So why did it choose to build its block on top of 3340162 and not 3340161?&lt;/p&gt;
+&lt;p&gt;Looking at the ethereum 2 beacon chain specification (that is written in Python! Executable specifications are pretty cool) for the fork_choice &lt;a href="https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#get_head"&gt;&lt;code&gt;get_head&lt;/code&gt; function&lt;/a&gt; gives a clue:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;get_head&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;store&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;Store&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&amp;gt;&lt;/span&gt; &lt;span class="n"&gt;Root&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+    &lt;span class="c1"&gt;# Get filtered block tree that only includes viable branches&lt;/span&gt;
+    &lt;span class="n"&gt;blocks&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;get_filtered_block_tree&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;store&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="c1"&gt;# Execute the LMD-GHOST fork choice&lt;/span&gt;
+    &lt;span class="n"&gt;head&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;store&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;justified_checkpoint&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;root&lt;/span&gt;
+    &lt;span class="k"&gt;while&lt;/span&gt; &lt;span class="kc"&gt;True&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="n"&gt;children&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;[&lt;/span&gt;
+            &lt;span class="n"&gt;root&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;root&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;blocks&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;keys&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+            &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;blocks&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;root&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;parent_root&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="n"&gt;head&lt;/span&gt;
+        &lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;children&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+            &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;head&lt;/span&gt;
+        &lt;span class="c1"&gt;# Sort by latest attesting balance with ties broken lexicographically&lt;/span&gt;
+        &lt;span class="c1"&gt;# Ties broken by favoring block with lexicographically higher root&lt;/span&gt;
+        &lt;span class="n"&gt;head&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;max&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;children&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;key&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="k"&gt;lambda&lt;/span&gt; &lt;span class="n"&gt;root&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;get_latest_attesting_balance&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;store&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;root&lt;/span&gt;&lt;span class="p"&gt;),&lt;/span&gt; &lt;span class="n"&gt;root&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;This code, as I understand it, will walk the chain until it comes to a fork. When it comes to a fork (like we have in the scenario above) it will choose the block that has the most attestation stake behind it.&lt;/p&gt;
+&lt;p&gt;Luckily we also collected attestations so we can try to verify this! But first some background on the attestation data that we collected: to decrease the network and processing load of thousands of individual attestations flying around the network, validators are divided up into &lt;em&gt;committees&lt;/em&gt; to perform the attestations. Validators communicate their attestations to other validators within their committee, and select validators are selected to aggregate these attestations globally. These aggregations are stored in the &lt;code&gt;aggregation_bits&lt;/code&gt; field of the aggregations messaged we received, so to find the total support for a particular head there's a little extra processing needed:&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;calculate_head_attestation_votes&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;attestations&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="sd"&gt;&amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+&lt;span class="sd"&gt;    Takes an array of attestation objects (as returned by the Beacon API) for a&lt;/span&gt;
+&lt;span class="sd"&gt;    particular slot and returns a dictionary of head : number of votes&lt;/span&gt;
+&lt;span class="sd"&gt;    &amp;quot;&amp;quot;&amp;quot;&lt;/span&gt;
+    &lt;span class="c1"&gt;# Mapping of: head -&amp;gt; committee index -&amp;gt; votes&lt;/span&gt;
+    &lt;span class="n"&gt;attestation_aggregations_by_committee&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;defaultdict&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;lambda&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt; &lt;span class="n"&gt;defaultdict&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# Multiple attestations might have the same aggregation bits set, so we need&lt;/span&gt;
+    &lt;span class="c1"&gt;# to OR them together to avoid double counting&lt;/span&gt;
+    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;attestation&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;attestations&lt;/span&gt;&lt;span class="p"&gt;:&lt;/span&gt;
+        &lt;span class="n"&gt;aggregate&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;attestation&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;aggregation_bits&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="c1"&gt;# This is what this attestation is voting as the head of the chain&lt;/span&gt;
+        &lt;span class="n"&gt;head&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;attestation&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;data&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;beacon_block_root&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="c1"&gt;# The particular committee this aggregation is part of&lt;/span&gt;
+        &lt;span class="n"&gt;index&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;attestation&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;data&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;index&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt;
+        &lt;span class="n"&gt;attestation_aggregations_by_committee&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;head&lt;/span&gt;&lt;span class="p"&gt;][&lt;/span&gt;&lt;span class="n"&gt;index&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;|=&lt;/span&gt; &lt;span class="n"&gt;aggregate&lt;/span&gt;
+
+    &lt;span class="n"&gt;attestation_head_votes&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;defaultdict&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+
+    &lt;span class="c1"&gt;# sum the aggregations to get the total number of votes for each head each&lt;/span&gt;
+    &lt;span class="c1"&gt;# bit in the aggregate represents a particular validator&amp;#39;s vote&lt;/span&gt;
+    &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;head&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;aggregations&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;attestation_aggregations_by_committee&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;items&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+        &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;_&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;aggregate&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;aggregations&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;items&lt;/span&gt;&lt;span class="p"&gt;():&lt;/span&gt;
+            &lt;span class="n"&gt;attestation_head_votes&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;head&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;+=&lt;/span&gt; &lt;span class="n"&gt;aggregate&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;bit_count&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;attestation_head_votes&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;This code basically sums up the aggregations we've received so we can find the total support for each particular head. (I manually filtered out aggregations for individual slots with a little &lt;code&gt;jq&lt;/code&gt; scripting: &lt;code&gt;jq -c 'select(.data.slot=="&amp;lt;slot&amp;gt;")' &amp;lt; attestations.json &amp;gt; attestations_for_slot.json&lt;/code&gt;).&lt;/p&gt;
+&lt;p&gt;&lt;code&gt;beacon_block_root&lt;/code&gt; here is what the validator is voting as the head of the chain at that point of time, so running this script to see how validators were attesting for the slots of interest.&lt;/p&gt;
+&lt;p&gt;First, looking at the attestations for the &lt;strong&gt;3340161&lt;/strong&gt; slot:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Slot &lt;code&gt;beacon_block_root&lt;/code&gt; vote&lt;/th&gt;
+&lt;th&gt;Count&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;3340160&lt;/td&gt;
+&lt;td&gt;5430&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;And then looking at the attestations for the &lt;strong&gt;3340162&lt;/strong&gt; slot:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Slot &lt;code&gt;beacon_block_root&lt;/code&gt; vote&lt;/th&gt;
+&lt;th&gt;Count&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;3340162&lt;/td&gt;
+&lt;td&gt;6384&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340160&lt;/td&gt;
+&lt;td&gt;36&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340161&lt;/td&gt;
+&lt;td&gt;7&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340122&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340156&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;These two tables are really quite informative because they show:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;In the slot that the &lt;strong&gt;3340161&lt;/strong&gt; block was produced, there was not a single attestation for that block. All attestations were for the block in the previous slot.&lt;/li&gt;
+&lt;li&gt;In the next slot, there are attestations for the &lt;strong&gt;3340161&lt;/strong&gt; block, but there are a lot more for the block that was produced in the same slot.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Again the &lt;a href="https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/validator.md#attesting"&gt;spec&lt;/a&gt; is illustrative in making sense of what might be going on here:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;A validator should create and broadcast the &lt;code&gt;attestation&lt;/code&gt; to the associated attestation subnet when either (a) the validator has received a valid block from the expected block proposer for the assigned &lt;code&gt;slot&lt;/code&gt; or (b) &lt;code&gt;1 / INTERVALS_PER_SLOT&lt;/code&gt; of the &lt;code&gt;slot&lt;/code&gt; has transpired (&lt;code&gt;SECONDS_PER_SLOT / INTERVALS_PER_SLOT&lt;/code&gt; seconds after the start of &lt;code&gt;slot&lt;/code&gt;) -- whichever comes &lt;em&gt;first&lt;/em&gt;.&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;So, we can probably reasonably guess that: &lt;/p&gt;
+&lt;p&gt;In slot &lt;strong&gt;3340161&lt;/strong&gt; it's likely no validators had received the 3340161 block, so all attested that the head of the chain was the &lt;strong&gt;3340160&lt;/strong&gt; block. We can plot the arrival time of the block compared to the arrival time of the attestations for this slot, relative to the start of the slot to make extra sure (again with the caveat that this only represents my view of the distributed network, other participants likely saw a slightly different view):&lt;/p&gt;
+&lt;p&gt;&lt;img alt="attestation delays" src="/images/61delays.png"&gt;
+The dashed line here represents when we received the block for this slot, whereas the red bars show a distribution of when we received attestations for this slot. &lt;code&gt;INTERVALS_PER_SLOT&lt;/code&gt; is currently &lt;code&gt;3&lt;/code&gt; so validators should wait only 4 seconds (12/3) before publishing an attestation if they haven't received the block from the proposer. There are, however, a considerable attestations received after a longer amount of time, which might be because of delays in me receiving the attestations or perhaps could mean that the validators aren't perfectly following the spec. It is curious that there's a big spike of attestations arrived &lt;em&gt;after&lt;/em&gt; the (quite block) arrives but given that no validators seemed to attest to the late block, it seems likely that it might just be because of network delays.&lt;/p&gt;
+&lt;p&gt;In slot &lt;strong&gt;3340162&lt;/strong&gt; we have a few different attestations for the head:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Attestations for &lt;strong&gt;3340162&lt;/strong&gt;: these are probably validators that received this block before &lt;code&gt;SECONDS_PER_SLOT / INTERVALS_PER_SLOT&lt;/code&gt; . These attestations are essentially picking this block over the &lt;strong&gt;3340161&lt;/strong&gt; block. At this stage, to these proposers, we can infer that both the &lt;strong&gt;3340161&lt;/strong&gt; and &lt;strong&gt;3340162&lt;/strong&gt; blocks have no attestations, as the fork choice rule says to pick the lexicographically higher root.&lt;/li&gt;
+&lt;li&gt;Attestations for &lt;strong&gt;3340160&lt;/strong&gt;: these are probably validators that didn't yet receive the &lt;strong&gt;3340162&lt;/strong&gt; or &lt;strong&gt;3340161&lt;/strong&gt; block so are voting for the last block they know about.&lt;/li&gt;
+&lt;li&gt;Attestations for &lt;strong&gt;3340161&lt;/strong&gt;: I think these are validators that are, at this point in time, following the "3340161 fork". I think this might be because they've received this block and haven't received &lt;strong&gt;3340162&lt;/strong&gt; or perhaps because they &lt;em&gt;have&lt;/em&gt; received attestations for &lt;strong&gt;3340161&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;Other attestations: Not really sure why these validators are voting for such old blocks as the head. Maybe they are experiencing network or processing issues and are really far behind?&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Some other thoughts:
+- I think that the &lt;strong&gt;3340161&lt;/strong&gt; block being late is likely the reason that the attestations aren't split at all for that block - with that block being late, all validators effectively have an extra slot time to receive the proceeding block so can all agree it is the up to date head. There's also probably an element of luck involved, the next block has some fairly "wrong" votes in it.
+- With ~312k current validators, there should be about 312k/32 = ~9700 attestations per slot. I'm not totally sure why I get a bit less than this amount, but I suppose it could be because my node couldn't keep up with the amount of attestations or perhaps it could mean that some validators were missed in the aggregated data. 
+- It's a little curious that we see 7 validators following the "3340161 fork". I suspect (but really have no way of checking) that these validators received an attestations for this block before they made their attestations. Maybe this is because some small set of the network was able to receive this block without much delay.&lt;/p&gt;
+&lt;p&gt;Overall it's pretty neat that the protocol is able to resolve and move past the the problematic late block, essentially by skipping over it!&lt;/p&gt;
+&lt;h3 id="slot-3340347"&gt;Slot 3340347&lt;/h3&gt;
+&lt;p&gt;Lets then look at the next forked block, which was the block produced in slot 3340347. This fork looks slightly different to the last fork, in that the later block is the reorged block, not the earlier block:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="forked blocks" src="/images/fork2.png"&gt;&lt;/p&gt;
+&lt;p&gt;Looking first at block arrival times:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Slot&lt;/th&gt;
+&lt;th&gt;Time from last slot (ms)&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;3340345&lt;/td&gt;
+&lt;td&gt;13304&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340346&lt;/td&gt;
+&lt;td&gt;22950&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;&lt;strong&gt;3340347&lt;/strong&gt;&lt;/td&gt;
+&lt;td&gt;557&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340348&lt;/td&gt;
+&lt;td&gt;11481&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340349&lt;/td&gt;
+&lt;td&gt;13332&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;This is different to the previous case in that this block appears to have not actually been that slow to arrive, relative to the last block. The previous block &lt;em&gt;was&lt;/em&gt; slow to arrive though!&lt;/p&gt;
+&lt;p&gt;Looking again at the attestations for the slots:&lt;/p&gt;
+&lt;p&gt;The &lt;strong&gt;3340345&lt;/strong&gt; slot:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Slot &lt;code&gt;beacon_block_root&lt;/code&gt; vote&lt;/th&gt;
+&lt;th&gt;Count&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;3340345&lt;/td&gt;
+&lt;td&gt;9667&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340344&lt;/td&gt;
+&lt;td&gt;2&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;The &lt;strong&gt;3340346&lt;/strong&gt; slot:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Slot &lt;code&gt;beacon_block_root&lt;/code&gt; vote&lt;/th&gt;
+&lt;th&gt;Count&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;3340345&lt;/td&gt;
+&lt;td&gt;7772&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;The &lt;strong&gt;3340347&lt;/strong&gt; slot:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Slot &lt;code&gt;beacon_block_root&lt;/code&gt; vote&lt;/th&gt;
+&lt;th&gt;Count&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;3340346&lt;/td&gt;
+&lt;td&gt;6063&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340345&lt;/td&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;The &lt;strong&gt;3340348&lt;/strong&gt; slot:&lt;/p&gt;
+&lt;table&gt;
+&lt;thead&gt;
+&lt;tr&gt;
+&lt;th&gt;Slot &lt;code&gt;beacon_block_root&lt;/code&gt; vote&lt;/th&gt;
+&lt;th&gt;Count&lt;/th&gt;
+&lt;/tr&gt;
+&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;
+&lt;td&gt;3340348&lt;/td&gt;
+&lt;td&gt;4333&lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+&lt;td&gt;3340346&lt;/td&gt;
+&lt;td&gt;4&lt;/td&gt;
+&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+&lt;p&gt;So the reconstructed timeline is:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;&lt;strong&gt;3340345&lt;/strong&gt; is created on schedule and the vast majority of validators attest to this block&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;3340346&lt;/strong&gt; is created with some delays, no validators receive it in this block so all attest that &lt;strong&gt;3340345&lt;/strong&gt; is the current head&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;3340347&lt;/strong&gt; is created, building off of &lt;strong&gt;3340345&lt;/strong&gt;, likely because the proposer didn't receive &lt;strong&gt;3340346&lt;/strong&gt; in time. No attesters attest to &lt;strong&gt;3340347&lt;/strong&gt; and instead all attest to  &lt;strong&gt;3340346&lt;/strong&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;3340348&lt;/strong&gt; builds off the head of the chain, which in this case is  &lt;strong&gt;3340346&lt;/strong&gt; as it has attestations whereas  &lt;strong&gt;3340347&lt;/strong&gt; does not.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;This is a little weird to me, I don't completely understand why at the &lt;strong&gt;3340347&lt;/strong&gt; slot there was not a single validator who voted for the block produced at &lt;strong&gt;3340347&lt;/strong&gt;. I initially thought that this might be due to the block arriving later than it should, so plotted the arrival time of the block relative to the attestations:&lt;/p&gt;
+&lt;p&gt;&lt;img alt="arrival times" src="/images/47delays.png"&gt;
+This time the block is &lt;em&gt;not&lt;/em&gt; later than the 4 second &lt;code&gt;SECONDS_PER_SLOT / INTERVALS_PER_SLOT&lt;/code&gt; deadline, and it looks like the validators have waited for the block before sending out attestations.&lt;/p&gt;
+&lt;p&gt;Unfortunately, I don't have a good handle on why the network didn't choose the  &lt;strong&gt;3340347&lt;/strong&gt; block when choosing the fork to follow. Reading through the specification, the fork choice appears to dictate that this block should be chosen and even incentived to be chosen, through the &lt;a href="https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#get_latest_attesting_balance"&gt;&lt;code&gt;proposer_boost_root&lt;/code&gt;&lt;/a&gt; mechanism that 'boosts' blocks that arrive on time.&lt;/p&gt;
+&lt;p&gt;In my understanding, the only reasons for this block to not be chosen are either:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;My view of the network was significantly different to what the rest of the network saw. Perhaps the &lt;strong&gt;3340347&lt;/strong&gt; block was delayed for all other participants.&lt;/li&gt;
+&lt;li&gt;The &lt;strong&gt;3340347&lt;/strong&gt; block did not pass the &lt;a href="https://github.com/ethereum/consensus-specs/blob/dev/specs/phase0/fork-choice.md#filter_block_tree"&gt;filter_block_tree&lt;/a&gt; check. I believe this could have been because it had a different finalized or justified checkpoint to what the rest of the network agrees upon.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Unfortunately, with the data I have, I'm not quite sure how to definitively prove or discover which of the two options caused this block to not included in the chain. The contents of this block is (as far as I can find) no longer available, due to beacon nodes pruning it from their history. &lt;/p&gt;
+&lt;p&gt;The rest of the reorged blocks in my log seem to have very similar symptoms to this block, in that:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The reorged block follows a delayed block&lt;/li&gt;
+&lt;li&gt;The reorged block creates fork to be created, most likely because they didn't receive the preceeding block in time&lt;/li&gt;
+&lt;li&gt;The network follows the earlier block instead of the later block&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I think there most likely must be a possibility that I'm missing here as I don't think it's coincidence that these reorgs seem to happen under the same circumstances. It seems unlikely that each of these blocks were skipped by &lt;code&gt;filter_block_tree&lt;/code&gt; or that my view of the network was considerably different to the rest of the network each time. &lt;/p&gt;
+&lt;h2 id="conclusion"&gt;Conclusion&lt;/h2&gt;
+&lt;p&gt;I learnt a lot about how attestation works on the beacon chain while investigating this, despite not completely solving the mystery of why exactly there are some reorged blocks.&lt;/p&gt;
+&lt;p&gt;To continue this investigation, maybe it would make sense to:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Have more collectors logging data, possibly on compute instances geographically distributed. This should allow me to get a better sense of what the rest of the network sees.&lt;/li&gt;
+&lt;li&gt;Log the contents of blocks, to better discover why nodes skip over them.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;If anyone has any theories on what might've happened in the second reorged block (and the other, similar, reorged blocks), please let me know!&lt;/p&gt;</content></entry><entry><title>Creating a mesh VPN tool for fun and learning</title><link href="https://www.samlewis.me/2021/07/creating-mesh-vpn-tool-for-fun" rel="alternate"></link><published>2021-07-07T00:00:00+10:00</published><updated>2021-07-07T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2021-07-07:/2021/07/creating-mesh-vpn-tool-for-fun</id><summary type="html">&lt;blockquote&gt;
 &lt;p&gt;tldr: I created a mesh VPN networking tool named &lt;strong&gt;meshboi&lt;/strong&gt; which you can checkout &lt;a href="https://github.com/samvrlewis/meshboi"&gt;on my github&lt;/a&gt;! This post walks through the 'magic' behind mesh VPN tools, using &lt;strong&gt;meshboi&lt;/strong&gt; as an example.&lt;/p&gt;
 &lt;/blockquote&gt;
 &lt;p&gt;Mesh VPN tools, such as &lt;a href="https://github.com/slackhq/nebula"&gt;Nebula&lt;/a&gt;, &lt;a href="https://tailscale.com/"&gt;Tailscale&lt;/a&gt;, &lt;a href="https://www.zerotier.com/"&gt;Zerotier&lt;/a&gt; and &lt;a href="https://www.tinc-vpn.org/"&gt;Tinc&lt;/a&gt;, facilitate the creation of peer to peer (mesh …&lt;/p&gt;</summary><content type="html">&lt;blockquote&gt;
@@ -15,13 +497,13 @@
 &lt;p&gt;The mesh model is in contrast to traditional “star” VPN solutions, such as OpenVPN or StrongSwan. In a star VPN, traffic between peers needs to pass through a central VPN server, which increases latency and reduces scalability (the central server can only handle so much traffic). The image below shows a simplified high level view of the VPN types. A mesh VPN facilitates direct connections between peers, whereas a star requires connections to go through a central server.&lt;/p&gt;
 &lt;p&gt;&lt;img alt="" src="/images/meshboi_meshvsstar.png"&gt;
 It's worth making a quick side note on the use of "VPN" here. In this case, VPN is meant to mean a network of peers over the internet that can communicate amongst each other. This is different to “consumer” VPN products (such as NordVPN or Private Internet Access) that are used for privacy and/or to avoid geographic website blocks. For these VPN products, the VPN server is effectively used as a gateway for clients to connect to the broader internet through. Peers on these networks generally do not and cannot connect to each other. For the rest of this post I'll exclusively focus on the first kind of VPN, which lets peers communicate.&lt;/p&gt;
-&lt;h2&gt;Introducing.. Meshboi! &lt;img alt="logo" src="https://user-images.githubusercontent.com/3880246/124463187-dd916d00-ddd5-11eb-8e0a-923629365637.png" style="display:inline;border:0px"&gt;&lt;/h2&gt;
+&lt;h2 id="introducing-meshboi"&gt;Introducing.. Meshboi! &lt;img alt="logo" src="https://user-images.githubusercontent.com/3880246/124463187-dd916d00-ddd5-11eb-8e0a-923629365637.png" style="display:inline;border:0px"&gt;&lt;/h2&gt;
 &lt;p&gt;There’s a bunch of interesting problems to solve in creating one of these tools, so I thought it’d be fun to create my own mesh VPN tool to learn more about how they work. While there’s a lot of complexity in creating a mesh VPN that is secure, performant and works across 100% of network configurations, creating something that isn’t as robust, for the purposes of fun and learning, is definitely doable.&lt;/p&gt;
 &lt;p&gt;The tool I created is named &lt;strong&gt;meshboi&lt;/strong&gt; and if you want to jump straight to the source code, you can find it &lt;a href="https://github.com/samvrlewis/meshboi"&gt;on my github&lt;/a&gt;. Meshboi is written in Go and was created purely for the purposes of fun and learning (so please use one of the other fantastic tools for running production things on!). &lt;/p&gt;
 &lt;p&gt;The below asciinema recording shows a simple demo of meshboi, showing how it enables communication between two physically separated computers, both behind NAT and firewalls, that are only connected via the internet.&lt;/p&gt;
 &lt;script id="asciicast-RbxcLLpLIzryIcX5S3qC9gQYd" src="https://asciinema.org/a/RbxcLLpLIzryIcX5S3qC9gQYd.js" async&gt;&lt;/script&gt;
 
-&lt;h2&gt;Why is this hard?&lt;/h2&gt;
+&lt;h2 id="why-is-this-hard"&gt;Why is this hard?&lt;/h2&gt;
 &lt;p&gt;There are a few core problems to solve when creating a tool like this.&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
@@ -41,14 +523,14 @@ It's worth making a quick side note on the use of "VPN" here. In this case, VPN 
 &lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;I’ll go more into the details of each of these problems, and how meshboi (and mesh VPN tools in general) solve them.&lt;/p&gt;
-&lt;h3&gt;Discoverability&lt;/h3&gt;
+&lt;h3 id="discoverability"&gt;Discoverability&lt;/h3&gt;
 &lt;p&gt;When a new computer wants to join a mesh network, it needs a method of discovering other computers that are already part of the mesh. This discovery process allows the joining member of a mesh to find internet addresses of other members, so that it can initiate the communication channel.&lt;/p&gt;
 &lt;p&gt;In theory, this initial bootstrapping could be done manually, through some out of band communication, like email or instant-messaging but this is not so practical and is further complicated by dynamic IP addresses, NAT and firewalls (discussed later).&lt;/p&gt;
 &lt;p&gt;Instead, most mesh network tools solve this issue by having a centralized server that members of the mesh talk to in order to get the details of their peers. In Nebula this server is named a “Lighthouse”. Meshboi also uses this concept and calls it a “Rolodex''. The Rolodex should be hosted on a server with an IP address that does not change, so that it can always be accessed by peers wanting to join the network.&lt;/p&gt;
 &lt;p&gt;&lt;img alt="" src="/images/meshboi_rolodex.png"&gt;
 It’s important to note that unlike centralized VPNs, no real traffic passes through the Rolodex. However, some tools do allow the data to be proxied through this server as a last-ditch option when NAT or firewalls are particularly hard to overcome. In Meshboi’s case this is not possible and the Rolodex server is completely ignorant of any data moving around the network. &lt;/p&gt;
 &lt;p&gt;The meshboi Rolodex serves only as a method to bootstrap networks, with peers directly authenticating each other (using dTLS and PSK as explained further on) before any data is passed between them. Because of this, the Rolodex implementation supports multiple completely separate networks. The Rolodex server is basically a very unsophisticated in-memory key/value store with &lt;code&gt;{networkName: list&amp;lt;IP addresses&amp;gt;}&lt;/code&gt;. I'm currently running a Rolodex server on a personal VPS (&lt;code&gt;rolodex.samlewis.me&lt;/code&gt;) that anyone can use to bootstrap their own networks but it's also possible to run a separate instance yourself on a server that's directly accessible to the internet.&lt;/p&gt;
-&lt;h3&gt;Transparency&lt;/h3&gt;
+&lt;h3 id="transparency"&gt;Transparency&lt;/h3&gt;
 &lt;p&gt;For a mesh VPN tool to be truly useful it needs to be transparent to network applications that send and receive data over the mesh network. The tool’s usefulness would be very limited if the source code of each application needed to be modified in order to know how to communicate with peers over the mesh.&lt;/p&gt;
 &lt;p&gt;Mesh VPN tools solve the transparency issue using what is known as “tunneling” where the packet meant for one subnet is tunneled through a connection on another subnet (usually over the internet) and then injected into the subnet on the other side of the tunnel. On Linux systems, &lt;a href="https://en.wikipedia.org/wiki/TUN/TAP"&gt;TUN/TAP devices&lt;/a&gt; facilitate tunneling in this way by providing virtualized software-only network interfaces.&lt;/p&gt;
 &lt;p&gt;&lt;a href="https://backreference.org/2010/03/26/tuntap-interface-tutorial/"&gt;Backreference&lt;/a&gt; has a nice explanation of TUNTAP devices:&lt;/p&gt;
@@ -101,7 +583,7 @@ The details of what exactly the data being sent across the internet are further 
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;h3&gt;NAT &amp;amp; Firewalls&lt;/h3&gt;
+&lt;h3 id="nat-firewalls"&gt;NAT &amp;amp; Firewalls&lt;/h3&gt;
 &lt;p&gt;The majority of computers on the internet are behind both NAT and firewalls (sometimes multiple levels of both). Being behind NAT and firewalls adds difficulty in allowing external parties to talk into your network across the internet. For an average user this is typically good, as (unless you are hosting an internet accessible server on your LAN) you typically do &lt;strong&gt;not&lt;/strong&gt; want random parties on the internet being able to initiate communications to computers/services running within your network.&lt;/p&gt;
 &lt;p&gt;However, this is a problem in establishing a mesh network. Members on the mesh need to be able to send arbitrary packets between each other. One way of solving this would be for each member to add port forwarding rules to their routers and open ports in their firewall(s). This is typically the appropriate solution to make a locally hosted server accessible on the internet and for a user with the technical know-how and access privileges this is doable (if kind of annoying). However this gets trickier and becomes a less ideal solution when you consider that users might be on a corporate network, using public wifi (for example at a cafe) or even behind &lt;a href="https://en.wikipedia.org/wiki/Carrier-grade_NAT"&gt;Carrier Grade NAT&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;Luckily there is another way! This method takes advantage of us knowing the peers that we want to talk to ahead of time (because the Rolodex has told us about them!).&lt;/p&gt;
@@ -133,7 +615,7 @@ The details of what exactly the data being sent across the internet are further 
 
 
 &lt;p&gt;I’d be remiss not to mention &lt;a href="https://tailscale.com/blog/how-nat-traversal-works/"&gt;this excellent Tailscale blog post&lt;/a&gt; that goes into a lot more depth on the firewall/NAT problem and considers more than the basic NAT scenario that I considered here. It also has some very excellent diagrams! Worth the read if my explanation here isn't making sense or if you’re interested in the subject.&lt;/p&gt;
-&lt;h3&gt;Security&lt;/h3&gt;
+&lt;h3 id="security"&gt;Security&lt;/h3&gt;
 &lt;p&gt;As Mesh VPN tools tunnel traffic over the internet, they need some sort of security that affords protection against things like:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Data being readable by third parties&lt;/li&gt;
@@ -142,7 +624,7 @@ The details of what exactly the data being sent across the internet are further 
 &lt;li&gt;Replay attacks&lt;/li&gt;
 &lt;/ul&gt;
 &lt;p&gt;Tailscale uses Wireguard links for this security and Nebula uses &lt;a href="https://noiseprotocol.org/"&gt;the Noise Protocol Framework&lt;/a&gt; which is what Wireguard is built upon.&lt;/p&gt;
-&lt;p&gt;Not knowing much about this type of security (and admittedly, barely knowing much more now!), I initially naively considered encrypting each internet-bound packet transmitted by meshboi by using something like &lt;a href="https://en.wikipedia.org/wiki/Bcrypt"&gt;bcrypt&lt;/a&gt; and a pre-shared key. However, while this would stop the data from being readable by third parties it wouldn't ensure protection against the other points above - attackers could still mess with the integrity of packets or could replay past packets.&lt;/p&gt;
+&lt;p&gt;Not knowing much about this type of security (and admittedly, barely knowing much more now!), I initially naively considered encrypting each internet-bound packet transmitted by meshboi by using something like &lt;a href="https://en.wikipedia.org/wiki/Advanced_Encryption_Standard"&gt;AES&lt;/a&gt; and a pre-shared key. However, while this would stop the data from being readable by third parties it wouldn't ensure protection against the other points above - attackers could still mess with the integrity of packets or could replay past packets.&lt;/p&gt;
 &lt;p&gt;That said, if we were certain that all the traffic over the mesh would already be in protocols that affords that sort of protection (such as HTTPS or SSH) then this sort of double protection would arguably be unnecessary. However, as meshboi should allow any sort of traffic to flow over its mesh it is better if it can guarantee some sort of security.&lt;/p&gt;
 &lt;p&gt;Because, as previously mentioned, traffic over the tunnel should be UDP, this somewhat limits the choice of protocols for implementing this security. To cut a long story short, for meshboi's case, I ended up using the not-super-popular UDP version of TLS: dTLS. To implement this I used the dTLS implementation in the &lt;a href="https://github.com/pion/dtls"&gt;Pion stack&lt;/a&gt; (which, as a complete aside, has to be just about the friendliest community I've ever encountered on the internet!).&lt;/p&gt;
 &lt;p&gt;Each link between peers in meshboi is implemented as a dTLS link. When peers learn of each other (via messages from the Rolodex) they will attempt to form this link using the pre-shared key they have been configured with. As dTLS requires the concept of a 'server' and 'client' for each connection, this is implemented somewhat arbitrarily in meshboi by using the peer with the 'largest' IP address to be the server:&lt;/p&gt;
@@ -185,7 +667,7 @@ The details of what exactly the data being sent across the internet are further 
 
 
 &lt;p&gt;In this way, the messages sent across the dTLS link can be tunneled IPv4 packets that can be injected directly into the mesh network. A future improvement might be to change this so that the IPv4 messages are wrapped inside other messages with metadata, so that more out of band messages can be defined and sent between peers.&lt;/p&gt;
-&lt;h2&gt;Performance&lt;/h2&gt;
+&lt;h2 id="performance"&gt;Performance&lt;/h2&gt;
 &lt;p&gt;To test the performance of meshboi, I used &lt;code&gt;iperf3&lt;/code&gt; to check the achievable speed between a GCP e2-micro (2 vCPUs, 1 GB memory) Debian Google Cloud Platform instance and a Vultr $5/month instance (1 vCPU, 1 GB memory).&lt;/p&gt;
 &lt;p&gt;For comparison, I also tested Nebula, Tailscale and then opened up instances' firewalls to run the test without any tunneling/mesh VPN software at all. It's likely that the configuration could be improved for better performance with the other tools, but it's nice at least as a point of reference. &lt;/p&gt;
 &lt;p&gt;As these tools do networking and packet encryption/decryption in userspace, my benchmarking technique was to measure both the achievable throughput across a link and the CPU usage hit taken. To do this, I ran &lt;code&gt;mpstat 1&lt;/code&gt; to find the average non-idle CPU time while running &lt;code&gt;iperf3&lt;/code&gt; across the link. I ran the iperf3 server on the GCP instance and the client on the Vultr instance, and measured CPU only on the Vultr instance. My benchmarking technique is not very comprehensive and likely could be improved (open to hearing suggestions!) but I think gives somewhat of an indication of the difference between these tools.&lt;/p&gt;
@@ -221,7 +703,7 @@ The details of what exactly the data being sent across the internet are further 
 &lt;/tbody&gt;
 &lt;/table&gt;
 &lt;p&gt;As expected, meshboi is probably not the best choice compared to established tools! I'm sure there's lots of easy wins to be had here though, I suspect the choice of dTLS cipher could go a long way to speeding things up. Meshboi also copies data around somewhat unnecessarily which is also most likely slowing things down.&lt;/p&gt;
-&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;h2 id="conclusion"&gt;Conclusion&lt;/h2&gt;
 &lt;p&gt;Hopefully this article gives a bit of an insight into how the magic of mesh VPN tools work. If you're interested in learning more then by all means feel free to dive into the meshboi &lt;a href="https://github,com/samvrlewis/meshboi"&gt;source code&lt;/a&gt;, play around with meshboi or even submit a patch or two - there's likely boundless things to improve!&lt;/p&gt;
 &lt;p&gt;Otherwise, if you're after a production ready mesh VPN solution there's a lot of solutions out there that work much better than meshboi. In particular, solutions like Tailscale and Nebula can do things like:&lt;/p&gt;
 &lt;ul&gt;
@@ -293,7 +775,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span cla
 &lt;p&gt;Unfortunately, while there's a lot of resources out there that give high level explanations of how Bitcoin works (one such resource I'd highly recommend is Anders Brownworth's fantastic &lt;a href="https://anders.com/blockchain/"&gt;blockchain visual 101&lt;/a&gt; video), there isn't a whole heap of information at a lower level and, in my opinion, there's only so much you can properly grok if you're looking at the 10000 ft view. &lt;/p&gt;
 &lt;p&gt;As someone relatively new to the space, I found myself hungry to understand the mechanics of how Bitcoin works. Luckily, because Bitcoin is decentralised and peer to peer by its nature, anyone is able to develop a client that conforms to the protocol. In order to get a greater appreciation of how Bitcoin works, I decided to write my own small toy Bitcoin client that was able to publish a transaction to the Bitcoin blockchain. &lt;/p&gt;
 &lt;p&gt;This post walks through the process of creating a minimally viable Bitcoin client that can create a transaction and submit it to the Bitcoin peer to peer network so that it is included in the Blockchain. If you'd rather just read the raw code, feel free to check out my &lt;a href="https://github.com/samvrlewis/simple-bitcoin"&gt;Github repo&lt;/a&gt;.&lt;/p&gt;
-&lt;h2&gt;Address generation&lt;/h2&gt;
+&lt;h2 id="address-generation"&gt;Address generation&lt;/h2&gt;
 &lt;p&gt;In order to be part of the Bitcoin network, it's necessary to have an address from which you can send and receive funds. Bitcoin uses public key cryptography and an address is basically a hashed version of a public key that has been derived from a secret private key. Surprisingly, and unlike most public key cryptography, the public key is also kept secret until funds are sent from the address - but more on that later. &lt;/p&gt;
 &lt;blockquote&gt;
 &lt;p&gt;A quick aside on terminology: In Bitcoin, the term "wallet" is used by clients to mean a collection of addresses. There's no concept of wallets at a protocol level, only addresses.&lt;/p&gt;
@@ -321,12 +803,12 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span cla
 
 
 &lt;p&gt;Running this code gets the private key (in hex) of  &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;0000000000000000000000000000000000000000000000000feedb0bdeadbeef
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;0000000000000000000000000000000000000000000000000feedb0bdeadbeef&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;And the public key (in hex) of &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;04d077e18fd45c031e0d256d75dfa8c3c21c589a861c4c33b99e64cf613113fcff9fc9d90a9d81346bcac64d3c01e6e0ef0828543edad73c0e257b845812cc8d28&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -367,7 +849,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span cla
 
     &lt;span class="n"&gt;result&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;int&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;from_bytes&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;byteorder&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;big&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
-    &lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;result&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+    &lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;result&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 
     &lt;span class="c1"&gt;# count the leading 0s&lt;/span&gt;
     &lt;span class="n"&gt;padding&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt; &lt;span class="nb"&gt;len&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;lstrip&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="sa"&gt;b&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="se"&gt;\0&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
@@ -385,9 +867,9 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span cla
 
 &lt;p&gt;After all of that, starting with my private key of &lt;code&gt;feedb0bdeadbeef&lt;/code&gt; (front padded with zeros), I've arrived with a Bitcoin address of &lt;code&gt;1KK2xni6gmTtdnSGRiuAf94jciFgRjDj7W&lt;/code&gt;!&lt;/p&gt;
 &lt;p&gt;With an address, it's now possible to get some Bitcoin! To get some Bitcoin into my address, I bought 0.0045 BTC (at the time of writing, around $11 USD) from &lt;a href="https://www.btcmarkets.com"&gt;btcmarkets&lt;/a&gt; using Australian dollars. Using btcmarket's trading portal, I transferred it to the above address, losing 0.0005 BTC to transaction fees in the process. You can see this transaction on the blockchain in transaction &lt;a href="https://blockchain.info/tx/95855ba9f46c6936d7b5ee6733c81e715ac92199938ce30ac3e1214b8c2cd8d7"&gt;95855ba9f46c6936d7b5ee6733c81e715ac92199938ce30ac3e1214b8c2cd8d7&lt;/a&gt;.&lt;/p&gt;
-&lt;h2&gt;Connecting to the p2p network&lt;/h2&gt;
+&lt;h2 id="connecting-to-the-p2p-network"&gt;Connecting to the p2p network&lt;/h2&gt;
 &lt;p&gt;Now that I have an address with some Bitcoin in it, things get more interesting. If I want to send that Bitcoin somewhere else, it's necessary to connect to the Bitcoin peer to peer network.&lt;/p&gt;
-&lt;h3&gt;Bootstrapping&lt;/h3&gt;
+&lt;h3 id="bootstrapping"&gt;Bootstrapping&lt;/h3&gt;
 &lt;p&gt;One of the sticking points I had when first learning about Bitcoin was, given the decentralised nature of the network, how do peers of the network find other peers? Without a centralised authority, how does a Bitcoin client know how to bootstrap and start talking to the rest of the network? &lt;/p&gt;
 &lt;p&gt;As it turns out, idealism submits to practicality and there is the slightest amount of centralisation in the initial peer discovery process. The principle way for a new client to find peers to connect to is to use a DNS lookup to any number of "DNS seed" servers that are maintained by members of the Bitcoin community.&lt;/p&gt;
 &lt;p&gt;It turns out DNS is well suited to this purpose of bootstrapping clients as the DNS protocol, which runs over UDP and is lightweight, is hard to DDoS. IRC was used as a previous bootstrapping method but was discontinued due to its weakness to DDoS attacks.  &lt;/p&gt;
@@ -404,7 +886,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span cla
 
 
 &lt;p&gt;After running this, the address returned was &lt;code&gt;208.67.251.126&lt;/code&gt; which is a friendly peer that I can connect to!&lt;/p&gt;
-&lt;h3&gt;Saying hi to my new peer friend&lt;/h3&gt;
+&lt;h3 id="saying-hi-to-my-new-peer-friend"&gt;Saying hi to my new peer friend&lt;/h3&gt;
 &lt;p&gt;Bitcoin connections between peers are through TCP. Upon connecting to a peer, the beginning handshake message of the Bitcoin protocol is a &lt;em&gt;Version&lt;/em&gt; message. Until peers swap Version messages, no other messages will be accepted. &lt;/p&gt;
 &lt;p&gt;Bitcoin protocol messages are well documented in the &lt;a href="https://bitcoin.org/en/developer-reference"&gt;Bitcoin developer reference&lt;/a&gt;. Using the developer reference as guide, the &lt;a href="https://bitcoin.org/en/developer-reference#version"&gt;version&lt;/a&gt; message can be constructed in Python as the snippet below shows. Most of the data is fairly uninteresting, administrative data which is used to establish the peer connection. If you're interested in more details than the attached comments provide, have a read of the developer reference.&lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;version&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;70014&lt;/span&gt;
@@ -454,7 +936,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span cla
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;connect&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;node&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;8333&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;send&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_message&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="s2"&gt;&amp;quot;version&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;payload&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
-&lt;span class="k"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+&lt;span class="nb"&gt;print&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;recv&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1024&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -464,7 +946,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span cla
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;h2&gt;Bitcoin transactions&lt;/h2&gt;
+&lt;h2 id="bitcoin-transactions"&gt;Bitcoin transactions&lt;/h2&gt;
 &lt;p&gt;To transfer Bitcoin it's necessary to broadcast a &lt;em&gt;transaction&lt;/em&gt; to the Bitcoin network.&lt;/p&gt;
 &lt;p&gt;Critically, the most important idea to understand is that the balance of a Bitcoin address is comprised solely by the number of "Unspent Transaction Outputs" (UTXO) that the address can spend. When Bob sends a Bitcoin to Alice, he's really just creating a UTXO that Alice (and only Alice) can later use to create another UTXO and send that Bitcoin on. The balance of a Bitcoin address is therefore defined by the amount of Bitcoin it is able to transfer to another address, rather than the amount of Bitcoin it &lt;em&gt;has&lt;/em&gt;. &lt;/p&gt;
 &lt;p&gt;To emphasize, when someone says that they have X bitcoin, they're really saying that all of the UTXOs that they can spend sum to X bitcoin of value. The distinction is subtle but important, the balance of a Bitcoin address isn't recorded anywhere directly but rather can be found by summing the UTXOs that it can spend. When I came to this realisation it was definitely a "oh, that's how it works!" moment.&lt;/p&gt;
@@ -474,7 +956,7 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span cla
 &lt;p&gt;Through Script, it's possible to create simple contract based transactions. Script is a basic stack based language with number of operations centred around checking equality of hashes and verifying signatures. Script is not Turing complete and does not have the ability to have any loops. The competing cryptocurrency Ethereum built on this to be able to have "smart contracts", which does have a Turing complete language. There's much debate about the utility, necessity and security of including a Turing complete language in cryptocurrencies but I'll leave that debate to others!&lt;/p&gt;
 &lt;p&gt;In standard terminology, a Bitcoin transaction is made up of inputs and outputs. An input is a UTXO (that is now being spent) and an output is a new UTXO. There can be multiple outputs for a single input but an input needs to be completely spent in a transaction. Any part of an input leftover is claimed by miners as a mining fee. &lt;/p&gt;
 &lt;p&gt;For my toy client I want to be able to send on the Bitcoin previously transferred from an exchange to my &lt;code&gt;FEEDB0BDEADBEEF&lt;/code&gt; address. Using the same process as before, I generated another address using the private key (before padding of) &lt;code&gt;BADCAFEFABC0FFEE&lt;/code&gt;. This generated the address &lt;code&gt;1QGNXLzGXhWTKF3HTSjuBMpQyUYFkWfgVC&lt;/code&gt;. &lt;/p&gt;
-&lt;h3&gt;Creating a raw transaction&lt;/h3&gt;
+&lt;h3 id="creating-a-raw-transaction"&gt;Creating a raw transaction&lt;/h3&gt;
 &lt;p&gt;Creating a transaction is a matter of first packing a "raw transaction" and then signing the raw transaction. Again, the &lt;a href="https://bitcoin.org/en/developer-reference#raw-transaction-format"&gt;developer reference&lt;/a&gt; has a description of what goes into a transaction. What makes up a transaction is shown below but a few notes first:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;
@@ -554,27 +1036,27 @@ ip netns &lt;span class="nb"&gt;exec&lt;/span&gt; ns_eth1 iperf3 -c &lt;span cla
 &lt;p&gt;For the Pubkey script of our transaction, we use a &lt;a href="https://en.bitcoin.it/wiki/Transaction#Pay-to-PubkeyHash"&gt;Pay to Pubkey hash&lt;/a&gt; (or p2pk) script. The script ensures that only the person that holds the public key that hashes to the provided Bitcoin address is able to spend the created output and that a supplied signature has been generated by the person that holds the corresponding private key to the public key.&lt;/p&gt;
 &lt;p&gt;To unlock a transaction that has been locked by a p2pk script, the user provides their public key and a signature of the hash of the raw transaction. The public key is hashed and compared to the address that the script was created with and the signature is verified for the supplied public key. If the hash of the public key and the address are equal, and the signature is verified, the output can be spent.&lt;/p&gt;
 &lt;p&gt;In Bitcoin script operands, the p2pk script looks as follows.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;OP_DUP
-OP_HASH160
-&amp;lt;Length of address in bytes&amp;gt;
-&amp;lt;Bitcoin address&amp;gt;
-OP_EQUALVERIFY
-OP_CHECKSIG
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;OP_DUP&lt;/span&gt;
+&lt;span class="err"&gt;OP_HASH160&lt;/span&gt;
+&lt;span class="err"&gt;&amp;lt;Length of address in bytes&amp;gt;&lt;/span&gt;
+&lt;span class="err"&gt;&amp;lt;Bitcoin address&amp;gt;&lt;/span&gt;
+&lt;span class="err"&gt;OP_EQUALVERIFY&lt;/span&gt;
+&lt;span class="err"&gt;OP_CHECKSIG&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;Converting the operands to their values (these can be found on the &lt;a href="https://en.bitcoin.it/wiki/Script"&gt;wiki&lt;/a&gt;) and inputting the public address (before it has been Base58Check encoded) gives the following script in hex:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;0x76
-0xA9
-0x14
-0xFF33195EC053D6E58D5FD3CC67747D3E1C71B280
-0x88
-0xAC
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;0x76&lt;/span&gt;
+&lt;span class="err"&gt;0xA9&lt;/span&gt;
+&lt;span class="err"&gt;0x14&lt;/span&gt;
+&lt;span class="err"&gt;0xFF33195EC053D6E58D5FD3CC67747D3E1C71B280&lt;/span&gt;
+&lt;span class="err"&gt;0x88&lt;/span&gt;
+&lt;span class="err"&gt;0xAC&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;The address is found using the earlier shown code for deriving an address from a private key, for the private key we're sending to, &lt;code&gt;0xBADCAFEFABC0FFEE&lt;/code&gt;. &lt;/p&gt;
-&lt;h3&gt;Signing the transaction&lt;/h3&gt;
+&lt;h3 id="signing-the-transaction"&gt;Signing the transaction&lt;/h3&gt;
 &lt;p&gt;There are two separate, but somewhat related, uses for the signature script in a (p2pk) transaction:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;The script verifies (unlocks) the UTXO that we are are trying to spend, by providing our public key that hashes to the address that the UTXO has been sent&lt;/li&gt;
@@ -727,7 +1209,7 @@ OP_CHECKSIG
 &lt;/pre&gt;&lt;/div&gt;
 
 
-&lt;h3&gt;Publishing the transaction&lt;/h3&gt;
+&lt;h3 id="publishing-the-transaction"&gt;Publishing the transaction&lt;/h3&gt;
 &lt;p&gt;With the transaction packed and signed, it's a matter of telling the network about it. Using a few functions previously defined in this article in &lt;a href="https://github.com/samvrlewis/simple-bitcoin/blob/master/bitcoin_p2p_message_utils.py"&gt;bitcoin_p2p_message_utils.py&lt;/a&gt;,  the below piece of code puts the Bitcoin message header on the transmission and transmits it to a peer. As mentioned earlier, it's first necessary to send a version message to the peer so that it accepts subsequent messages. &lt;/p&gt;
 &lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;AF_INET&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;socket&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;SOCK_STREAM&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="n"&gt;s&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;connect&lt;/span&gt;&lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;get_bitcoin_peer&lt;/span&gt;&lt;span class="p"&gt;(),&lt;/span&gt; &lt;span class="mi"&gt;8333&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
@@ -740,12 +1222,12 @@ OP_CHECKSIG
 &lt;p&gt;In any case, I eventually got it to work and was very excited when I saw that my &lt;a href="https://blockchain.info/tx/ac812978fb87232ed5700fc64e8733546d70eaa4d9aa80cf1d20a3f71bd8d133"&gt;transaction made its way into the blockchain&lt;/a&gt;!! It was a great feeling of accomplishment knowing that my small, dinky, hand crafted transaction will now forever be a part of Bitcoin's ledger. &lt;/p&gt;
 &lt;p&gt;&lt;img alt="transaction success" src="/images/final_transaction.png"&gt;&lt;/p&gt;
 &lt;p&gt;When I submitted the transaction, my transaction fee was actually quite low compared to the median (I used the &lt;a href="https://bitcoinfees.21.co/"&gt;bitcoin fees&lt;/a&gt; website to check) and as such it took around 5 hours for a miner to decide to include it in a block. I checked this by looking at the number of confirmations the transaction had - this is a measure of how many blocks deep the block with the transaction is in. At the time of writing this was at 190 confirmations.. meaning that after the block my transaction is in, there's another 190 blocks. This can be pretty safely considered confirmed, as it would take an impressive attack on the network to rewrite 190 blocks to remove my transaction.&lt;/p&gt;
-&lt;h2&gt;Conclusion&lt;/h2&gt;
+&lt;h2 id="conclusion"&gt;Conclusion&lt;/h2&gt;
 &lt;p&gt;I hope you've gained some appreciation of how Bitcoin works through reading this article, I know I certainly did during the months it took me to put all of this together! While most of the information presented here isn't too practicably applicable - you'd normally just use a client that does it all for you - I think having a greater understanding of how things work gives you a better appreciation of what's happening under the covers and gives makes you a more confident user of the technology.&lt;/p&gt;
 &lt;p&gt;If you'd like to peruse the code, or play around further with the toy examples, please check out my associated &lt;a href="https://github.com/samvrlewis/simple-bitcoin"&gt;Github repo&lt;/a&gt;. There's a lot of room to explore further in the Bitcoin world, I've only really looked at a very common use case of Bitcoin. There's certainly room out there to do cooler feats than just transferring value between two addresses! I also didn't touch how mining, the process of adding transactions to the blockchain, works.. which is another rabbit hole all together. &lt;/p&gt;
 &lt;p&gt;If you've read this far you might have realised that the 380000 Satoshi (or 0.0038 BTC) that I transferred into &lt;code&gt;1QGNXLzGXhWTKF3HTSjuBMpQyUYFkWfgVC&lt;/code&gt; can, with enough smarts, be taken by anyone.. as the private key for the address exists within this article. I'm very interested to see how long it takes to be transferred away and hope that whoever takes it has the decency to do so using some of the techniques I've detailed here! It'd be pretty lame if you just loaded the private key into a wallet app to take it, but I guess I can't stop you! At the time of writing this amount is worth about $10 USD, but if Bitcoin "goes to the moon" who knows how much it might be worth! &lt;em&gt;(Edit: And it's gone now! Taken by &lt;a href="https://blockchain.info/tx/2685ff794de17cebdf94eb0f111e8b8c03529a9ae628909cef4090663b54e565"&gt;1KgoPFVDNcx7H2VY9bB2dxxP9yNM2Nar1N&lt;/a&gt; after a few hours of posting this article. Well played!)&lt;/em&gt;&lt;/p&gt;
 &lt;p&gt;And just in case you're looking for an address to send Bitcoin to when you're playing around with this stuff, or if you think this post was valuable enough to warrant a tip - my address of &lt;code&gt;18uKa5c9S84tkN1ktuG568CR23vmeU7F5H&lt;/code&gt; is happy to take any small donations! Alternatively, if you want to yell at me about getting anything wrong, I'd love to hear it.&lt;/p&gt;
-&lt;h2&gt;Further resources&lt;/h2&gt;
+&lt;h2 id="further-resources"&gt;Further resources&lt;/h2&gt;
 &lt;p&gt;If you found this article interesting, some further resources to check out:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;a href="https://www.amazon.com/Mastering-Bitcoin-Unlocking-Digital-Cryptocurrencies/dp/1449374042"&gt;Mastering Bitcoin&lt;/a&gt; is a book that explains the technical details of Bitcoins. I haven't read this completely, but on a skim it looks like it is a wealth of good information.&lt;/li&gt;
@@ -755,7 +1237,7 @@ OP_CHECKSIG
 &lt;li&gt;To also save yourself pain, it's probably advisable to use the &lt;a href="https://en.bitcoin.it/wiki/Testnet"&gt;Bitcoin testnet&lt;/a&gt; to play around with, rather than using the mainnet like I did. That said, it's more fun when the risk of your code being wrong is losing real money!&lt;/li&gt;
 &lt;li&gt;Lastly, it is probably worth repeating that the accompanying code for this article can be found in my &lt;a href="https://github.com/samvrlewis/simple-bitcoin"&gt;Github repo&lt;/a&gt;.&lt;/li&gt;
 &lt;/ul&gt;</content></entry><entry><title>Unit testing embedded code with cmocka</title><link href="https://www.samlewis.me/2016/09/embedded-unit-testing-with-cmocka" rel="alternate"></link><published>2016-09-26T00:00:00+10:00</published><updated>2016-09-26T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2016-09-26:/2016/09/embedded-unit-testing-with-cmocka</id><summary type="html">&lt;p&gt;&lt;a href="https://en.wikipedia.org/wiki/Unit_testing"&gt;Unit testing&lt;/a&gt; is a great software testing practice that gets a lot of love in web and application development but unfortunately isn't practiced as often in embedded/firmware development. This is a shame as the impacts of having a bug in firmware can be considerably more catastrophic than having a …&lt;/p&gt;</summary><content type="html">&lt;p&gt;&lt;a href="https://en.wikipedia.org/wiki/Unit_testing"&gt;Unit testing&lt;/a&gt; is a great software testing practice that gets a lot of love in web and application development but unfortunately isn't practiced as often in embedded/firmware development. This is a shame as the impacts of having a bug in firmware can be considerably more catastrophic than having a bug in a webapp. I've written this article in the hope of demonstrating some of the benefits that come when writing unit tests for embedded software and have also given a small toy example of how it's possible to unit test firmware using the &lt;code&gt;cmocka&lt;/code&gt; framework. &lt;/p&gt;
-&lt;h3&gt;Why unit test embedded software?&lt;/h3&gt;
+&lt;h3 id="why-unit-test-embedded-software"&gt;Why unit test embedded software?&lt;/h3&gt;
 &lt;p&gt;System level embedded software testing is notoriously difficult, mainly because embedded software runs on bare metal hardware. While you can never completely get away from testing embedded software on real hardware, testing the logic in the embedded software through unit testing is very valuable and gets you a lot of the way there. If you still need convincing, some of the things I really like about having unit tests for my embedded code:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Allows you to develop your application layer logic without the need for any hardware, saving lots of time&lt;/li&gt;
@@ -768,34 +1250,34 @@ OP_CHECKSIG
 &lt;/ul&gt;
 &lt;p&gt;There are a lot of unit testing frameworks for &lt;code&gt;C&lt;/code&gt; but for embedded testing, the framework I like best is &lt;a href="https://cmocka.org/"&gt;cmocka&lt;/a&gt;. I've looked at others in the past, such as &lt;a href="http://www.throwtheswitch.org/cmock/"&gt;cmock&lt;/a&gt; and &lt;a href="https://github.com/mity/cutest"&gt;cutest&lt;/a&gt; but cmocka stands out as having all testing &amp;amp; mocking functionality I need while having minimal dependencies. &lt;/p&gt;
 &lt;p&gt;On caveat worth mentioning is that to properly use these frameworks, you'll most likely need to compiler your code with a different compiler to what your compile with for your hardware - both so that the framework can run and so that you can execute the tests on your workstation. However, this shouldn't present a major problem as long as you're not relying on non-standard or undefined compiler behaviour. Logic errors in your code will still be logic errors no matter what compiler you use to compile the code. &lt;/p&gt;
-&lt;h3&gt;An example of unit testing C in an embedded context&lt;/h3&gt;
+&lt;h3 id="an-example-of-unit-testing-c-in-an-embedded-context"&gt;An example of unit testing C in an embedded context&lt;/h3&gt;
 &lt;p&gt;To give a concrete example of how you could make use of &lt;code&gt;cmocka&lt;/code&gt; in an embedded context, I'll show the process of unit testing code for a temperature sensor. I've chosen the TI &lt;a href="http://www.ti.com/lit/ds/symlink/tmp101.pdf"&gt;TMP101&lt;/a&gt; as the temperature sensor, which is a temperature sensor that works over I2C. The complete listing of code &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/"&gt;is checked in on my github&lt;/a&gt;, the below text gives a rundown of how it all comes together. &lt;/p&gt;
 &lt;p&gt;The first step as normal, is to write some code for the tmp101 sensor that can fetch a temperature. You can find the full code listing &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/src/tmp101.c"&gt;on my github&lt;/a&gt;. It's also reproduced below. &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;tmp101.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;#include &amp;quot;tmp101.h&amp;quot;&lt;/span&gt;
 
-&lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="kt"&gt;float&lt;/span&gt; &lt;span class="n"&gt;TMP_BIT_RESOLUTION&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.0625&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="nb nb-Type"&gt;float&lt;/span&gt; &lt;span class="n"&gt;TMP_BIT_RESOLUTION&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mf"&gt;0.0625&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
-&lt;span class="kt"&gt;float&lt;/span&gt; &lt;span class="nf"&gt;tmp101_get_temperature&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; 
+&lt;span class="nb nb-Type"&gt;float&lt;/span&gt; &lt;span class="n"&gt;tmp101_get_temperature&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;void&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; 
 &lt;span class="p"&gt;{&lt;/span&gt;   
-    &lt;span class="c1"&gt;// Need to set the TMP101 pointer register to point to the temp register&lt;/span&gt;
-    &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;pointer_address&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Need&lt;/span&gt; &lt;span class="n"&gt;to&lt;/span&gt; &lt;span class="n"&gt;set&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;TMP101&lt;/span&gt; &lt;span class="n"&gt;pointer&lt;/span&gt; &lt;span class="n"&gt;register&lt;/span&gt; &lt;span class="n"&gt;to&lt;/span&gt; &lt;span class="n"&gt;point&lt;/span&gt; &lt;span class="n"&gt;to&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;temp&lt;/span&gt; &lt;span class="n"&gt;register&lt;/span&gt;
+    &lt;span class="n"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;pointer_address&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
     &lt;span class="n"&gt;i2c_transmit_blocking&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TMP101_ADDRESS&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;pointer_address&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 
-    &lt;span class="c1"&gt;// The TMP101 stores 12 bit samples that are retrieved in two byte blocks&lt;/span&gt;
-    &lt;span class="kt"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;];&lt;/span&gt;
+    &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;The&lt;/span&gt; &lt;span class="n"&gt;TMP101&lt;/span&gt; &lt;span class="n"&gt;stores&lt;/span&gt; &lt;span class="mi"&gt;12&lt;/span&gt; &lt;span class="n"&gt;bit&lt;/span&gt; &lt;span class="n"&gt;samples&lt;/span&gt; &lt;span class="n"&gt;that&lt;/span&gt; &lt;span class="n"&gt;are&lt;/span&gt; &lt;span class="n"&gt;retrieved&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;two&lt;/span&gt; &lt;span class="n"&gt;byte&lt;/span&gt; &lt;span class="n"&gt;blocks&lt;/span&gt;
+    &lt;span class="n"&gt;uint8_t&lt;/span&gt; &lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;];&lt;/span&gt;
     &lt;span class="n"&gt;i2c_read_blocking&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;TMP101_ADDRESS&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;],&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 
-    &lt;span class="c1"&gt;// the 1st byte is bits 12 to 4 of the sample and the 2nd byte is bits 4 to 0&lt;/span&gt;
-    &lt;span class="c1"&gt;// see page 16 of the TMP_101 datasheet&lt;/span&gt;
-    &lt;span class="kt"&gt;uint16_t&lt;/span&gt; &lt;span class="n"&gt;temperature_bits&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="n"&gt;st&lt;/span&gt; &lt;span class="n"&gt;byte&lt;/span&gt; &lt;span class="k"&gt;is&lt;/span&gt; &lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="mi"&gt;12&lt;/span&gt; &lt;span class="n"&gt;to&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt; &lt;span class="n"&gt;of&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;sample&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="n"&gt;nd&lt;/span&gt; &lt;span class="n"&gt;byte&lt;/span&gt; &lt;span class="k"&gt;is&lt;/span&gt; &lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt; &lt;span class="n"&gt;to&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+    &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;see&lt;/span&gt; &lt;span class="n"&gt;page&lt;/span&gt; &lt;span class="mi"&gt;16&lt;/span&gt; &lt;span class="n"&gt;of&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;TMP_101&lt;/span&gt; &lt;span class="n"&gt;datasheet&lt;/span&gt;
+    &lt;span class="n"&gt;uint16_t&lt;/span&gt; &lt;span class="n"&gt;temperature_bits&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;data&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 
-    &lt;span class="c1"&gt;// The 12 bit sample is represented using 2s complement, for simplicity &lt;/span&gt;
-    &lt;span class="c1"&gt;// (and because there&amp;#39;s no 12 bit int representation), scale up the sample&lt;/span&gt;
-    &lt;span class="c1"&gt;// to 16 bits and adjust the bit resolution when converting later&lt;/span&gt;
-    &lt;span class="kt"&gt;int16_t&lt;/span&gt; &lt;span class="n"&gt;temperature&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;temperature_bits&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;The&lt;/span&gt; &lt;span class="mi"&gt;12&lt;/span&gt; &lt;span class="n"&gt;bit&lt;/span&gt; &lt;span class="n"&gt;sample&lt;/span&gt; &lt;span class="k"&gt;is&lt;/span&gt; &lt;span class="n"&gt;represented&lt;/span&gt; &lt;span class="n"&gt;using&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="n"&gt;s&lt;/span&gt; &lt;span class="n"&gt;complement&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;simplicity&lt;/span&gt; 
+    &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;because&lt;/span&gt; &lt;span class="n"&gt;there&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;s no 12 bit int representation), scale up the sample&lt;/span&gt;
+    &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;to&lt;/span&gt; &lt;span class="mi"&gt;16&lt;/span&gt; &lt;span class="n"&gt;bits&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;adjust&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;bit&lt;/span&gt; &lt;span class="n"&gt;resolution&lt;/span&gt; &lt;span class="n"&gt;when&lt;/span&gt; &lt;span class="n"&gt;converting&lt;/span&gt; &lt;span class="n"&gt;later&lt;/span&gt;
+    &lt;span class="n"&gt;int16_t&lt;/span&gt; &lt;span class="n"&gt;temperature&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;temperature_bits&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;4&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
-    &lt;span class="c1"&gt;// shift the sample back down and convert by the TMP_101 bit resolution&lt;/span&gt;
-    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;temperature&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mf"&gt;0.0625f&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;shift&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;sample&lt;/span&gt; &lt;span class="n"&gt;back&lt;/span&gt; &lt;span class="n"&gt;down&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="nb"&gt;convert&lt;/span&gt; &lt;span class="n"&gt;by&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;TMP_101&lt;/span&gt; &lt;span class="n"&gt;bit&lt;/span&gt; &lt;span class="n"&gt;resolution&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="p"&gt;((&lt;/span&gt;&lt;span class="n"&gt;temperature&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="mi"&gt;16&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="mf"&gt;0.0625&lt;/span&gt;&lt;span class="n"&gt;f&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
@@ -816,33 +1298,33 @@ OP_CHECKSIG
 
 
 &lt;p&gt;But mixing test code with production code is ugly and an antipattern that should be avoided if possible. A much better way that allows us to both completely separate our testing and source code is to use the &lt;code&gt;cmocka&lt;/code&gt; framework to help us (dynamically!) control what our &lt;code&gt;i2c_read_blocking&lt;/code&gt; function does. The first step of using &lt;code&gt;cmocka&lt;/code&gt; is to define mocks for the functions you want to mock out. The two mocked functions are shown below.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;void __wrap_i2c_transmit_blocking(uint8_t address, uint8_t offset, uint8_t* data, uint8_t data_size)
-{
-    // allows the calling test to check if the supplied parameters are as expected
-    check_expected(address);
-    check_expected(offset);
-}
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;void&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;__wrap_i2c_transmit_blocking&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;uint8_t&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;uint8_t&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;offset&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;uint8_t&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;data&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;uint8_t&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;data_size&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="o"&gt;//&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;allows&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;the&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;calling&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;test&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;to&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;check&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;the&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;supplied&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;parameters&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;are&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;as&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;expected&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;check_expected&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="n"&gt;check_expected&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;offset&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 
-void __wrap_i2c_read_blocking(uint8_t address, uint8_t offset, uint8_t* pData, uint8_t data_size) 
-{
-    // allow the calling test to specify the data it wants back
-    // and copy it back out
-    for(int i=0; i &amp;lt; data_size; i++) {
-        pData[i] = mock_type(uint8_t);
-    }
-}
+&lt;span class="n"&gt;void&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;__wrap_i2c_read_blocking&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;uint8_t&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;address&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;uint8_t&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;offset&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;uint8_t&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;pData&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;uint8_t&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;data_size&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;
+&lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="o"&gt;//&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;allow&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;the&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;calling&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;test&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;to&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;specify&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;the&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;data&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;it&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;wants&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;back&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="o"&gt;//&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="ow"&gt;and&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;copy&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;it&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;back&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="k"&gt;out&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="k"&gt;for&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="nc"&gt;int&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;&amp;lt;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;data_size&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;++&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="err"&gt;{&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;        &lt;/span&gt;&lt;span class="n"&gt;pData&lt;/span&gt;&lt;span class="o"&gt;[&lt;/span&gt;&lt;span class="n"&gt;i&lt;/span&gt;&lt;span class="o"&gt;]&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;=&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="n"&gt;mock_type&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;uint8_t&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="w"&gt;    &lt;/span&gt;&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;span class="err"&gt;}&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;&lt;code&gt;cmocka&lt;/code&gt; cleverly uses the linker to swap out the real function calls for the mocked ones. To allow for this, mocked out functions are prefixed with &lt;code&gt;__wrap_&lt;/code&gt;. The linker is then provided with the arguments &lt;code&gt;--wrap=i2c_read_blocking -Wl,--wrap=i2c_transmit_blocking&lt;/code&gt; which allows these functions to be mocked out. For a complete example of compiling/linking with cmocka, see the &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/Makefile"&gt;makefile&lt;/a&gt; in my example project.&lt;/p&gt;
 &lt;p&gt;With the mocks in place we can now write some tests! A complete look at the tests in my example project can be found &lt;a href="https://github.com/samvrlewis/cmocka-embedded-example/blob/master/test/test_tmp101.c"&gt;on my github&lt;/a&gt; but, as an example, here's a single test:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;static void test_negative_temperature(void **state)
-{
-    will_return(__wrap_i2c_read_blocking, 0b11100111);
-    will_return(__wrap_i2c_read_blocking, 0b00000000);
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="n"&gt;void&lt;/span&gt; &lt;span class="n"&gt;test_negative_temperature&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;void&lt;/span&gt; &lt;span class="o"&gt;**&lt;/span&gt;&lt;span class="k"&gt;state&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="err"&gt;{&lt;/span&gt;
+    &lt;span class="n"&gt;will_return&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;__wrap_i2c_read_blocking&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="n"&gt;b11100111&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="n"&gt;will_return&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;__wrap_i2c_read_blocking&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="n"&gt;b00000000&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 
-    assert_true(tmp101_get_temperature() == -25);
-}
+    &lt;span class="n"&gt;assert_true&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;tmp101_get_temperature&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="o"&gt;-&lt;/span&gt;&lt;span class="mi"&gt;25&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+&lt;span class="err"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -859,13 +1341,13 @@ void __wrap_i2c_read_blocking(uint8_t address, uint8_t offset, uint8_t* pData, u
 &lt;p&gt;In fact, xv6 was developed by MIT as a teaching operating system for their &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6.html"&gt;6.828 course&lt;/a&gt;. The course page for 6.828 is a great resource that MIT are kind enough to have publicly avaliable. &lt;/p&gt;
 &lt;p&gt;MIT also produce a fantastic &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6/book-rev8.pdf"&gt;xv6 reference book&lt;/a&gt; that provides commentary on the structure of the xv6 operating system. Additionally, the xv6 source actually self documents - the xv6 &lt;code&gt;make&lt;/code&gt; file contains a target (&lt;code&gt;make xv6.pdf&lt;/code&gt;) that generates a &lt;a href="https://pdos.csail.mit.edu/6.828/2014/xv6/xv6-rev8.pdf"&gt;pdf of the source code&lt;/a&gt;, which amazingly comes in under 100 pages and 10k lines of source (including comments!). Not bad for an entire, functional, operating system. &lt;/p&gt;
 &lt;p&gt;xv6 is typically run virtualized using qemu on a Linux host machine. To get started with xv6, clone the xv6 repo:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;git clone git://github.com/mit-pdos/xv6-public.git xv6
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;git clone git://github.com/mit-pdos/xv6-public.git xv6&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;Then to start it as a virtual machine under qemu:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;cd xv6
-make qemu
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;cd xv6&lt;/span&gt;
+&lt;span class="err"&gt;make qemu&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -874,22 +1356,22 @@ make qemu
 &lt;p&gt;&lt;img alt="qemu xv6 shell" src="https://raw.githubusercontent.com/samvrlewis/samvrlewis.github.io/master/2016/04/getting-started-xv6/qemu.png"&gt; &lt;/p&gt;
 &lt;p&gt;From here, you'll be able to run a few simple commands like &lt;code&gt;ls&lt;/code&gt; and &lt;code&gt;cat&lt;/code&gt; and revel in the knowledge that you can understand what's happening behind the covers by reading through the source code for the shell - line 8500 in the source code listing. &lt;/p&gt;
 &lt;p&gt;The core &lt;code&gt;while&lt;/code&gt; loop the shell executes is shown below. &lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt; // Read and run input commands.
- while(getcmd(buf, sizeof(buf)) &amp;gt;= 0){
-    if(buf[0] == ’c’ &amp;amp;&amp;amp; buf[1] == ’d’ &amp;amp;&amp;amp; buf[2] == ’ ’){
-        // Clumsy but will have to do for now.
-        // Chdir has no effect on the parent if run in the child.
-        buf[strlen(buf)−1] = 0; // chop \n
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt; &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="k"&gt;Read&lt;/span&gt; &lt;span class="k"&gt;and&lt;/span&gt; &lt;span class="n"&gt;run&lt;/span&gt; &lt;span class="k"&gt;input&lt;/span&gt; &lt;span class="n"&gt;commands&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
+ &lt;span class="n"&gt;while&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;getcmd&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;sizeof&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="err"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="err"&gt;’&lt;/span&gt;&lt;span class="k"&gt;c&lt;/span&gt;&lt;span class="err"&gt;’&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="err"&gt;’&lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="err"&gt;’&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&amp;amp;&lt;/span&gt; &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="err"&gt;’&lt;/span&gt; &lt;span class="err"&gt;’&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="err"&gt;{&lt;/span&gt;
+        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Clumsy&lt;/span&gt; &lt;span class="n"&gt;but&lt;/span&gt; &lt;span class="n"&gt;will&lt;/span&gt; &lt;span class="n"&gt;have&lt;/span&gt; &lt;span class="k"&gt;to&lt;/span&gt; &lt;span class="k"&gt;do&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;now&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
+        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Chdir&lt;/span&gt; &lt;span class="n"&gt;has&lt;/span&gt; &lt;span class="k"&gt;no&lt;/span&gt; &lt;span class="n"&gt;effect&lt;/span&gt; &lt;span class="k"&gt;on&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;parent&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;run&lt;/span&gt; &lt;span class="k"&gt;in&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;child&lt;/span&gt;&lt;span class="p"&gt;.&lt;/span&gt;
+        &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;[&lt;/span&gt;&lt;span class="n"&gt;strlen&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;&lt;span class="err"&gt;−&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;]&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt; &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;chop&lt;/span&gt; &lt;span class="err"&gt;\&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;
 
-        if(chdir(buf+3) &amp;lt; 0)
-            printf(2, &amp;quot;cannot cd %s\n&amp;quot;, buf+3);
-        continue;
-    }
-    if(fork1() == 0)
-        runcmd(parsecmd(buf));
-    wait();
- }
- exit();
+        &lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;chdir&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;&amp;lt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+            &lt;span class="n"&gt;printf&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="ss"&gt;&amp;quot;cannot cd %s\n&amp;quot;&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="o"&gt;+&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="k"&gt;continue&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+    &lt;span class="err"&gt;}&lt;/span&gt;
+    &lt;span class="k"&gt;if&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;fork1&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt; &lt;span class="o"&gt;==&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="n"&gt;runcmd&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;parsecmd&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;buf&lt;/span&gt;&lt;span class="p"&gt;));&lt;/span&gt;
+    &lt;span class="n"&gt;wait&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
+ &lt;span class="err"&gt;}&lt;/span&gt;
+ &lt;span class="n"&gt;exit&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
@@ -938,87 +1420,87 @@ Follow @awesamlewis&lt;/a&gt;&lt;/p&gt;</content></entry><entry><title>Using the
 &lt;p&gt;An 'X' in the P3DIR column indicates a "don't care". So for both pins, it doesn't matter if we set them to an output or an input when configuring them for UART. For the P3SEL1 and P3SEL0 columns, we need to consult the family guide. The next picture is an excerpt from page 483 of the family guide. &lt;/p&gt;
 &lt;p&gt;&lt;img alt="MSP432 serial modules" src="/images/GPIO_selection.png"&gt;&lt;/p&gt;
 &lt;p&gt;So to use the UART functionality of these pins, we're using the 'primary IO module function'. Now we have all the information we need to set the pins up in UART mode! Because it doesn't matter whether the pins are in output or input mode, we're able to use the &lt;code&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/code&gt; function or the &lt;code&gt;GPIO_setAsPeripheralModuleFunctionOutputPin&lt;/code&gt; function. For no reason whatsoever, I'll use the output variant. The result is the following line of code:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/* Set pins 2 and 3 of port 3 to the primary module function (UART) */&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
-GPIO_setAsPeripheralModuleFunctionInputPin&lt;span class="o"&gt;(&lt;/span&gt;GPIO_PORT_P3&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;GPIO_PIN2&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="o"&gt;|&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;GPIO_PIN3&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;GPIO_PRIMARY_MODULE_FUNCTION&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="err"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;/* Set pins 2 and 3 of port 3 to the primary module function (UART) */&lt;/span&gt;
+&lt;span class="err"&gt;GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P3, GPIO_PIN2 | GPIO_PIN3, GPIO_PRIMARY_MODULE_FUNCTION);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;The next thing to do is to define a eUSCI config. This is basically from the TI provided examples. The only tricky bit is generating the BRDIV, UCxBRF and UCxBRS numbers which in this case are 78, 2 &amp;amp; 0. Luckily, once again TI have &lt;a href="http://software-dl.ti.com/msp430/msp430_public_sw/mcu/msp430/MSP430BaudRateConverter/index.html"&gt;provided a tool&lt;/a&gt; to do this. This tool finds the optimal way of prescaling and modulating the clock source you're using to achieve your desired baud rate. More information about this process is on page 721 of the family guide. &lt;/p&gt;
 &lt;p&gt;Using the tool with a clock of 12MHz and baud rate of 9600 Hz, gives a clockPrescalar of 78, a firstModReg of 2, a secondModReg of 0 and oversampling turned on. Converting this into a config, we get the following:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;const eUSCI_UART_Config uartConfig =
-{
-    EUSCI_A_UART_CLOCKSOURCE_SMCLK,          // SMCLK Clock Source
-    78,                                      // BRDIV = 78
-    2,                                       // UCxBRF = 2
-    0,                                       // UCxBRS = 0
-    EUSCI_A_UART_NO_PARITY,                  // No Parity
-    EUSCI_A_UART_LSB_FIRST,                  // MSB First
-    EUSCI_A_UART_ONE_STOP_BIT,               // One stop bit
-    EUSCI_A_UART_MODE,                       // UART mode
-    EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION  // Oversampling
-};
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="n"&gt;eUSCI_UART_Config&lt;/span&gt; &lt;span class="n"&gt;uartConfig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_CLOCKSOURCE_SMCLK&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;          &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;SMCLK&lt;/span&gt; &lt;span class="n"&gt;Clock&lt;/span&gt; &lt;span class="n"&gt;Source&lt;/span&gt;
+    &lt;span class="mi"&gt;78&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                      &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;BRDIV&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;78&lt;/span&gt;
+    &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;UCxBRF&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;
+    &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;UCxBRS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_NO_PARITY&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;No&lt;/span&gt; &lt;span class="n"&gt;Parity&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_LSB_FIRST&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;MSB&lt;/span&gt; &lt;span class="n"&gt;First&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_ONE_STOP_BIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;               &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;One&lt;/span&gt; &lt;span class="n"&gt;stop&lt;/span&gt; &lt;span class="n"&gt;bit&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_MODE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;UART&lt;/span&gt; &lt;span class="n"&gt;mode&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION&lt;/span&gt;  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Oversampling&lt;/span&gt;
+&lt;span class="p"&gt;};&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;The parity, MSB/LSB first and the amount of stop bits will all be determined by the device or chip that you want to communicate with. Now, to use that config to initialise the module using driverlib:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;UART_initModule(EUSCI_A2_MODULE, &amp;amp;uartConfig);
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;UART_initModule(EUSCI_A2_MODULE, &amp;amp;uartConfig);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;This sets all the relevant registers to achieve the configuration earlier specified. If you're really interesting in understanding what exactly this is doing, it's worth reading the family guide. Now that the module is intialised, it can finally be enabled on!&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;UART_enableModule(EUSCI_A2_MODULE);
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;UART_enableModule(EUSCI_A2_MODULE);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;From here, you can send a byte of data to the module with the following driverlib function call:&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cm"&gt;/* sends the &amp;#39;g&amp;#39; character to the A2 module&amp;#39; */&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
-UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span class="o"&gt;,&lt;/span&gt;&lt;span class="w"&gt; &lt;/span&gt;&lt;span class="s"&gt;&amp;#39;g&amp;#39;&lt;/span&gt;&lt;span class="o"&gt;)&lt;/span&gt;&lt;span class="err"&gt;;&lt;/span&gt;&lt;span class="w"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;/* sends the &amp;#39;g&amp;#39; character to the A2 module&amp;#39; */&lt;/span&gt;
+&lt;span class="err"&gt;UART_transmitData(EUSCI_A2_MODULE, &amp;#39;g&amp;#39;);&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
 &lt;p&gt;If you want to simplify the process of sending individual characters (or instead want to send strings/numbers etc), check out &lt;a href="../msp432-serial-printf/"&gt;my post about a printf function for the MSP432&lt;/a&gt;.&lt;/p&gt;
 &lt;p&gt;The whole code would then end up looking like this.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="cp"&gt;#include&lt;/span&gt; &lt;span class="cpf"&gt;&amp;quot;driverlib.h&amp;quot;&lt;/span&gt;&lt;span class="cp"&gt;&lt;/span&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="c1"&gt;#include &amp;quot;driverlib.h&amp;quot;&lt;/span&gt;
 
 &lt;span class="k"&gt;const&lt;/span&gt; &lt;span class="n"&gt;eUSCI_UART_Config&lt;/span&gt; &lt;span class="n"&gt;uartConfig&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt;
 &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_CLOCKSOURCE_SMCLK&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;          &lt;span class="c1"&gt;// SMCLK Clock Source&lt;/span&gt;
-    &lt;span class="mi"&gt;78&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                     &lt;span class="c1"&gt;// BRDIV = 78&lt;/span&gt;
-    &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="c1"&gt;// UCxBRF = 2&lt;/span&gt;
-    &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="c1"&gt;// UCxBRS = 0&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_NO_PARITY&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="c1"&gt;// No Parity&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_LSB_FIRST&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="c1"&gt;// MSB First&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_ONE_STOP_BIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;               &lt;span class="c1"&gt;// One stop bit&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_MODE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                       &lt;span class="c1"&gt;// UART mode&lt;/span&gt;
-    &lt;span class="n"&gt;EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION&lt;/span&gt;  &lt;span class="c1"&gt;// Oversampling&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_CLOCKSOURCE_SMCLK&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;          &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;SMCLK&lt;/span&gt; &lt;span class="n"&gt;Clock&lt;/span&gt; &lt;span class="n"&gt;Source&lt;/span&gt;
+    &lt;span class="mi"&gt;78&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                     &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;BRDIV&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;78&lt;/span&gt;
+    &lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;UCxBRF&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;2&lt;/span&gt;
+    &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;UCxBRS&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_NO_PARITY&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;No&lt;/span&gt; &lt;span class="n"&gt;Parity&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_LSB_FIRST&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;MSB&lt;/span&gt; &lt;span class="n"&gt;First&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_ONE_STOP_BIT&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;               &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;One&lt;/span&gt; &lt;span class="n"&gt;stop&lt;/span&gt; &lt;span class="n"&gt;bit&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_MODE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;                       &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;UART&lt;/span&gt; &lt;span class="n"&gt;mode&lt;/span&gt;
+    &lt;span class="n"&gt;EUSCI_A_UART_OVERSAMPLING_BAUDRATE_GENERATION&lt;/span&gt;  &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Oversampling&lt;/span&gt;
 &lt;span class="p"&gt;};&lt;/span&gt;
 
 
-&lt;span class="kt"&gt;int&lt;/span&gt; &lt;span class="nf"&gt;main&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="kt"&gt;void&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+&lt;span class="nb nb-Type"&gt;int&lt;/span&gt; &lt;span class="n"&gt;main&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;void&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
 &lt;span class="p"&gt;{&lt;/span&gt;
-    &lt;span class="cm"&gt;/* Halting WDT  */&lt;/span&gt;
+    &lt;span class="o"&gt;/*&lt;/span&gt; &lt;span class="n"&gt;Halting&lt;/span&gt; &lt;span class="n"&gt;WDT&lt;/span&gt;  &lt;span class="o"&gt;*/&lt;/span&gt;
     &lt;span class="n"&gt;WDT_A_holdTimer&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt;
 
 
-    &lt;span class="cm"&gt;/* Configure pins P3.2 and P3.3 in UART mode.&lt;/span&gt;
-&lt;span class="cm"&gt;     * Doesn&amp;#39;t matter if they are set to inputs or outputs&lt;/span&gt;
-&lt;span class="cm"&gt;     */&lt;/span&gt;
+    &lt;span class="o"&gt;/*&lt;/span&gt; &lt;span class="n"&gt;Configure&lt;/span&gt; &lt;span class="n"&gt;pins&lt;/span&gt; &lt;span class="n"&gt;P3&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt; &lt;span class="ow"&gt;and&lt;/span&gt; &lt;span class="n"&gt;P3&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="mi"&gt;3&lt;/span&gt; &lt;span class="ow"&gt;in&lt;/span&gt; &lt;span class="n"&gt;UART&lt;/span&gt; &lt;span class="n"&gt;mode&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;
+     &lt;span class="o"&gt;*&lt;/span&gt; &lt;span class="n"&gt;Doesn&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;t matter if they are set to inputs or outputs&lt;/span&gt;
+     &lt;span class="o"&gt;*/&lt;/span&gt;
     &lt;span class="n"&gt;GPIO_setAsPeripheralModuleFunctionInputPin&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;GPIO_PORT_P3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;
                 &lt;span class="n"&gt;GPIO_PIN2&lt;/span&gt; &lt;span class="o"&gt;|&lt;/span&gt; &lt;span class="n"&gt;GPIO_PIN3&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;GPIO_PRIMARY_MODULE_FUNCTION&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 
-    &lt;span class="cm"&gt;/* Setting DCO (clock) to 12MHz */&lt;/span&gt;
+    &lt;span class="o"&gt;/*&lt;/span&gt; &lt;span class="n"&gt;Setting&lt;/span&gt; &lt;span class="n"&gt;DCO&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;clock&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="n"&gt;to&lt;/span&gt; &lt;span class="mi"&gt;12&lt;/span&gt;&lt;span class="n"&gt;MHz&lt;/span&gt; &lt;span class="o"&gt;*/&lt;/span&gt;
     &lt;span class="n"&gt;CS_setDCOCenteredFrequency&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;CS_DCO_FREQUENCY_12&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 
-    &lt;span class="cm"&gt;/* Configuring UART Module */&lt;/span&gt;
+    &lt;span class="o"&gt;/*&lt;/span&gt; &lt;span class="n"&gt;Configuring&lt;/span&gt; &lt;span class="n"&gt;UART&lt;/span&gt; &lt;span class="n"&gt;Module&lt;/span&gt; &lt;span class="o"&gt;*/&lt;/span&gt;
     &lt;span class="n"&gt;UART_initModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="o"&gt;&amp;amp;&lt;/span&gt;&lt;span class="n"&gt;uartConfig&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 
-    &lt;span class="cm"&gt;/* Enable UART module */&lt;/span&gt;
+    &lt;span class="o"&gt;/*&lt;/span&gt; &lt;span class="n"&gt;Enable&lt;/span&gt; &lt;span class="n"&gt;UART&lt;/span&gt; &lt;span class="n"&gt;module&lt;/span&gt; &lt;span class="o"&gt;*/&lt;/span&gt;
     &lt;span class="n"&gt;UART_enableModule&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
 
     &lt;span class="k"&gt;while&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
     &lt;span class="p"&gt;{&lt;/span&gt;
-        &lt;span class="cm"&gt;/* Send the &amp;#39;g&amp;#39; character over UART */&lt;/span&gt;
-        &lt;span class="n"&gt;UART_transmitData&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="sc"&gt;&amp;#39;g&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+        &lt;span class="o"&gt;/*&lt;/span&gt; &lt;span class="n"&gt;Send&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;g&amp;#39;&lt;/span&gt; &lt;span class="n"&gt;character&lt;/span&gt; &lt;span class="n"&gt;over&lt;/span&gt; &lt;span class="n"&gt;UART&lt;/span&gt; &lt;span class="o"&gt;*/&lt;/span&gt;
+        &lt;span class="n"&gt;UART_transmitData&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;EUSCI_A2_MODULE&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="s1"&gt;&amp;#39;g&amp;#39;&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
     &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
@@ -1138,38 +1620,38 @@ UART_transmitData&lt;span class="o"&gt;(&lt;/span&gt;EUSCI_A2_MODULE&lt;span cla
 &lt;p&gt;It was then simple to hook into the data stream with google charts. A chart with my progress is shown above, will be interesting to see how the line behaves (I'm expecting an exponential rise closer to the due date!). &lt;/p&gt;</content></entry><entry><title>Using C# to check if audio is playing in Windows</title><link href="https://www.samlewis.me/2014/08/is-audio-playing-windows" rel="alternate"></link><published>2014-08-05T00:00:00+10:00</published><updated>2014-08-05T00:00:00+10:00</updated><author><name>Sam Lewis</name></author><id>tag:www.samlewis.me,2014-08-05:/2014/08/is-audio-playing-windows</id><summary type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
 &lt;p&gt;The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore …&lt;/p&gt;</summary><content type="html">&lt;p&gt;Using the &lt;a href="http://cscore.codeplex.com/"&gt;CSCore&lt;/a&gt; library (easily installed in Visual Studio with Install-Package CSCore) I was able to quickly knock up a prototype that let me check if audio was currently being played on my system.&lt;/p&gt;
 &lt;p&gt;The code below is heavily inspired by audio meter code in the EndPointTests file for CSCore.&lt;/p&gt;
-&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;using CSCore.CoreAudioAPI;
-using System;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="n"&gt;using&lt;/span&gt; &lt;span class="n"&gt;CSCore&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;CoreAudioAPI&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;span class="n"&gt;using&lt;/span&gt; &lt;span class="n"&gt;System&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
 
-namespace AudioPlayingTest
-{
-    class AudioPlayChecker
-    {
-        // Gets the default device for the system
-        public static MMDevice GetDefaultRenderDevice()
-        {
-            using (var enumerator = new MMDeviceEnumerator())
-            {
-                return enumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Console);
-            }
-        }
+&lt;span class="n"&gt;namespace&lt;/span&gt; &lt;span class="n"&gt;AudioPlayingTest&lt;/span&gt;
+&lt;span class="p"&gt;{&lt;/span&gt;
+    &lt;span class="k"&gt;class&lt;/span&gt; &lt;span class="n"&gt;AudioPlayChecker&lt;/span&gt;
+    &lt;span class="p"&gt;{&lt;/span&gt;
+        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Gets&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;default&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt; &lt;span class="k"&gt;for&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;system&lt;/span&gt;
+        &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="n"&gt;MMDevice&lt;/span&gt; &lt;span class="n"&gt;GetDefaultRenderDevice&lt;/span&gt;&lt;span class="p"&gt;()&lt;/span&gt;
+        &lt;span class="p"&gt;{&lt;/span&gt;
+            &lt;span class="n"&gt;using&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;var&lt;/span&gt; &lt;span class="n"&gt;enumerator&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;new&lt;/span&gt; &lt;span class="n"&gt;MMDeviceEnumerator&lt;/span&gt;&lt;span class="p"&gt;())&lt;/span&gt;
+            &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;enumerator&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;GetDefaultAudioEndpoint&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;DataFlow&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Render&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt; &lt;span class="n"&gt;Role&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;Console&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+            &lt;span class="p"&gt;}&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
 
-        // Checks if audio is playing on a certain device
-        public static bool IsAudioPlaying(MMDevice device)
-        {
-            using (var meter = AudioMeterInformation.FromDevice(device))
-            {
-                return meter.PeakValue &amp;gt; 0;
-            }
-        }
+        &lt;span class="o"&gt;//&lt;/span&gt; &lt;span class="n"&gt;Checks&lt;/span&gt; &lt;span class="k"&gt;if&lt;/span&gt; &lt;span class="n"&gt;audio&lt;/span&gt; &lt;span class="k"&gt;is&lt;/span&gt; &lt;span class="n"&gt;playing&lt;/span&gt; &lt;span class="n"&gt;on&lt;/span&gt; &lt;span class="n"&gt;a&lt;/span&gt; &lt;span class="n"&gt;certain&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt;
+        &lt;span class="n"&gt;public&lt;/span&gt; &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="nb nb-Type"&gt;bool&lt;/span&gt; &lt;span class="n"&gt;IsAudioPlaying&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;MMDevice&lt;/span&gt; &lt;span class="n"&gt;device&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="p"&gt;{&lt;/span&gt;
+            &lt;span class="n"&gt;using&lt;/span&gt; &lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="k"&gt;var&lt;/span&gt; &lt;span class="n"&gt;meter&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;AudioMeterInformation&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;FromDevice&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;device&lt;/span&gt;&lt;span class="p"&gt;))&lt;/span&gt;
+            &lt;span class="p"&gt;{&lt;/span&gt;
+                &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;meter&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;PeakValue&lt;/span&gt; &lt;span class="o"&gt;&amp;gt;&lt;/span&gt; &lt;span class="mi"&gt;0&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+            &lt;span class="p"&gt;}&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
 
-        static void Main(string[] args)
-        {
-            Console.WriteLine(IsAudioPlaying(GetDefaultRenderDevice()));
-            Console.ReadLine(); //Just so the console window doesn&amp;#39;t close
-        }
-    }
-}
+        &lt;span class="k"&gt;static&lt;/span&gt; &lt;span class="n"&gt;void&lt;/span&gt; &lt;span class="n"&gt;Main&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;string&lt;/span&gt;&lt;span class="p"&gt;[]&lt;/span&gt; &lt;span class="n"&gt;args&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt;
+        &lt;span class="p"&gt;{&lt;/span&gt;
+            &lt;span class="n"&gt;Console&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;WriteLine&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;IsAudioPlaying&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;GetDefaultRenderDevice&lt;/span&gt;&lt;span class="p"&gt;()));&lt;/span&gt;
+            &lt;span class="n"&gt;Console&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;ReadLine&lt;/span&gt;&lt;span class="p"&gt;();&lt;/span&gt; &lt;span class="o"&gt;//&lt;/span&gt;&lt;span class="n"&gt;Just&lt;/span&gt; &lt;span class="n"&gt;so&lt;/span&gt; &lt;span class="n"&gt;the&lt;/span&gt; &lt;span class="n"&gt;console&lt;/span&gt; &lt;span class="n"&gt;window&lt;/span&gt; &lt;span class="n"&gt;doesn&lt;/span&gt;&lt;span class="s1"&gt;&amp;#39;t close&lt;/span&gt;
+        &lt;span class="p"&gt;}&lt;/span&gt;
+    &lt;span class="p"&gt;}&lt;/span&gt;
+&lt;span class="p"&gt;}&lt;/span&gt;
 &lt;/pre&gt;&lt;/div&gt;
 
 
