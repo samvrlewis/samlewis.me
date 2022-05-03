@@ -383,3 +383,18 @@ To continue this investigation, maybe it would make sense to:
 - Log the contents of blocks, to better discover why nodes skip over them.
 
 If anyone has any theories on what might've happened in the second reorged block (and the other, similar, reorged blocks), please let me know!
+
+## Update
+Since posting this article the reason for this behavior was revealed thanks to a researched from the Ethereum foundation reaching out. It turns out, at the time this was written, Proposer Boost was _not_ active on mainnet which was causing tiebreaks to be resolved through lexicographical ordering of the block hashes. 
+
+> We've identified the reason for the reorg of block 3340347 - proposer boost is not yet active on mainnet. Proposer boost is a local fork choice change that does not affect consensus code (such as block validity rules or finality conditions), thus not requiring a soft/hard fork (forks have significant coordination costs across client teams & stakers). Clients are releasing it in their software at their own pace, and stakers can upgrade to software with this feature without a targeted timeline. 
+>
+> Without proposer boost, the fork choice tiebreaker is the block root (higher lexicographical ordering wins). The block roots were the following:
+>
+>```
+>Block 3340346: 0xfaf0....
+>Block 3340347: 0x9774....
+>```
+> This particular reorg instance is explained by the lack of proposer boost, and the tiebreaker rule.
+
+These "unfair" reorgs are probably a good rationale for having proposer boost turned on, so hopefully it is activated soon!
