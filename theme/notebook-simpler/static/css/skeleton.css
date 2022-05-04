@@ -28,7 +28,7 @@
 
 /* #Flexible column widths
 ================================================== */
-    .container                                  { width: 75%; } /*whatever you want - can even be fixed if you prefer*/
+    .container                                  { width: 75%; max-width: 1000px; } /*whatever you want - can even be fixed if you prefer*/
     .container .column,
     .container .columns                         { margin-left: 0.78125%; margin-right: 0.78125%;  }
 
