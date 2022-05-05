@@ -7,7 +7,7 @@ SITEURL = 'https://www.samlewis.me'
 TIMEZONE = 'Australia/Brisbane'
 THEME = './theme/notebook-simpler'
 SUMMARY_MAX_LENGTH = 50
-AVATAR = '/theme/images/avatar.jpg'
+AVATAR = '/theme/images/samface_small.png'
 TITLE = "Sam Lewis"
 DESCRIPTION = "Sam Lewis is a Melbourne based geek who develops cool bits of code. He likes data, embedded stuff and AFL."
 
