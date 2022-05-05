@@ -14,7 +14,6 @@ TODO:
 @import url(https://fonts.googleapis.com/css?family=Droid+Sans);
 @import url(https://fonts.googleapis.com/css?family=Source+Code+Pro);
 
-{margin: 0; padding: 0;}
 html, body {
 	height: 100%;
 	font-family: "Droid Sans", sans-serif;
@@ -55,6 +54,9 @@ section#content {
 	position: fixed;
 	text-align: center;
 	font-family: "Droid Serif", serif;
+	max-width: 200px;
+	min-width: 140px;
+
 }
 
 #sidebar li {
@@ -173,6 +175,7 @@ code, pre.ipynb {
         position: relative;
         width: 100%;
         top: 8px;
+		max-width: unset;
     }
     
     /*#sidebar img { width: 140px; margin-right: 10px; }*/
