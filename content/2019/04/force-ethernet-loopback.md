@@ -23,37 +23,31 @@ To do this:
 
 1. Create a namespace for each adapter
 ```
-:::bash
 ip netns add ns_eth0
 ip netns add ns_eth1
 ```
 2. Move the adapters into the namespaces
 ```
-:::bash
 ip link set eth0 netns ns_eth0
 ip link set eth1 netns ns_eth1
 ```
 3. Assign ip addresses to each adapter
 ```
-:::bash
 ip netns exec ns_eth0 ip addr add dev eth0 192.168.1.1/24
 ip netns exec ns_eth1 ip addr add dev eth1 192.168.1.2/24
 ```
 4. Bring the adapters up
 ```
-:::bash
 ip netns exec ns_eth0 ip link set eth0 up
 ip netns exec ns_eth1 ip link set eth1 up
 ```
 5. Check that each adapter can ping the other
 ```
-:::bash
 ip netns exec ns_eth0 ping 192.168.1.2
 ip netns exec ns_eth1 ping 192.168.1.1
 ```
 6. Run your tests, happy in the knowledge that the traffic is really going out on the physical interface!
 ```
-:::bash
 ip netns exec ns_eth0 iperf3 -s
 ip netns exec ns_eth1 iperf3 -c 192.168.1.1
 ```
