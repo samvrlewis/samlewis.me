@@ -26,8 +26,7 @@ In Python, I use the [ecsda library]() to do the heavy lifting for the elliptic 
  
 > As an amusing aside, I originally created an address using the private key 0xFACEBEEF and sent it 0.0005 BTC.. 1 month later and someone had [stolen my 0.0005 BTC](https://blockchain.info/address/1KAWPAD8KovUo53pqHUY2bLNMTYa1obFX9)! I guess people must occasionally trawl through addresses with simple/common private keys. You really should use proper key derivation techniques!
  
-```
-:::python
+```python
 from ecdsa import SECP256k1, SigningKey
  
 def get_private_key(hex_string):
@@ -58,8 +57,7 @@ The `0x04` that prepends the public key signifies that this is an *uncompressed*
  
 From here, to generate the Bitcoin address from the public key, the public key is sha256 hashed and then ripemd160 hashed. This double hashing provides an extra layer of security and a ripemd160 hash provides a 160 bit hash of sha256's 256 bit hash, shortening the length of the address. An interesting result of this is that it is possible for two different public keys to hash to the same address! However, with 2^160 different addresses, this isn't likely to happen any time soon.
  
-```
-:::python
+```python
 import hashlib
  
 def get_public_address(public_key):
@@ -82,8 +80,7 @@ As alluded to before, an interesting point is that both the conversion from priv
  
 That standard way of expressing a Bitcoin address is to use the [Base58Check](https://en.bitcoin.it/wiki/base58Check_encoding) encoding of it. This encoding is only a representation of an address (and so can be decoded/reversed). Base58Check generates addresses of the form *1661HxZpSy5jhcJ2k6av2dxuspa8aafDac*. The Base58Check encoding provides a shorter address to express and also has an inbuilt checksum, that allows detection of mistyped address. In just about every Bitcoin client, the Base58Check encoding of your address is the address that you'll see. A Base58Check also includes a version number, which I'm setting to 0 in the code below - this represents that the address is a pubkey hash.
  
-```
-:::python
+```python
 # 58 character alphabet used
 BASE58_ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
  
@@ -130,7 +127,7 @@ The seeds are hardcoded into [Bitcoin core's source code](https://github.com/bit
  
 The Python code below connects to a DNS seed and arbitrarily chooses the first peer to connect to. Using the `socket` library, the code basically performs a `nslookup` and returns the ipv4 address of the first result on running a query against the seed node `seed.bitcoin.sipa.be`.
  
-```
+```python
 import socket
  
 # use a dns request to a seed bitcoin DNS server to find a node
@@ -147,8 +144,7 @@ Bitcoin connections between peers are through TCP. Upon connecting to a peer, th
  
 Bitcoin protocol messages are well documented in the [Bitcoin developer reference](https://bitcoin.org/en/developer-reference). Using the developer reference as guide, the [version](https://bitcoin.org/en/developer-reference#version) message can be constructed in Python as the snippet below shows. Most of the data is fairly uninteresting, administrative data which is used to establish the peer connection. If you're interested in more details than the attached comments provide, have a read of the developer reference.
  
-```
-:::python
+```python
 version = 70014
 services = 1 # not a full node, cant provide any data
 timestamp = int(time.time())
@@ -166,8 +162,7 @@ relay = 0
  
 Using Python's [struct library](https://docs.python.org/3/library/struct.html) the version payload data is packed into the right format, paying special attention to endianness and byte widths of the data. Packing the data into the right format is important, or else the receiving peer won't be able to understand the raw bytes that it receives. 
  
-```
-:::python
+```python
 payload = struct.pack("<I", version)
 payload += struct.pack("<Q", services)
 payload += struct.pack("<Q", timestamp)
@@ -184,8 +179,7 @@ payload += struct.pack("<I", start_height)
  
 Again, the way in which this data should be packed is available in the developer reference. Finally, each payload transmitted on the Bitcoin network needs to be prepended with a header, that contains the length of the payload, a checksum and the type of message the payload is. The header also contains the magic constant `0xF9BEB4D9` which is set for all mainnet Bitcoin messages. The following function gets a Bitcoin message with header attached.
  
-```
-:::python
+```python
 def get_bitcoin_message(message_type, payload):
     header = struct.pack(">L", 0xF9BEB4D9)
     header += struct.pack("12s", bytes(message_type, 'utf-8'))
@@ -196,8 +190,8 @@ def get_bitcoin_message(message_type, payload):
 ```
  
 With the data packed into the right format, and the header attached, it can be sent off to our peer! 
-```
-:::python
+
+```python
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((node, 8333))
 s.send(get_bitcoin_message("version", payload))
@@ -208,8 +202,7 @@ The Bitcoin protocol mandates that on receiving a version message, a peer should
  
 Running the above snippet prints out the following. It certainly looks promising - "Satoshi" and "Verack" are good words to see in the dump out! If my version message had been malformed, the peer would not have responded at all.
  
-```
-:::python
+```python
 b'\xf9\xbe\xb4\xd9version\x00\x00\x00\x00\x00f\x00\x00\x00\xf8\xdd\x9aL\x7f\x11\x01\x00\r\x00\x00\x00\x00\x00\x00\x00\xddR1Y\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\xff\xff\xcb\xce\x1d\xfc\xe9j\r\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x06\xb8>*\x88@I\x8e\x10/Satoshi:0.14.0/t)\x07\x00\x01\xf9\xbe\xb4\xd9verack\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00]\xf6\xe0\xe2'
 ```
  
@@ -303,8 +296,7 @@ Before the raw transaction is hashed, it also needs to have a [Hashtype value](h
  
 The below functions  put together a python dictionary of raw transaction values.
  
-```
-:::python
+```python
 def get_p2pkh_script(pub_key):
     """
     This is the standard 'pay to pubkey hash' script
@@ -351,8 +343,8 @@ def get_raw_transaction(from_addr, to_addr, transaction_hash, output_index, sato
 ```
  
 Calling the code with the following values creates the raw transaction that I'm interested in making.
-```
-:::python
+
+```python
 private_key = address_utils.get_private_key("FEEDB0BDEADBEEF")
 public_key = address_utils.get_public_key(private_key)
 from_address = address_utils.get_public_address(public_key)
@@ -371,8 +363,7 @@ In order to be able to sign, and eventually transmit the transaction to the netw
  
 This allows me to define a function that will produce the signature script. Once the signature script is generated, it should replace the placeholder signature script.
  
-```
-:::python
+```python
 def get_transaction_signature(transaction, private_key):
     """
     Gets the sigscript of a raw transaction
@@ -411,8 +402,7 @@ You can see that here is the first time I have needed to provide my public key a
  
 Using the `get_transaction_signature` function, we can now sign and pack our transaction ready for transmission! This involves replacing the placeholder signature script with the real signature script and removing the `hash_code_type` from the transaction as shown below.
  
-```
-:::python
+```python
 signature = get_transaction_signature(raw, private_key )
  
 raw["sig_script_length"] = len(signature)
@@ -425,8 +415,7 @@ transaction = get_packed_transaction(raw)
 ### Publishing the transaction
 With the transaction packed and signed, it's a matter of telling the network about it. Using a few functions previously defined in this article in [bitcoin_p2p_message_utils.py](https://github.com/samvrlewis/simple-bitcoin/blob/master/bitcoin_p2p_message_utils.py),  the below piece of code puts the Bitcoin message header on the transmission and transmits it to a peer. As mentioned earlier, it's first necessary to send a version message to the peer so that it accepts subsequent messages. 
  
-```
-:::python
+```python
 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 s.connect((get_bitcoin_peer(), 8333))
 s.send(get_bitcoin_message("version", get_version_payload())
